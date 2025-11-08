@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OBLIVITRIS - Memory-Based Invisible Tetris</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f0e17 0%, #1a1a2e 50%, #16213e 100%);
+            color: #fffffe;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin: 20px 0;
+            text-align: center;
+            background: linear-gradient(45deg, #a7a9be, #fffffe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            text-align: center;
+            margin-bottom: 20px;
+            font-style: italic;
+            color: #a7a9be;
+        }
+
+        #gameArea {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin: 20px 0;
+        }
+
+        #canvasContainer {
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+
+        canvas {
+            border: 3px solid rgba(167, 169, 190, 0.3);
+            border-radius: 8px;
+            display: block;
+            background: rgba(0, 0, 0, 0.8);
+        }
+
+        .fade-overlay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            pointer-events: none;
+            display: none;
+        }
+
+        .fade-overlay.active {
+            display: block;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.7; }
+        }
+
+        #sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            max-width: 350px;
+        }
+
+        .panel {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(167, 169, 190, 0.1);
+        }
+
+        .sonar-panel {
+            text-align: center;
+        }
+
+        .sonar-btn {
+            background: linear-gradient(135deg, #7f5af0 0%, #5f3dc4 100%);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            font-size: 1.1em;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin: 10px 0;
+            width: 100%;
+        }
+
+        .sonar-btn:hover:not(:disabled) {
+            transform: scale(1.05);
+            box-shadow: 0 0 30px rgba(127, 90, 240, 0.5);
+        }
+
+        .sonar-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .sonar-count {
+            font-size: 2em;
+            color: #7f5af0;
+            margin: 10px 0;
+        }
+
+        .memory-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .stat {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 0.8em;
+            color: #a7a9be;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #fffffe;
+        }
+
+        .fade-info {
+            background: rgba(127, 90, 240, 0.1);
+            border: 2px solid rgba(127, 90, 240, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            font-size: 0.9em;
+            line-height: 1.6;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            flex-direction: column;
+        }
+
+        button {
+            background: linear-gradient(135deg, #7f5af0 0%, #5f3dc4 100%);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            font-size: 1em;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(127, 90, 240, 0.4);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .message {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.95em;
+            line-height: 1.5;
+        }
+
+        .message.archaeologist {
+            background: rgba(255, 215, 0, 0.2);
+            border: 2px solid #ffd700;
+        }
+
+        .message.penalty {
+            background: rgba(239, 35, 60, 0.2);
+            border: 2px solid #ef233c;
+            animation: shake 0.5s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        .instructions {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            max-width: 800px;
+        }
+
+        .instructions h3 {
+            margin-bottom: 10px;
+            color: #7f5af0;
+        }
+
+        .instructions ul {
+            margin-left: 20px;
+            line-height: 1.8;
+        }
+
+        .instructions kbd {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+
+        #gameOver {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            padding: 40px;
+            border-radius: 20px;
+            border: 3px solid #7f5af0;
+            text-align: center;
+            z-index: 1000;
+            min-width: 400px;
+        }
+
+        #gameOver h2 {
+            color: #7f5af0;
+            margin-bottom: 20px;
+        }
+
+        .achievement {
+            background: rgba(255, 215, 0, 0.2);
+            border: 2px solid #ffd700;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>👁️‍🗨️ OBLIVITRIS 👁️‍🗨️</h1>
+    <p class="subtitle">Trust Your Memory, Not Your Eyes</p>
+
+    <div id="gameArea">
+        <div id="canvasContainer">
+            <canvas id="gameCanvas" width="300" height="600"></canvas>
+            <div class="fade-overlay" id="fadeOverlay">⚡ SONAR PULSE ⚡</div>
+        </div>
+
+        <div id="sidebar">
+            <div class="panel sonar-panel">
+                <h3 style="color: #7f5af0; margin-bottom: 10px;">Sonar Pulses</h3>
+                <div class="sonar-count" id="sonarCount">3</div>
+                <button class="sonar-btn" id="sonarBtn">
+                    🔍 ACTIVATE SONAR
+                </button>
+                <div style="font-size: 0.85em; color: #a7a9be; margin-top: 10px;">
+                    Reveals all hidden blocks for 1 second
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3 style="color: #7f5af0; margin-bottom: 10px;">Memory Stats</h3>
+                <div class="memory-stats">
+                    <div class="stat">
+                        <div class="stat-label">Score</div>
+                        <div class="stat-value" id="score">0</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Lines</div>
+                        <div class="stat-value" id="lines">0</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Penalties</div>
+                        <div class="stat-value" id="penalties">0</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Perfect Memory</div>
+                        <div class="stat-value" id="perfect">0</div>
+                    </div>
+                </div>
+
+                <div class="fade-info">
+                    <strong>Fade Timeline:</strong><br>
+                    • 0-3s: Fully visible<br>
+                    • 3-10s: 50% opacity<br>
+                    • 10s+: Invisible<br>
+                    • Last 5 pieces: Faint outline
+                </div>
+
+                <div class="controls">
+                    <button id="startBtn">Start Game</button>
+                    <button id="pauseBtn" disabled>Pause</button>
+                </div>
+
+                <div class="message" id="message">
+                    Trust your spatial memory!
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="instructions">
+        <h3>How Memory Mechanics Work</h3>
+        <ul>
+            <li><strong>Gradual Fade:</strong> Placed pieces are fully visible for 3 seconds, then fade to 50% opacity, then disappear completely after 10 seconds</li>
+            <li><strong>Sonar Pulse:</strong> Press <kbd>S</kbd> or click button to briefly reveal all hidden blocks (3 pulses per game)</li>
+            <li><strong>Memory Strain:</strong> The longer you survive, the faster pieces fade - your memory is tested!</li>
+            <li><strong>Ghost Memory:</strong> Your last 5 placed pieces show as faint outlines to help track recent moves</li>
+            <li><strong>Penalty:</strong> Trying to place a piece in an occupied space (that you forgot about) costs you a life</li>
+            <li><strong>Archaeologist Mode:</strong> Clear lines without using sonar pulses for bonus points - prove perfect memory!</li>
+        </ul>
+        <h3 style="margin-top: 15px;">Controls</h3>
+        <ul>
+            <li><kbd>←</kbd> <kbd>→</kbd> Move piece</li>
+            <li><kbd>↑</kbd> Rotate piece</li>
+            <li><kbd>↓</kbd> Soft drop</li>
+            <li><kbd>Space</kbd> Hard drop</li>
+            <li><kbd>S</kbd> Activate sonar pulse</li>
+        </ul>
+    </div>
+
+    <div id="gameOver">
+        <h2>Memory Test Complete</h2>
+        <div style="font-size: 2em; margin: 20px 0;" id="finalScore">0</div>
+        <div id="achievements"></div>
+        <div id="finalStats"></div>
+        <button onclick="location.reload()" style="margin-top: 20px;">Test Memory Again</button>
+    </div>
+
+    <script>
+        const COLS = 10;
+        const ROWS = 20;
+        const BLOCK_SIZE = 30;
+        const COLORS = ['#7f5af0', '#ef233c', '#2cb67d', '#f72585', '#4cc9f0', '#f77f00', '#06ffa5'];
+
+        const SHAPES = {
+            'I': [[1,1,1,1]],
+            'O': [[1,1],[1,1]],
+            'T': [[0,1,0],[1,1,1]],
+            'S': [[0,1,1],[1,1,0]],
+            'Z': [[1,1,0],[0,1,1]],
+            'J': [[1,0,0],[1,1,1]],
+            'L': [[0,0,1],[1,1,1]]
+        };
+
+        let gameState = {
+            score: 0,
+            lines: 0,
+            penalties: 0,
+            perfectMemory: 0,
+            sonarPulses: 3,
+            sonarActive: false,
+            gameStarted: false,
+            gamePaused: false,
+            board: createBoard(),
+            piece: null,
+            pieceHistory: [],
+            usedSonar: false,
+            fadeSpeed: 1.0
+        };
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function createBoard() {
+            return Array.from({ length: ROWS }, () =>
+                Array.from({ length: COLS }, () => ({ color: null, timestamp: null, recent: false }))
+            );
+        }
+
+        function createPiece() {
+            const shapes = Object.keys(SHAPES);
+            const shape = shapes[Math.floor(Math.random() * shapes.length)];
+            return {
+                shape: SHAPES[shape],
+                x: Math.floor(COLS / 2) - 1,
+                y: 0,
+                color: COLORS[Math.floor(Math.random() * COLORS.length)]
+            };
+        }
+
+        function getOpacity(timestamp) {
+            if (!timestamp || gameState.sonarActive) return 1.0;
+
+            const age = (Date.now() - timestamp) / 1000 / gameState.fadeSpeed;
+
+            if (age < 3) return 1.0;
+            if (age < 10) return 0.5;
+            return 0.0;
+        }
+
+        function draw() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.95)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw grid
+            ctx.strokeStyle = 'rgba(167, 169, 190, 0.05)';
+            ctx.lineWidth = 1;
+            for (let x = 0; x <= COLS; x++) {
+                ctx.beginPath();
+                ctx.moveTo(x * BLOCK_SIZE, 0);
+                ctx.lineTo(x * BLOCK_SIZE, ROWS * BLOCK_SIZE);
+                ctx.stroke();
+            }
+            for (let y = 0; y <= ROWS; y++) {
+                ctx.beginPath();
+                ctx.moveTo(0, y * BLOCK_SIZE);
+                ctx.lineTo(COLS * BLOCK_SIZE, y * BLOCK_SIZE);
+                ctx.stroke();
+            }
+
+            // Draw board with fading
+            for (let y = 0; y < ROWS; y++) {
+                for (let x = 0; x < COLS; x++) {
+                    const cell = gameState.board[y][x];
+                    if (cell.color) {
+                        const opacity = getOpacity(cell.timestamp);
+
+                        if (opacity > 0) {
+                            ctx.globalAlpha = opacity;
+                            ctx.fillStyle = cell.color;
+                            ctx.fillRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE - 1, BLOCK_SIZE - 1);
+
+                            // Ghost outline for recent pieces
+                            if (cell.recent && opacity === 0 && !gameState.sonarActive) {
+                                ctx.globalAlpha = 0.15;
+                                ctx.strokeStyle = cell.color;
+                                ctx.lineWidth = 2;
+                                ctx.strokeRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE - 1, BLOCK_SIZE - 1);
+                            }
+                        }
+                    }
+                }
+            }
+
+            ctx.globalAlpha = 1.0;
+
+            // Draw current piece
+            if (gameState.piece) {
+                gameState.piece.shape.forEach((row, y) => {
+                    row.forEach((value, x) => {
+                        if (value) {
+                            ctx.fillStyle = gameState.piece.color;
+                            ctx.fillRect(
+                                (gameState.piece.x + x) * BLOCK_SIZE,
+                                (gameState.piece.y + y) * BLOCK_SIZE,
+                                BLOCK_SIZE - 1, BLOCK_SIZE - 1
+                            );
+                        }
+                    });
+                });
+            }
+        }
+
+        function collides(piece, offsetX = 0, offsetY = 0) {
+            for (let y = 0; y < piece.shape.length; y++) {
+                for (let x = 0; x < piece.shape[y].length; x++) {
+                    if (piece.shape[y][x]) {
+                        const newX = piece.x + x + offsetX;
+                        const newY = piece.y + y + offsetY;
+
+                        if (newX < 0 || newX >= COLS || newY >= ROWS) return true;
+                        if (newY >= 0 && gameState.board[newY][newX].color) {
+                            // Penalty for forgetting!
+                            const cellOpacity = getOpacity(gameState.board[newY][newX].timestamp);
+                            if (cellOpacity === 0 && !gameState.sonarActive) {
+                                gameState.penalties++;
+                                showMessage('⚠️ MEMORY FAILURE! You forgot there was a block there!', 'penalty');
+                                updateStats();
+                            }
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        function merge() {
+            const timestamp = Date.now();
+            gameState.piece.shape.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value) {
+                        const boardY = gameState.piece.y + y;
+                        const boardX = gameState.piece.x + x;
+                        if (boardY >= 0 && boardY < ROWS && boardX >= 0 && boardX < COLS) {
+                            gameState.board[boardY][boardX] = {
+                                color: gameState.piece.color,
+                                timestamp: timestamp,
+                                recent: true
+                            };
+                            gameState.pieceHistory.push({ x: boardX, y: boardY });
+                        }
+                    }
+                });
+            });
+
+            // Keep only last 5 pieces as "recent"
+            if (gameState.pieceHistory.length > 20) {
+                const oldPieces = gameState.pieceHistory.splice(0, gameState.pieceHistory.length - 20);
+                oldPieces.forEach(pos => {
+                    if (gameState.board[pos.y] && gameState.board[pos.y][pos.x]) {
+                        gameState.board[pos.y][pos.x].recent = false;
+                    }
+                });
+            }
+        }
+
+        function clearLines() {
+            let linesCleared = 0;
+            for (let y = ROWS - 1; y >= 0; y--) {
+                if (gameState.board[y].every(cell => cell.color !== null)) {
+                    gameState.board.splice(y, 1);
+                    gameState.board.unshift(Array.from({ length: COLS }, () => ({ color: null, timestamp: null, recent: false })));
+                    linesCleared++;
+                    y++;
+                }
+            }
+
+            if (linesCleared > 0) {
+                gameState.lines += linesCleared;
+                let points = linesCleared * 100;
+
+                // Archaeologist bonus
+                if (!gameState.usedSonar) {
+                    points *= 2;
+                    gameState.perfectMemory++;
+                    if (gameState.lines % 10 === 0) {
+                        showMessage('🏛️ ARCHAEOLOGIST BONUS! Perfect memory - double points!', 'archaeologist');
+                    }
+                }
+
+                gameState.score += points;
+
+                // Increase fade speed
+                gameState.fadeSpeed = Math.min(3.0, 1.0 + gameState.lines * 0.05);
+
+                updateStats();
+            }
+        }
+
+        function rotate(piece) {
+            const rotated = piece.shape[0].map((_, i) =>
+                piece.shape.map(row => row[i]).reverse()
+            );
+            return { ...piece, shape: rotated };
+        }
+
+        function moveDown() {
+            if (!gameState.piece) return;
+
+            if (!collides(gameState.piece, 0, 1)) {
+                gameState.piece.y++;
+                return true;
+            } else {
+                merge();
+                clearLines();
+                gameState.piece = createPiece();
+
+                if (collides(gameState.piece)) {
+                    gameOver();
+                    return false;
+                }
+            }
+            return false;
+        }
+
+        function hardDrop() {
+            if (!gameState.piece) return;
+
+            while (!collides(gameState.piece, 0, 1)) {
+                gameState.piece.y++;
+            }
+
+            merge();
+            clearLines();
+            gameState.piece = createPiece();
+
+            if (collides(gameState.piece)) {
+                gameOver();
+            }
+
+            updateStats();
+        }
+
+        function activateSonar() {
+            if (gameState.sonarPulses <= 0 || gameState.sonarActive) return;
+
+            gameState.sonarPulses--;
+            gameState.sonarActive = true;
+            gameState.usedSonar = true;
+
+            document.getElementById('fadeOverlay').classList.add('active');
+            document.getElementById('sonarBtn').disabled = true;
+
+            setTimeout(() => {
+                gameState.sonarActive = false;
+                document.getElementById('fadeOverlay').classList.remove('active');
+                if (gameState.sonarPulses > 0) {
+                    document.getElementById('sonarBtn').disabled = false;
+                }
+            }, 1000);
+
+            updateStats();
+        }
+
+        function showMessage(text, type) {
+            const msg = document.getElementById('message');
+            msg.textContent = text;
+            msg.className = 'message ' + type;
+            setTimeout(() => {
+                if (msg.textContent === text) {
+                    msg.textContent = 'Trust your spatial memory!';
+                    msg.className = 'message';
+                }
+            }, 3000);
+        }
+
+        function updateStats() {
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('lines').textContent = gameState.lines;
+            document.getElementById('penalties').textContent = gameState.penalties;
+            document.getElementById('perfect').textContent = gameState.perfectMemory;
+            document.getElementById('sonarCount').textContent = gameState.sonarPulses;
+
+            if (gameState.sonarPulses === 0) {
+                document.getElementById('sonarBtn').disabled = true;
+                document.getElementById('sonarBtn').textContent = '🔍 NO PULSES LEFT';
+            } else {
+                document.getElementById('sonarBtn').textContent = `🔍 ACTIVATE SONAR (${gameState.sonarPulses} left)`;
+            }
+        }
+
+        function gameOver() {
+            gameState.gameStarted = false;
+
+            const achievements = [];
+            if (!gameState.usedSonar) {
+                achievements.push('🏛️ TRUE ARCHAEOLOGIST - Never used sonar!');
+            }
+            if (gameState.penalties === 0) {
+                achievements.push('🧠 PERFECT RECALL - No memory penalties!');
+            }
+            if (gameState.lines >= 20) {
+                achievements.push('💪 MEMORY MASTER - 20+ lines cleared!');
+            }
+            if (gameState.perfectMemory >= 5) {
+                achievements.push('⭐ CONSISTENT GENIUS - 5+ perfect memory bonuses!');
+            }
+
+            document.getElementById('gameOver').style.display = 'block';
+            document.getElementById('finalScore').textContent = gameState.score;
+
+            const achievementsHtml = achievements.length > 0
+                ? `<div class="achievement"><strong>Achievements:</strong><br>${achievements.join('<br>')}</div>`
+                : '';
+
+            document.getElementById('achievements').innerHTML = achievementsHtml;
+            document.getElementById('finalStats').innerHTML = `
+                Lines Cleared: ${gameState.lines}<br>
+                Memory Penalties: ${gameState.penalties}<br>
+                Perfect Memory Bonuses: ${gameState.perfectMemory}<br>
+                Sonar Pulses Used: ${3 - gameState.sonarPulses}<br>
+                Final Fade Speed: ${gameState.fadeSpeed.toFixed(1)}x
+            `;
+        }
+
+        let dropCounter = 0;
+        let lastTime = 0;
+
+        function gameLoop(time = 0) {
+            if (!gameState.gameStarted || gameState.gamePaused) {
+                requestAnimationFrame(gameLoop);
+                return;
+            }
+
+            const deltaTime = time - lastTime;
+            lastTime = time;
+            dropCounter += deltaTime;
+
+            if (dropCounter > 1000) {
+                moveDown();
+                dropCounter = 0;
+            }
+
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Event listeners
+        document.addEventListener('keydown', (e) => {
+            if (!gameState.gameStarted || gameState.gamePaused || !gameState.piece) return;
+
+            switch(e.key.toLowerCase()) {
+                case 'arrowleft':
+                    if (!collides(gameState.piece, -1, 0)) {
+                        gameState.piece.x--;
+                    }
+                    break;
+                case 'arrowright':
+                    if (!collides(gameState.piece, 1, 0)) {
+                        gameState.piece.x++;
+                    }
+                    break;
+                case 'arrowdown':
+                    moveDown();
+                    break;
+                case 'arrowup':
+                    const rotated = rotate(gameState.piece);
+                    if (!collides(rotated)) {
+                        gameState.piece = rotated;
+                    }
+                    break;
+                case ' ':
+                    e.preventDefault();
+                    hardDrop();
+                    break;
+                case 's':
+                    e.preventDefault();
+                    activateSonar();
+                    break;
+            }
+            draw();
+        });
+
+        document.getElementById('startBtn').addEventListener('click', () => {
+            gameState = {
+                score: 0,
+                lines: 0,
+                penalties: 0,
+                perfectMemory: 0,
+                sonarPulses: 3,
+                sonarActive: false,
+                gameStarted: true,
+                gamePaused: false,
+                board: createBoard(),
+                piece: createPiece(),
+                pieceHistory: [],
+                usedSonar: false,
+                fadeSpeed: 1.0
+            };
+
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('pauseBtn').disabled = false;
+            document.getElementById('sonarBtn').disabled = false;
+            document.getElementById('gameOver').style.display = 'none';
+
+            updateStats();
+            gameLoop();
+        });
+
+        document.getElementById('pauseBtn').addEventListener('click', () => {
+            gameState.gamePaused = !gameState.gamePaused;
+            document.getElementById('pauseBtn').textContent = gameState.gamePaused ? 'Resume' : 'Pause';
+        });
+
+        document.getElementById('sonarBtn').addEventListener('click', activateSonar);
+
+        // Initial draw
+        draw();
+    </script>
+</body>
+</html>
