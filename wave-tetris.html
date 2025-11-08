@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wave Tetris - p5.js Variation</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #0575e6 0%, #021b79 100%);
+            font-family: 'Arial', sans-serif;
+        }
+        #canvas-container {
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        h1 {
+            margin: 0 0 10px 0;
+            font-size: 2em;
+        }
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            background: rgba(0,0,0,0.5);
+            padding: 15px 25px;
+            border-radius: 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="info">
+        <h1>🌊 Wave Tetris</h1>
+        <p>Score: <span id="score">0</span></p>
+        <p>Lines: <span id="lines">0</span></p>
+        <p>Level: <span id="level">1</span></p>
+    </div>
+    <div class="controls">
+        <strong>Controls:</strong> Arrow Keys to move/rotate | Space to drop | P to pause
+    </div>
+    <script>
+        const COLS = 10;
+        const ROWS = 20;
+        const BLOCK_SIZE = 30;
+
+        let grid = [];
+        let currentPiece;
+        let gameOver = false;
+        let paused = false;
+        let score = 0;
+        let lines = 0;
+        let level = 1;
+        let dropCounter = 0;
+        let dropInterval = 1000;
+        let lastTime = 0;
+        let waveOffset = 0;
+
+        const SHAPES = [
+            [[1,1,1,1]], // I
+            [[1,1],[1,1]], // O
+            [[0,1,0],[1,1,1]], // T
+            [[1,0,0],[1,1,1]], // L
+            [[0,0,1],[1,1,1]], // J
+            [[0,1,1],[1,1,0]], // S
+            [[1,1,0],[0,1,1]]  // Z
+        ];
+
+        const COLORS = [
+            [0, 255, 255],    // Cyan
+            [64, 224, 208],   // Turquoise
+            [0, 191, 255],    // Deep Sky Blue
+            [30, 144, 255],   // Dodger Blue
+            [100, 149, 237],  // Cornflower Blue
+            [135, 206, 250],  // Light Sky Blue
+            [70, 130, 180]    // Steel Blue
+        ];
+
+        class Piece {
+            constructor() {
+                this.shape = random(SHAPES);
+                this.x = Math.floor(COLS / 2) - Math.floor(this.shape[0].length / 2);
+                this.y = 0;
+                this.col = random(COLORS);
+            }
+
+            draw() {
+                push();
+
+                for (let row = 0; row < this.shape.length; row++) {
+                    for (let col = 0; col < this.shape[row].length; col++) {
+                        if (this.shape[row][col]) {
+                            let baseX = (this.x + col) * BLOCK_SIZE;
+                            let baseY = (this.y + row) * BLOCK_SIZE;
+
+                            // Apply wave distortion
+                            let waveX = sin(waveOffset + baseY * 0.1) * 10;
+                            let waveY = cos(waveOffset + baseX * 0.1) * 5;
+
+                            push();
+                            translate(baseX + waveX, baseY + waveY);
+
+                            // Draw block with gradient effect
+                            fill(this.col[0], this.col[1], this.col[2], 200);
+                            stroke(255, 255, 255, 150);
+                            strokeWeight(2);
+                            rect(0, 0, BLOCK_SIZE, BLOCK_SIZE);
+
+                            // Wave pattern inside block
+                            noStroke();
+                            for (let i = 0; i < BLOCK_SIZE; i += 2) {
+                                let alpha = map(sin(waveOffset * 2 + i * 0.3), -1, 1, 50, 150);
+                                fill(255, 255, 255, alpha);
+                                rect(i, 0, 2, BLOCK_SIZE);
+                            }
+
+                            pop();
+                        }
+                    }
+                }
+                pop();
+            }
+
+            move(dx, dy) {
+                this.x += dx;
+                this.y += dy;
+                if (this.collision()) {
+                    this.x -= dx;
+                    this.y -= dy;
+                    return false;
+                }
+                return true;
+            }
+
+            rotate() {
+                const newShape = this.shape[0].map((_, i) =>
+                    this.shape.map(row => row[i]).reverse()
+                );
+                const oldShape = this.shape;
+                this.shape = newShape;
+                if (this.collision()) {
+                    this.shape = oldShape;
+                }
+            }
+
+            collision() {
+                for (let row = 0; row < this.shape.length; row++) {
+                    for (let col = 0; col < this.shape[row].length; col++) {
+                        if (this.shape[row][col]) {
+                            let newX = this.x + col;
+                            let newY = this.y + row;
+                            if (newX < 0 || newX >= COLS || newY >= ROWS) {
+                                return true;
+                            }
+                            if (newY >= 0 && grid[newY][newX]) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+                return false;
+            }
+
+            lock() {
+                for (let row = 0; row < this.shape.length; row++) {
+                    for (let col = 0; col < this.shape[row].length; col++) {
+                        if (this.shape[row][col]) {
+                            let newY = this.y + row;
+                            let newX = this.x + col;
+                            if (newY >= 0) {
+                                grid[newY][newX] = this.col;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        function setup() {
+            let canvas = createCanvas(COLS * BLOCK_SIZE + 100, ROWS * BLOCK_SIZE);
+            canvas.parent('canvas-container');
+
+            for (let i = 0; i < ROWS; i++) {
+                grid[i] = Array(COLS).fill(0);
+            }
+
+            currentPiece = new Piece();
+            frameRate(60);
+        }
+
+        function draw() {
+            if (!gameOver && !paused) {
+                let now = millis();
+                let deltaTime = now - lastTime;
+                lastTime = now;
+
+                dropCounter += deltaTime;
+                if (dropCounter > dropInterval) {
+                    if (!currentPiece.move(0, 1)) {
+                        currentPiece.lock();
+                        clearLines();
+                        currentPiece = new Piece();
+                        if (currentPiece.collision()) {
+                            gameOver = true;
+                        }
+                    }
+                    dropCounter = 0;
+                }
+            }
+
+            // Update wave offset
+            waveOffset += 0.05;
+
+            // Draw ocean background
+            drawOceanBackground();
+
+            push();
+            translate(50, 0);
+
+            // Draw grid with wave effects
+            for (let row = 0; row < ROWS; row++) {
+                for (let col = 0; col < COLS; col++) {
+                    let baseX = col * BLOCK_SIZE;
+                    let baseY = row * BLOCK_SIZE;
+
+                    // Wave distortion
+                    let waveX = sin(waveOffset + baseY * 0.1) * 10;
+                    let waveY = cos(waveOffset + baseX * 0.1) * 5;
+
+                    if (grid[row][col]) {
+                        push();
+                        translate(baseX + waveX, baseY + waveY);
+
+                        fill(grid[row][col][0], grid[row][col][1], grid[row][col][2]);
+                        stroke(255, 255, 255, 150);
+                        strokeWeight(2);
+                        rect(0, 0, BLOCK_SIZE, BLOCK_SIZE);
+
+                        // Wave pattern
+                        noStroke();
+                        for (let i = 0; i < BLOCK_SIZE; i += 2) {
+                            let alpha = map(sin(waveOffset * 2 + i * 0.3), -1, 1, 50, 150);
+                            fill(255, 255, 255, alpha);
+                            rect(i, 0, 2, BLOCK_SIZE);
+                        }
+
+                        pop();
+                    } else {
+                        push();
+                        translate(baseX + waveX, baseY + waveY);
+                        stroke(100, 150, 255, 80);
+                        strokeWeight(1);
+                        noFill();
+                        rect(0, 0, BLOCK_SIZE, BLOCK_SIZE);
+                        pop();
+                    }
+                }
+            }
+
+            // Draw current piece
+            if (!gameOver && currentPiece) {
+                currentPiece.draw();
+            }
+
+            pop();
+
+            // Game over overlay
+            if (gameOver) {
+                fill(0, 0, 0, 200);
+                rect(0, height/2 - 50, width, 100);
+                fill(255);
+                textAlign(CENTER, CENTER);
+                textSize(32);
+                text('GAME OVER', width/2, height/2 - 20);
+                textSize(16);
+                text('Press R to restart', width/2, height/2 + 20);
+            }
+
+            if (paused) {
+                fill(0, 0, 0, 150);
+                rect(0, height/2 - 40, width, 80);
+                fill(255);
+                textAlign(CENTER, CENTER);
+                textSize(32);
+                text('PAUSED', width/2, height/2);
+            }
+        }
+
+        function drawOceanBackground() {
+            // Gradient background
+            for (let y = 0; y < height; y++) {
+                let inter = map(y, 0, height, 0, 1);
+                let c = lerpColor(color(5, 117, 230), color(2, 27, 121), inter);
+                stroke(c);
+                line(0, y, width, y);
+            }
+
+            // Animated waves in background
+            noFill();
+            for (let i = 0; i < 5; i++) {
+                stroke(255, 255, 255, 30 - i * 5);
+                strokeWeight(2);
+                beginShape();
+                for (let x = 0; x < width; x += 5) {
+                    let y = height * 0.3 + sin(waveOffset * 0.5 + x * 0.02 + i) * 30;
+                    vertex(x, y);
+                }
+                endShape();
+            }
+        }
+
+        function clearLines() {
+            let linesCleared = 0;
+            for (let row = ROWS - 1; row >= 0; row--) {
+                if (grid[row].every(cell => cell !== 0)) {
+                    grid.splice(row, 1);
+                    grid.unshift(Array(COLS).fill(0));
+                    linesCleared++;
+                    row++;
+                }
+            }
+            if (linesCleared > 0) {
+                lines += linesCleared;
+                score += linesCleared * linesCleared * 100 * level;
+                level = Math.floor(lines / 10) + 1;
+                dropInterval = Math.max(100, 1000 - (level - 1) * 100);
+
+                document.getElementById('score').textContent = score;
+                document.getElementById('lines').textContent = lines;
+                document.getElementById('level').textContent = level;
+            }
+        }
+
+        function keyPressed() {
+            if (gameOver && key === 'r') {
+                resetGame();
+                return;
+            }
+
+            if (key === 'p' || key === 'P') {
+                paused = !paused;
+                return;
+            }
+
+            if (paused || gameOver) return;
+
+            if (keyCode === LEFT_ARROW) {
+                currentPiece.move(-1, 0);
+            } else if (keyCode === RIGHT_ARROW) {
+                currentPiece.move(1, 0);
+            } else if (keyCode === DOWN_ARROW) {
+                if (currentPiece.move(0, 1)) {
+                    score += 1;
+                    document.getElementById('score').textContent = score;
+                }
+            } else if (keyCode === UP_ARROW) {
+                currentPiece.rotate();
+            } else if (key === ' ') {
+                while (currentPiece.move(0, 1)) {
+                    score += 2;
+                }
+                document.getElementById('score').textContent = score;
+            }
+        }
+
+        function resetGame() {
+            grid = [];
+            for (let i = 0; i < ROWS; i++) {
+                grid[i] = Array(COLS).fill(0);
+            }
+            currentPiece = new Piece();
+            gameOver = false;
+            paused = false;
+            score = 0;
+            lines = 0;
+            level = 1;
+            dropCounter = 0;
+            dropInterval = 1000;
+            waveOffset = 0;
+
+            document.getElementById('score').textContent = score;
+            document.getElementById('lines').textContent = lines;
+            document.getElementById('level').textContent = level;
+        }
+    </script>
+</body>
+</html>

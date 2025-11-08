@@ -2,6 +2,14 @@
 
 This repository contains interactive games exploring different concepts:
 
+**Contents:**
+- 🎮 Classic Tetris - Traditional gameplay
+- 🎮🧠 Language Games Tetris - Philosophy meets classic gameplay
+- 🎨 10 p5.js Artistic Variations - Creative coding experiments
+- 🧠 Wittgenstein's Language Games Collection - Educational philosophy games
+
+---
+
 ## 🎮 Classic Tetris
 A classic Tetris implementation with smooth controls and scoring.
 
@@ -56,6 +64,165 @@ The perfect fusion: Tetris mechanics meet Wittgenstein's philosophy! Play Tetris
 - Forms of life shape how we interpret and use language
 
 **Difficulty:** Familiar Tetris gameplay with philosophical depth
+
+---
+
+## 🎨 p5.js Tetris Variations
+
+A collection of 10 artistic and algorithmic Tetris variations built with p5.js, each exploring different visual effects and creative coding techniques.
+
+### 🌈 Rainbow Tetris
+**File:** `rainbow-tetris.html`
+
+Experience Tetris with vibrant rainbow trails that follow falling pieces.
+
+**Features:**
+- HSB color cycling through the spectrum
+- Smooth trailing effects with alpha decay
+- Each piece gets a unique hue that rotates through the rainbow
+- Glowing inner effects for visual depth
+
+---
+
+### ✨ Particle Tetris
+**File:** `particle-tetris.html`
+
+Tetris pieces made entirely of swirling particle systems.
+
+**Features:**
+- Each block contains 20+ animated particles
+- Particles swirl and orbit within blocks
+- Explosive particle effects on line clears
+- Deep space aesthetic with particle trails
+
+---
+
+### 🌍 Gravity Tetris
+**File:** `gravity-tetris.html`
+
+Physics-based Tetris where blocks bounce and settle with realistic gravity.
+
+**Features:**
+- Blocks bounce when landing with squash/stretch effects
+- Realistic gravity and damping simulation
+- Wobble animations during descent
+- Physics-based settling creates dynamic gameplay
+
+---
+
+### 🌀 Spiral Tetris
+**File:** `spiral-tetris.html`
+
+The entire game board rotates in a mesmerizing spiral motion.
+
+**Features:**
+- Continuous gentle rotation of the play field
+- Rotation accelerates when clearing lines or rotating pieces
+- Spiral background pattern animations
+- Pulsing piece effects synced to rotation
+
+---
+
+### 🌊 Wave Tetris
+**File:** `wave-tetris.html`
+
+Sine wave distortions ripple through the game board like water.
+
+**Features:**
+- Horizontal and vertical wave distortions
+- Ocean-themed gradient background
+- Animated wave patterns in the background
+- Striped wave effects within each block
+
+---
+
+### 🔺 Fractal Tetris
+**File:** `fractal-tetris.html`
+
+Pieces rendered with beautiful fractal patterns.
+
+**Features:**
+- Three fractal types: recursive trees, Sierpinski triangles, Mandelbrot sets
+- Each piece randomly assigned a fractal pattern
+- Mathematical beauty meets classic gameplay
+- Fractal background decorations
+
+---
+
+### 🎵 Sound Reactive Tetris
+**File:** `sound-reactive-tetris.html`
+
+Visual effects that respond to microphone input and audio levels.
+
+**Features:**
+- Blocks pulse and glow with audio amplitude
+- Circular audio visualizer with rotating elements
+- Background colors shift with sound levels
+- Click to enable microphone input
+
+---
+
+### 🪞 Mirror Tetris
+**File:** `mirror-tetris.html`
+
+Control two symmetrical boards simultaneously!
+
+**Features:**
+- Two parallel game boards
+- Mirror pieces that move in sync
+- Clear lines on both boards for massive scores
+- Increased challenge managing dual play fields
+
+---
+
+### 💧 Liquid Tetris
+**File:** `liquid-tetris.html`
+
+Pieces behave like liquid blobs with fluid simulation.
+
+**Features:**
+- Organic wobbling blob shapes instead of rigid blocks
+- Dripping particle effects as pieces fall
+- Splash animations on landing and line clears
+- Smooth liquid-like deformations
+
+---
+
+### ⚡ Glitch Tetris
+**File:** `glitch-tetris.html`
+
+Retro glitch art aesthetic with digital corruption effects.
+
+**Features:**
+- RGB channel separation and chromatic aberration
+- Scanline and CRT screen effects
+- Random screen glitches and artifacts
+- VHS-style visual noise
+- Glitch intensity spikes on rotations and line clears
+
+---
+
+## 🎯 p5.js Variations Play Order
+
+**For Visual Artists:**
+1. **Fractal Tetris** - Mathematical beauty
+2. **Liquid Tetris** - Organic fluid motion
+3. **Particle Tetris** - Dynamic particle systems
+
+**For Music Lovers:**
+- **Sound Reactive Tetris** - Interactive audio visualization
+
+**For Challenge Seekers:**
+- **Mirror Tetris** - Double the boards, double the challenge
+- **Spiral Tetris** - Rotating perspective adds complexity
+
+**For Aesthetic Vibes:**
+- **Rainbow Tetris** - Colorful and smooth
+- **Wave Tetris** - Ocean-inspired zen
+- **Glitch Tetris** - Retro cyberpunk aesthetic
+
+**For Physics Fans:**
+- **Gravity Tetris** - Realistic bouncing and physics
 
 ---
 
@@ -177,7 +344,7 @@ The comprehensive introduction to language games, featuring four distinct worlds
 
 ## 🎯 Recommended Play Order
 
-**For Educational Journey:**
+**For Educational Journey (Philosophy Focus):**
 1. **Context Shift** - Start here to grasp the basic idea
 2. **The Builder's Apprentice** - Experience primitive language learning
 3. **Language Games Adventure** - Get the comprehensive overview
@@ -187,6 +354,10 @@ The comprehensive introduction to language games, featuring four distinct worlds
 **For Fun with Philosophy:**
 - **Language Games Tetris** - Perfect entry point! Familiar gameplay with philosophical depth
 - Or play it after completing the educational games to see concepts applied to Tetris
+
+**For Creative Coding & Art:**
+- **p5.js Tetris Variations** - 10 artistic interpretations exploring visual effects, physics, and algorithmic art
+- Great for programmers, artists, and anyone who enjoys creative coding
 
 **For Classic Gaming:**
 - **Classic Tetris** - Pure block-stacking fun without philosophy

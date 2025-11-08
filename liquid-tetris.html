@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Liquid Tetris - p5.js Variation</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1e9600 0%, #007700 100%);
+            font-family: 'Arial', sans-serif;
+        }
+        #canvas-container {
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        h1 {
+            margin: 0 0 10px 0;
+            font-size: 2em;
+        }
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            background: rgba(0,0,0,0.5);
+            padding: 15px 25px;
+            border-radius: 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="info">
+        <h1>💧 Liquid Tetris</h1>
+        <p>Score: <span id="score">0</span></p>
+        <p>Lines: <span id="lines">0</span></p>
+        <p>Level: <span id="level">1</span></p>
+    </div>
+    <div class="controls">
+        <strong>Controls:</strong> Arrow Keys to move/rotate | Space to drop | P to pause
+    </div>
+    <script>
+        const COLS = 10;
+        const ROWS = 20;
+        const BLOCK_SIZE = 30;
+
+        let grid = [];
+        let liquidDrops = [];
+        let currentPiece;
+        let gameOver = false;
+        let paused = false;
+        let score = 0;
+        let lines = 0;
+        let level = 1;
+        let dropCounter = 0;
+        let dropInterval = 1000;
+        let lastTime = 0;
+
+        const SHAPES = [
+            [[1,1,1,1]], // I
+            [[1,1],[1,1]], // O
+            [[0,1,0],[1,1,1]], // T
+            [[1,0,0],[1,1,1]], // L
+            [[0,0,1],[1,1,1]], // J
+            [[0,1,1],[1,1,0]], // S
+            [[1,1,0],[0,1,1]]  // Z
+        ];
+
+        const COLORS = [
+            [0, 191, 255],    // Deep Sky Blue
+            [64, 224, 208],   // Turquoise
+            [0, 255, 255],    // Cyan
+            [127, 255, 212],  // Aquamarine
+            [72, 209, 204],   // Medium Turquoise
+            [32, 178, 170],   // Light Sea Green
+            [0, 206, 209]     // Dark Turquoise
+        ];
+
+        class LiquidDrop {
+            constructor(x, y, col) {
+                this.x = x;
+                this.y = y;
+                this.col = col;
+                this.vy = random(1, 3);
+                this.vx = random(-0.5, 0.5);
+                this.size = random(5, 15);
+                this.alpha = 255;
+            }
+
+            update() {
+                this.vy += 0.2; // Gravity
+                this.y += this.vy;
+                this.x += this.vx;
+
+                // Check if reached bottom
+                let gridY = floor(this.y / BLOCK_SIZE);
+                let gridX = floor(this.x / BLOCK_SIZE);
+
+                if (gridY >= 0 && gridY < ROWS && gridX >= 0 && gridX < COLS) {
+                    if (gridY === ROWS - 1 || (gridY < ROWS - 1 && grid[gridY + 1][gridX])) {
+                        this.vy *= -0.3; // Bounce
+                        this.vx *= 0.8;
+                        if (abs(this.vy) < 0.5) {
+                            this.alpha -= 5;
+                        }
+                    }
+                }
+
+                if (this.y > height) {
+                    this.alpha = 0;
+                }
+            }
+
+            display() {
+                push();
+                noStroke();
+                fill(this.col[0], this.col[1], this.col[2], this.alpha);
+
+                // Main drop
+                circle(this.x, this.y, this.size);
+
+                // Highlight
+                fill(255, 255, 255, this.alpha * 0.5);
+                circle(this.x - this.size/4, this.y - this.size/4, this.size/2);
+
+                pop();
+            }
+
+            isDead() {
+                return this.alpha <= 0;
+            }
+        }
+
+        class Piece {
+            constructor() {
+                this.shape = random(SHAPES);
+                this.x = Math.floor(COLS / 2) - Math.floor(this.shape[0].length / 2);
+                this.y = 0;
+                this.col = random(COLORS);
+                this.liquidOffset = random(100);
+            }
+
+            draw() {
+                push();
+
+                for (let row = 0; row < this.shape.length; row++) {
+                    for (let col = 0; col < this.shape[row].length; col++) {
+                        if (this.shape[row][col]) {
+                            let px = (this.x + col) * BLOCK_SIZE;
+                            let py = (this.y + row) * BLOCK_SIZE;
+
+                            // Draw liquid block with wobble
+                            push();
+                            translate(px + BLOCK_SIZE/2, py + BLOCK_SIZE/2);
+
+                            // Create liquid blob shape
+                            fill(this.col[0], this.col[1], this.col[2], 200);
+                            stroke(this.col[0], this.col[1], this.col[2]);
+                            strokeWeight(2);
+
+                            beginShape();
+                            for (let a = 0; a < TWO_PI; a += 0.3) {
+                                let offset = sin(frameCount * 0.05 + a * 3 + this.liquidOffset) * 3;
+                                let r = BLOCK_SIZE/2 + offset;
+                                let x = cos(a) * r;
+                                let y = sin(a) * r;
+                                vertex(x, y);
+                            }
+                            endShape(CLOSE);
+
+                            // Inner liquid highlight
+                            noStroke();
+                            fill(255, 255, 255, 100);
+                            beginShape();
+                            for (let a = 0; a < TWO_PI; a += 0.5) {
+                                let offset = sin(frameCount * 0.05 + a * 3 + this.liquidOffset) * 2;
+                                let r = BLOCK_SIZE/4 + offset;
+                                let x = cos(a) * r - BLOCK_SIZE/6;
+                                let y = sin(a) * r - BLOCK_SIZE/6;
+                                vertex(x, y);
+                            }
+                            endShape(CLOSE);
+
+                            pop();
+
+                            // Dripping effect
+                            if (random(1) < 0.05) {
+                                liquidDrops.push(new LiquidDrop(
+                                    px + BLOCK_SIZE/2,
+                                    py + BLOCK_SIZE,
+                                    this.col
+                                ));
+                            }
+                        }
+                    }
+                }
+                pop();
+            }
+
+            move(dx, dy) {
+                this.x += dx;
+                this.y += dy;
+                if (this.collision()) {
+                    this.x -= dx;
+                    this.y -= dy;
+                    return false;
+                }
+                return true;
+            }
+
+            rotate() {
+                const newShape = this.shape[0].map((_, i) =>
+                    this.shape.map(row => row[i]).reverse()
+                );
+                const oldShape = this.shape;
+                this.shape = newShape;
+                if (this.collision()) {
+                    this.shape = oldShape;
+                }
+            }
+
+            collision() {
+                for (let row = 0; row < this.shape.length; row++) {
+                    for (let col = 0; col < this.shape[row].length; col++) {
+                        if (this.shape[row][col]) {
+                            let newX = this.x + col;
+                            let newY = this.y + row;
+                            if (newX < 0 || newX >= COLS || newY >= ROWS) {
+                                return true;
+                            }
+                            if (newY >= 0 && grid[newY][newX]) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+                return false;
+            }
+
+            lock() {
+                for (let row = 0; row < this.shape.length; row++) {
+                    for (let col = 0; col < this.shape[row].length; col++) {
+                        if (this.shape[row][col]) {
+                            let newY = this.y + row;
+                            let newX = this.x + col;
+                            if (newY >= 0) {
+                                grid[newY][newX] = {
+                                    col: this.col,
+                                    liquidOffset: random(100)
+                                };
+
+                                // Create splash
+                                for (let i = 0; i < 20; i++) {
+                                    liquidDrops.push(new LiquidDrop(
+                                        newX * BLOCK_SIZE + BLOCK_SIZE/2,
+                                        newY * BLOCK_SIZE + BLOCK_SIZE/2,
+                                        this.col
+                                    ));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        function setup() {
+            let canvas = createCanvas(COLS * BLOCK_SIZE, ROWS * BLOCK_SIZE);
+            canvas.parent('canvas-container');
+
+            for (let i = 0; i < ROWS; i++) {
+                grid[i] = Array(COLS).fill(0);
+            }
+
+            currentPiece = new Piece();
+            frameRate(60);
+        }
+
+        function draw() {
+            if (!gameOver && !paused) {
+                let now = millis();
+                let deltaTime = now - lastTime;
+                lastTime = now;
+
+                dropCounter += deltaTime;
+                if (dropCounter > dropInterval) {
+                    if (!currentPiece.move(0, 1)) {
+                        currentPiece.lock();
+                        clearLines();
+                        currentPiece = new Piece();
+                        if (currentPiece.collision()) {
+                            gameOver = true;
+                        }
+                    }
+                    dropCounter = 0;
+                }
+            }
+
+            // Draw background
+            background(10, 60, 40);
+
+            // Update and draw liquid drops
+            for (let i = liquidDrops.length - 1; i >= 0; i--) {
+                liquidDrops[i].update();
+                liquidDrops[i].display();
+                if (liquidDrops[i].isDead()) {
+                    liquidDrops.splice(i, 1);
+                }
+            }
+
+            // Draw grid with liquid effect
+            for (let row = 0; row < ROWS; row++) {
+                for (let col = 0; col < COLS; col++) {
+                    let px = col * BLOCK_SIZE;
+                    let py = row * BLOCK_SIZE;
+
+                    if (grid[row][col]) {
+                        let cell = grid[row][col];
+
+                        push();
+                        translate(px + BLOCK_SIZE/2, py + BLOCK_SIZE/2);
+
+                        // Liquid blob
+                        fill(cell.col[0], cell.col[1], cell.col[2]);
+                        stroke(cell.col[0], cell.col[1], cell.col[2]);
+                        strokeWeight(2);
+
+                        beginShape();
+                        for (let a = 0; a < TWO_PI; a += 0.3) {
+                            let offset = sin(frameCount * 0.05 + a * 3 + cell.liquidOffset) * 3;
+                            let r = BLOCK_SIZE/2 + offset;
+                            let x = cos(a) * r;
+                            let y = sin(a) * r;
+                            vertex(x, y);
+                        }
+                        endShape(CLOSE);
+
+                        // Highlight
+                        noStroke();
+                        fill(255, 255, 255, 100);
+                        beginShape();
+                        for (let a = 0; a < TWO_PI; a += 0.5) {
+                            let offset = sin(frameCount * 0.05 + a * 3 + cell.liquidOffset) * 2;
+                            let r = BLOCK_SIZE/4 + offset;
+                            let x = cos(a) * r - BLOCK_SIZE/6;
+                            let y = sin(a) * r - BLOCK_SIZE/6;
+                            vertex(x, y);
+                        }
+                        endShape(CLOSE);
+
+                        pop();
+                    } else {
+                        stroke(50, 100, 70, 50);
+                        strokeWeight(1);
+                        noFill();
+                        rect(px, py, BLOCK_SIZE, BLOCK_SIZE);
+                    }
+                }
+            }
+
+            // Draw current piece
+            if (!gameOver && currentPiece) {
+                currentPiece.draw();
+            }
+
+            // Game over overlay
+            if (gameOver) {
+                fill(0, 0, 0, 200);
+                rect(0, height/2 - 50, width, 100);
+                fill(255);
+                textAlign(CENTER, CENTER);
+                textSize(32);
+                text('GAME OVER', width/2, height/2 - 20);
+                textSize(16);
+                text('Press R to restart', width/2, height/2 + 20);
+            }
+
+            if (paused) {
+                fill(0, 0, 0, 150);
+                rect(0, height/2 - 40, width, 80);
+                fill(255);
+                textAlign(CENTER, CENTER);
+                textSize(32);
+                text('PAUSED', width/2, height/2);
+            }
+        }
+
+        function clearLines() {
+            let linesCleared = 0;
+            for (let row = ROWS - 1; row >= 0; row--) {
+                if (grid[row].every(cell => cell !== 0)) {
+                    // Create big splash
+                    for (let col = 0; col < COLS; col++) {
+                        for (let i = 0; i < 30; i++) {
+                            liquidDrops.push(new LiquidDrop(
+                                col * BLOCK_SIZE + BLOCK_SIZE/2,
+                                row * BLOCK_SIZE + BLOCK_SIZE/2,
+                                grid[row][col].col
+                            ));
+                        }
+                    }
+
+                    grid.splice(row, 1);
+                    grid.unshift(Array(COLS).fill(0));
+                    linesCleared++;
+                    row++;
+                }
+            }
+            if (linesCleared > 0) {
+                lines += linesCleared;
+                score += linesCleared * linesCleared * 100 * level;
+                level = Math.floor(lines / 10) + 1;
+                dropInterval = Math.max(100, 1000 - (level - 1) * 100);
+
+                document.getElementById('score').textContent = score;
+                document.getElementById('lines').textContent = lines;
+                document.getElementById('level').textContent = level;
+            }
+        }
+
+        function keyPressed() {
+            if (gameOver && key === 'r') {
+                resetGame();
+                return;
+            }
+
+            if (key === 'p' || key === 'P') {
+                paused = !paused;
+                return;
+            }
+
+            if (paused || gameOver) return;
+
+            if (keyCode === LEFT_ARROW) {
+                currentPiece.move(-1, 0);
+            } else if (keyCode === RIGHT_ARROW) {
+                currentPiece.move(1, 0);
+            } else if (keyCode === DOWN_ARROW) {
+                if (currentPiece.move(0, 1)) {
+                    score += 1;
+                    document.getElementById('score').textContent = score;
+                }
+            } else if (keyCode === UP_ARROW) {
+                currentPiece.rotate();
+            } else if (key === ' ') {
+                while (currentPiece.move(0, 1)) {
+                    score += 2;
+                }
+                document.getElementById('score').textContent = score;
+            }
+        }
+
+        function resetGame() {
+            grid = [];
+            for (let i = 0; i < ROWS; i++) {
+                grid[i] = Array(COLS).fill(0);
+            }
+            liquidDrops = [];
+            currentPiece = new Piece();
+            gameOver = false;
+            paused = false;
+            score = 0;
+            lines = 0;
+            level = 1;
+            dropCounter = 0;
+            dropInterval = 1000;
+
+            document.getElementById('score').textContent = score;
+            document.getElementById('lines').textContent = lines;
+            document.getElementById('level').textContent = level;
+        }
+    </script>
+</body>
+</html>
