@@ -7,58 +7,30 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
     <style>
         body {
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
+            margin: 0; padding: 0; display: flex;
+            justify-content: center; align-items: center; min-height: 100vh;
             background: linear-gradient(135deg, #1a0033 0%, #4a0080 50%, #8000ff 100%);
-            font-family: 'Courier New', monospace;
-            color: white;
+            font-family: 'Courier New', monospace; color: white;
         }
         #info-panel {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 20px;
-            border-radius: 10px;
-            border: 2px solid #8000ff;
-            max-width: 300px;
+            position: absolute; top: 20px; right: 20px;
+            background: rgba(0, 0, 0, 0.7); padding: 20px;
+            border-radius: 10px; border: 2px solid #8000ff; max-width: 300px;
         }
-        h1 {
-            margin: 0 0 10px 0;
-            font-size: 24px;
-            color: #ff00ff;
-            text-shadow: 0 0 10px #ff00ff;
+        h1 { margin: 0 0 10px 0; font-size: 24px; color: #ff00ff; text-shadow: 0 0 10px #ff00ff; }
+        .stat { margin: 8px 0; font-size: 16px; }
+        .label { color: #aaaaff; }
+        .value { color: #00ffff; font-weight: bold; }
+        .instructions { margin-top: 15px; font-size: 12px; color: #cccccc; border-top: 1px solid #8000ff; padding-top: 10px; }
+        .quantum-info { margin-top: 15px; font-size: 11px; color: #ffaaff; border-top: 1px solid #8000ff; padding-top: 10px; font-style: italic; }
+        .prediction-feedback {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px; font-weight: bold;
+            pointer-events: none; opacity: 0;
+            transition: opacity 0.3s;
         }
-        .stat {
-            margin: 8px 0;
-            font-size: 16px;
-        }
-        .label {
-            color: #aaaaff;
-        }
-        .value {
-            color: #00ffff;
-            font-weight: bold;
-        }
-        .instructions {
-            margin-top: 15px;
-            font-size: 12px;
-            color: #cccccc;
-            border-top: 1px solid #8000ff;
-            padding-top: 10px;
-        }
-        .quantum-info {
-            margin-top: 15px;
-            font-size: 11px;
-            color: #ffaaff;
-            border-top: 1px solid #8000ff;
-            padding-top: 10px;
-            font-style: italic;
-        }
+        .prediction-feedback.show { opacity: 1; }
     </style>
 </head>
 <body>
@@ -69,149 +41,113 @@
         <div class="stat"><span class="label">Level:</span> <span class="value" id="level">1</span></div>
         <div class="stat"><span class="label">Predictions:</span> <span class="value" id="predictions">0</span></div>
         <div class="stat"><span class="label">Multiplier:</span> <span class="value" id="multiplier">×1</span></div>
+        <div class="stat"><span class="label">Accuracy:</span> <span class="value" id="accuracy">0%</span></div>
         <div class="instructions">
             <strong>Controls:</strong><br>
-            ← → Move<br>
-            ↑ Rotate (↑ probability)<br>
-            ↓ Soft Drop<br>
-            Space: Hard Drop<br>
-            1-7: Predict shape
+            ← → Move | ↑ Rotate (changes probability)<br>
+            ↓ Soft Drop | Space: Hard Drop<br>
+            1-7: Predict shape (I O T S Z J L)<br>
+            P: Pause | R: Restart (when game over)
         </div>
         <div class="quantum-info">
-            Pieces exist in superposition until placed. Rotate to shift probabilities. Predict correctly to earn multipliers!
+            Pieces exist in superposition until placed. Rotate to shift probabilities toward I-piece. Predict correctly to earn multipliers!
         </div>
     </div>
+    <div id="prediction-feedback" class="prediction-feedback"></div>
 
     <script>
-        const COLS = 10;
-        const ROWS = 20;
-        const BLOCK_SIZE = 30;
-        const FALL_SPEED_BASE = 800;
+        const COLS = 10, ROWS = 20, BLOCK_SIZE = 30, FALL_SPEED_BASE = 800;
 
         const SHAPES = [
-            [[1,1,1,1]], // I
-            [[1,1],[1,1]], // O
-            [[0,1,0],[1,1,1]], // T
-            [[1,1,0],[0,1,1]], // S
-            [[0,1,1],[1,1,0]], // Z
-            [[1,0,0],[1,1,1]], // J
-            [[0,0,1],[1,1,1]]  // L
+            [[1,1,1,1]], [[1,1],[1,1]], [[0,1,0],[1,1,1]],
+            [[1,1,0],[0,1,1]], [[0,1,1],[1,1,0]],
+            [[1,0,0],[1,1,1]], [[0,0,1],[1,1,1]]
         ];
 
         const COLORS = [
-            [0, 255, 255],   // I - cyan
-            [255, 255, 0],   // O - yellow
-            [128, 0, 128],   // T - purple
-            [0, 255, 0],     // S - green
-            [255, 0, 0],     // Z - red
-            [0, 0, 255],     // J - blue
-            [255, 127, 0]    // L - orange
+            [0, 255, 255], [255, 255, 0], [128, 0, 128],
+            [0, 255, 0], [255, 0, 0], [0, 0, 255], [255, 127, 0]
         ];
 
-        let board = [];
-        let currentPiece = null;
-        let currentX = 0;
-        let currentY = 0;
-        let lastFall = 0;
-        let gameOver = false;
-        let score = 0;
-        let linesCleared = 0;
-        let level = 1;
-        let predictions = 0;
-        let multiplier = 1;
-        let rotationCount = 0;
-        let predictedShape = -1;
-
-        // Quantum state - probabilities for each shape
+        let board = [], currentPiece = null, currentX = 0, currentY = 0;
+        let lastFall = 0, gameOver = false, paused = false;
+        let score = 0, linesCleared = 0, level = 1;
+        let predictions = 0, correctPredictions = 0, multiplier = 1;
+        let rotationCount = 0, predictedShape = -1;
         let probabilities = [1/7, 1/7, 1/7, 1/7, 1/7, 1/7, 1/7];
+        let predictionFeedbackTime = 0;
 
         function setup() {
             createCanvas(COLS * BLOCK_SIZE + 200, ROWS * BLOCK_SIZE + 100);
-
-            // Initialize board
-            for (let y = 0; y < ROWS; y++) {
-                board[y] = [];
-                for (let x = 0; x < COLS; x++) {
-                    board[y][x] = null;
-                }
-            }
-
+            for (let y = 0; y < ROWS; y++) board[y] = Array(COLS).fill(null);
             spawnPiece();
         }
 
         function draw() {
             background(20, 0, 40);
 
-            // Draw board grid
-            stroke(80, 0, 120);
-            strokeWeight(1);
-            for (let x = 0; x <= COLS; x++) {
-                line(x * BLOCK_SIZE, 0, x * BLOCK_SIZE, ROWS * BLOCK_SIZE);
-            }
-            for (let y = 0; y <= ROWS; y++) {
-                line(0, y * BLOCK_SIZE, COLS * BLOCK_SIZE, y * BLOCK_SIZE);
+            if (paused && !gameOver) {
+                drawPaused();
+                return;
             }
 
-            // Draw placed blocks
+            // Grid
+            stroke(80, 0, 120); strokeWeight(1);
+            for (let x = 0; x <= COLS; x++) line(x * BLOCK_SIZE, 0, x * BLOCK_SIZE, ROWS * BLOCK_SIZE);
+            for (let y = 0; y <= ROWS; y++) line(0, y * BLOCK_SIZE, COLS * BLOCK_SIZE, y * BLOCK_SIZE);
+
+            // Board
             for (let y = 0; y < ROWS; y++) {
                 for (let x = 0; x < COLS; x++) {
-                    if (board[y][x] !== null) {
-                        drawBlock(x, y, board[y][x], 255);
-                    }
+                    if (board[y][x] !== null) drawBlock(x, y, board[y][x], 255);
                 }
             }
 
-            // Draw current piece in superposition
+            // Current piece in superposition
             if (currentPiece && !gameOver) {
                 drawSuperposition();
+                drawProbabilityBars();
             }
 
-            // Draw probability bars
-            drawProbabilityBars();
+            // Prediction feedback
+            if (millis() - predictionFeedbackTime < 800) {
+                let alpha = map(millis() - predictionFeedbackTime, 0, 800, 255, 0);
+                let feedback = document.getElementById('prediction-feedback');
+                feedback.style.opacity = alpha / 255;
+            }
 
             // Auto-fall
             if (millis() - lastFall > FALL_SPEED_BASE / level && !gameOver) {
-                moveDown();
-                lastFall = millis();
+                moveDown(); lastFall = millis();
             }
 
-            if (gameOver) {
-                drawGameOver();
-            }
+            if (gameOver) drawGameOver();
         }
 
         function drawBlock(x, y, colorIndex, alpha) {
             let col = COLORS[colorIndex];
             fill(col[0], col[1], col[2], alpha);
-            stroke(255, 255, 255, alpha);
-            strokeWeight(2);
+            stroke(255, 255, 255, alpha); strokeWeight(2);
             rect(x * BLOCK_SIZE + 2, y * BLOCK_SIZE + 2, BLOCK_SIZE - 4, BLOCK_SIZE - 4, 3);
-
-            // Glow effect
-            noStroke();
-            fill(col[0], col[1], col[2], alpha * 0.3);
+            noStroke(); fill(col[0], col[1], col[2], alpha * 0.3);
             rect(x * BLOCK_SIZE + 2, y * BLOCK_SIZE + 2, BLOCK_SIZE - 4, BLOCK_SIZE - 4, 3);
         }
 
         function drawSuperposition() {
-            // Draw all possible shapes as ghostly overlays
+            // Draw all possible shapes with alpha based on probability
             for (let shapeIndex = 0; shapeIndex < SHAPES.length; shapeIndex++) {
                 let alpha = probabilities[shapeIndex] * 200 + 30;
                 let shape = SHAPES[shapeIndex];
 
                 for (let y = 0; y < shape.length; y++) {
                     for (let x = 0; x < shape[y].length; x++) {
-                        if (shape[y][x]) {
-                            drawBlock(currentX + x, currentY + y, shapeIndex, alpha);
-                        }
+                        if (shape[y][x]) drawBlock(currentX + x, currentY + y, shapeIndex, alpha);
                     }
                 }
             }
 
-            // Draw quantum wave effect
-            noFill();
-            stroke(255, 0, 255, 100 + sin(frameCount * 0.1) * 100);
-            strokeWeight(2);
+            // Quantum wave effect
+            noFill(); stroke(255, 0, 255, 100 + sin(frameCount * 0.1) * 100); strokeWeight(2);
             let centerX = (currentX + 1.5) * BLOCK_SIZE;
             let centerY = (currentY + 1) * BLOCK_SIZE;
             for (let i = 0; i < 3; i++) {
@@ -219,85 +155,71 @@
                     BLOCK_SIZE * 3 + sin(frameCount * 0.05 + i) * 20,
                     BLOCK_SIZE * 3 + sin(frameCount * 0.05 + i) * 20);
             }
+
+            // Show predicted shape
+            if (predictedShape >= 0) {
+                fill(255, 255, 0, 150); noStroke();
+                textSize(16); textAlign(CENTER);
+                text('Predicted: ' + ['I','O','T','S','Z','J','L'][predictedShape],
+                    COLS * BLOCK_SIZE / 2, ROWS * BLOCK_SIZE + 30);
+            }
         }
 
         function drawProbabilityBars() {
             let barX = COLS * BLOCK_SIZE + 10;
-            let barY = 50;
-            let barWidth = 150;
-            let barHeight = 20;
-
-            textSize(12);
-            fill(255);
-            noStroke();
+            let barY = 50; let barWidth = 150; let barHeight = 20;
+            textSize(12); fill(255); noStroke();
             text("Quantum Probabilities:", barX, barY - 10);
 
             const shapeNames = ['I', 'O', 'T', 'S', 'Z', 'J', 'L'];
 
             for (let i = 0; i < probabilities.length; i++) {
-                // Background
-                fill(50);
-                rect(barX, barY + i * (barHeight + 5), barWidth, barHeight, 3);
-
-                // Probability bar
+                fill(50); rect(barX, barY + i * (barHeight + 5), barWidth, barHeight, 3);
                 let col = COLORS[i];
                 fill(col[0], col[1], col[2]);
                 let probWidth = probabilities[i] * barWidth;
                 rect(barX, barY + i * (barHeight + 5), probWidth, barHeight, 3);
-
-                // Label and percentage
-                fill(255);
-                textSize(11);
+                fill(255); textSize(11);
                 text(shapeNames[i], barX + barWidth + 5, barY + i * (barHeight + 5) + 14);
                 text((probabilities[i] * 100).toFixed(0) + '%', barX + 5, barY + i * (barHeight + 5) + 14);
             }
         }
 
         function spawnPiece() {
-            // Reset probabilities to equal
             probabilities = [1/7, 1/7, 1/7, 1/7, 1/7, 1/7, 1/7];
-            rotationCount = 0;
-            predictedShape = -1;
+            rotationCount = 0; predictedShape = -1;
+            currentPiece = true; currentX = Math.floor(COLS / 2) - 1; currentY = 0;
 
-            currentPiece = true; // In superposition
-            currentX = Math.floor(COLS / 2) - 1;
-            currentY = 0;
-
-            // Check if game over
-            if (!canPlace(currentX, currentY)) {
-                gameOver = true;
-            }
+            if (!canPlace(currentX, currentY)) gameOver = true;
         }
 
         function collapsePiece() {
-            // Collapse superposition based on probabilities
-            let rand = Math.random();
-            let cumulative = 0;
-            let collapsedShape = 0;
+            let rand = Math.random(); let cumulative = 0; let collapsedShape = 0;
 
             for (let i = 0; i < probabilities.length; i++) {
                 cumulative += probabilities[i];
-                if (rand <= cumulative) {
-                    collapsedShape = i;
-                    break;
-                }
+                if (rand <= cumulative) { collapsedShape = i; break; }
             }
 
-            // Check if prediction was correct
             if (predictedShape === collapsedShape) {
                 multiplier = Math.min(multiplier + 1, 10);
-                score += 100 * multiplier;
-                predictions++;
-                updateStats();
-
-                // Visual feedback
-                showPredictionSuccess();
+                score += 100 * multiplier; correctPredictions++;
+                showPredictionFeedback(true);
             } else if (predictedShape !== -1) {
                 multiplier = Math.max(1, multiplier - 1);
-                updateStats();
+                showPredictionFeedback(false);
             }
 
+            updateStats();
             return collapsedShape;
+        }
+
+        function showPredictionFeedback(correct) {
+            let feedback = document.getElementById('prediction-feedback');
+            feedback.textContent = correct ? '✓ CORRECT!' : '✗ WRONG';
+            feedback.style.color = correct ? '#00ff00' : '#ff0000';
+            feedback.style.textShadow = correct ? '0 0 20px #00ff00' : '0 0 20px #ff0000';
+            predictionFeedbackTime = millis();
         }
 
         function placePiece() {
@@ -306,88 +228,40 @@
 
             for (let y = 0; y < shape.length; y++) {
                 for (let x = 0; x < shape[y].length; x++) {
-                    if (shape[y][x]) {
-                        board[currentY + y][currentX + x] = shapeIndex;
-                    }
+                    if (shape[y][x]) board[currentY + y][currentX + x] = shapeIndex;
                 }
             }
 
-            clearLines();
-            spawnPiece();
+            clearLines(); spawnPiece();
         }
 
         function canPlace(x, y) {
-            // Check if any possible shape can fit
             for (let shapeIndex = 0; shapeIndex < SHAPES.length; shapeIndex++) {
-                let shape = SHAPES[shapeIndex];
-                let canFit = true;
+                let shape = SHAPES[shapeIndex]; let canFit = true;
 
                 for (let sy = 0; sy < shape.length; sy++) {
                     for (let sx = 0; sx < shape[sy].length; sx++) {
                         if (shape[sy][sx]) {
-                            let newX = x + sx;
-                            let newY = y + sy;
-
-                            if (newX < 0 || newX >= COLS || newY >= ROWS) {
-                                canFit = false;
-                                break;
-                            }
-                            if (newY >= 0 && board[newY][newX] !== null) {
-                                canFit = false;
-                                break;
-                            }
+                            let newX = x + sx, newY = y + sy;
+                            if (newX < 0 || newX >= COLS || newY >= ROWS) { canFit = false; break; }
+                            if (newY >= 0 && board[newY][newX] !== null) { canFit = false; break; }
                         }
                     }
                 }
 
                 if (canFit) return true;
             }
-
             return false;
         }
 
         function moveDown() {
-            if (canPlace(currentX, currentY + 1)) {
-                currentY++;
-            } else {
-                placePiece();
-            }
-        }
-
-        function moveLeft() {
-            if (canPlace(currentX - 1, currentY)) {
-                currentX--;
-            }
-        }
-
-        function moveRight() {
-            if (canPlace(currentX + 1, currentY)) {
-                currentX++;
-            }
-        }
-
-        function rotate() {
-            // Increase rotation count - shifts probabilities toward I-piece
-            rotationCount++;
-
-            // Update probabilities (more rotations = more likely to get I-piece)
-            let iProbBonus = Math.min(rotationCount * 0.05, 0.4);
-            probabilities[0] = (1/7) + iProbBonus;
-
-            // Redistribute remaining probability
-            let remaining = 1 - probabilities[0];
-            for (let i = 1; i < probabilities.length; i++) {
-                probabilities[i] = remaining / 6;
-            }
+            if (canPlace(currentX, currentY + 1)) currentY++;
+            else placePiece();
         }
 
         function hardDrop() {
-            while (canPlace(currentX, currentY + 1)) {
-                currentY++;
-                score += 2;
-            }
-            updateStats();
-            placePiece();
+            while (canPlace(currentX, currentY + 1)) { currentY++; score += 2; }
+            updateStats(); placePiece();
         }
 
         function clearLines() {
@@ -396,17 +270,12 @@
             for (let y = ROWS - 1; y >= 0; y--) {
                 let full = true;
                 for (let x = 0; x < COLS; x++) {
-                    if (board[y][x] === null) {
-                        full = false;
-                        break;
-                    }
+                    if (board[y][x] === null) { full = false; break; }
                 }
 
                 if (full) {
-                    board.splice(y, 1);
-                    board.unshift(new Array(COLS).fill(null));
-                    cleared++;
-                    y++; // Check same line again
+                    board.splice(y, 1); board.unshift(new Array(COLS).fill(null));
+                    cleared++; y++;
                 }
             }
 
@@ -422,90 +291,69 @@
             document.getElementById('score').textContent = score;
             document.getElementById('lines').textContent = linesCleared;
             document.getElementById('level').textContent = level;
-            document.getElementById('predictions').textContent = predictions;
+            document.getElementById('predictions').textContent = correctPredictions;
             document.getElementById('multiplier').textContent = '×' + multiplier;
-        }
-
-        function showPredictionSuccess() {
-            // Visual feedback for correct prediction
-            push();
-            fill(0, 255, 0, 150);
-            textSize(40);
-            textAlign(CENTER, CENTER);
-            text('CORRECT!', COLS * BLOCK_SIZE / 2, ROWS * BLOCK_SIZE / 2);
-            pop();
+            let accuracy = predictions > 0 ? Math.round((correctPredictions / predictions) * 100) : 0;
+            document.getElementById('accuracy').textContent = accuracy + '%';
         }
 
         function keyPressed() {
             if (gameOver) {
-                if (key === 'r' || key === 'R') {
-                    resetGame();
-                }
+                if (key === 'r' || key === 'R') resetGame();
                 return;
             }
 
-            if (keyCode === LEFT_ARROW) {
-                moveLeft();
-            } else if (keyCode === RIGHT_ARROW) {
-                moveRight();
-            } else if (keyCode === DOWN_ARROW) {
-                moveDown();
-                score += 1;
-                updateStats();
-            } else if (keyCode === UP_ARROW) {
-                rotate();
-            } else if (key === ' ') {
-                hardDrop();
-            } else if (key >= '1' && key <= '7') {
-                // Predict shape
-                predictedShape = parseInt(key) - 1;
-
-                // Visual feedback
-                push();
-                fill(255, 255, 0, 200);
-                textSize(20);
-                textAlign(CENTER);
-                text('Predicted: ' + ['I','O','T','S','Z','J','L'][predictedShape],
-                    COLS * BLOCK_SIZE / 2, ROWS * BLOCK_SIZE - 20);
-                pop();
+            if (key === 'p' || key === 'P') {
+                paused = !paused; return;
             }
+
+            if (paused) return;
+
+            if (keyCode === LEFT_ARROW) canPlace(currentX - 1, currentY) && currentX--;
+            else if (keyCode === RIGHT_ARROW) canPlace(currentX + 1, currentY) && currentX++;
+            else if (keyCode === DOWN_ARROW) { moveDown(); score += 1; updateStats(); }
+            else if (keyCode === UP_ARROW) {
+                rotationCount++;
+                let iProbBonus = Math.min(rotationCount * 0.05, 0.4);
+                probabilities[0] = (1/7) + iProbBonus;
+                let remaining = 1 - probabilities[0];
+                for (let i = 1; i < probabilities.length; i++) probabilities[i] = remaining / 6;
+            }
+            else if (key === ' ') hardDrop();
+            else if (key >= '1' && key <= '7') {
+                predictedShape = parseInt(key) - 1; predictions++;
+            }
+        }
+
+        function drawPaused() {
+            background(20, 0, 40);
+            fill(255, 255, 255);
+            textSize(48); textAlign(CENTER, CENTER);
+            text('PAUSED', COLS * BLOCK_SIZE / 2, ROWS * BLOCK_SIZE / 2);
+            textSize(20);
+            text('Press P to resume', COLS * BLOCK_SIZE / 2, ROWS * BLOCK_SIZE / 2 + 50);
         }
 
         function drawGameOver() {
             fill(0, 0, 0, 200);
             rect(0, 0, COLS * BLOCK_SIZE, ROWS * BLOCK_SIZE);
-
-            fill(255, 0, 0);
-            textSize(48);
-            textAlign(CENTER, CENTER);
-            text('GAME OVER', COLS * BLOCK_SIZE / 2, ROWS * BLOCK_SIZE / 2 - 50);
-
-            fill(255);
-            textSize(24);
-            text('Score: ' + score, COLS * BLOCK_SIZE / 2, ROWS * BLOCK_SIZE / 2);
-            text('Predictions: ' + predictions, COLS * BLOCK_SIZE / 2, ROWS * BLOCK_SIZE / 2 + 40);
-
+            fill(255, 0, 0); textSize(48); textAlign(CENTER, CENTER);
+            text('QUANTUM', COLS * BLOCK_SIZE / 2, ROWS * BLOCK_SIZE / 2 - 60);
+            text('COLLAPSE', COLS * BLOCK_SIZE / 2, ROWS * BLOCK_SIZE / 2 - 10);
+            fill(255); textSize(24);
+            text('Score: ' + score, COLS * BLOCK_SIZE / 2, ROWS * BLOCK_SIZE / 2 + 40);
+            text('Predictions: ' + correctPredictions + '/' + predictions, COLS * BLOCK_SIZE / 2, ROWS * BLOCK_SIZE / 2 + 70);
             textSize(16);
-            text('Press R to restart', COLS * BLOCK_SIZE / 2, ROWS * BLOCK_SIZE / 2 + 100);
+            text('Press R to restart', COLS * BLOCK_SIZE / 2, ROWS * BLOCK_SIZE / 2 + 110);
         }
 
         function resetGame() {
             board = [];
-            for (let y = 0; y < ROWS; y++) {
-                board[y] = [];
-                for (let x = 0; x < COLS; x++) {
-                    board[y][x] = null;
-                }
-            }
-
-            score = 0;
-            linesCleared = 0;
-            level = 1;
-            predictions = 0;
-            multiplier = 1;
-            gameOver = false;
-            updateStats();
-            spawnPiece();
+            for (let y = 0; y < ROWS; y++) board[y] = Array(COLS).fill(null);
+            score = 0; linesCleared = 0; level = 1;
+            predictions = 0; correctPredictions = 0; multiplier = 1;
+            gameOver = false; paused = false;
+            updateStats(); spawnPiece();
         }
     </script>
 </body>
