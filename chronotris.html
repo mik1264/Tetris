@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CHRONOTRIS - Multi-Timeline Tetris</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 3em;
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px rgba(255,255,255,0.5), 0 0 40px rgba(102,126,234,0.5);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+
+        .subtitle {
+            text-align: center;
+            font-size: 1.2em;
+            margin-bottom: 20px;
+            opacity: 0.9;
+        }
+
+        .game-area {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .timeline {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            padding: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .timeline h3 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+
+        .past { border-color: #ffd700; }
+        .present { border-color: #00ff00; }
+        .future { border-color: #00ffff; }
+
+        canvas {
+            display: block;
+            border: 3px solid rgba(255, 255, 255, 0.4);
+            border-radius: 8px;
+            box-shadow: 0 0 30px rgba(255, 255, 255, 0.2);
+        }
+
+        .info-panel {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .stat {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.8;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        .controls {
+            text-align: center;
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+        }
+
+        .button {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            font-size: 1em;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+            font-family: 'Courier New', monospace;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        .button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .message {
+            text-align: center;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            margin-top: 15px;
+            font-size: 1.1em;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .warning {
+            background: rgba(255, 165, 0, 0.3);
+            border: 2px solid orange;
+        }
+
+        .success {
+            background: rgba(0, 255, 0, 0.3);
+            border: 2px solid lime;
+        }
+
+        .timeline-indicator {
+            display: flex;
+            justify-content: space-around;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .indicator {
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .indicator.active {
+            transform: scale(1.1);
+            box-shadow: 0 0 20px currentColor;
+        }
+
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 10px currentColor; }
+            50% { box-shadow: 0 0 30px currentColor; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⏱️ CHRONOTRIS ⏱️</h1>
+        <div class="subtitle">Multi-Timeline Tetris - Control Past, Present, and Future Simultaneously!</div>
+
+        <div class="info-panel">
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-label">Score</div>
+                    <div class="stat-value" id="score">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Lines Cleared</div>
+                    <div class="stat-value" id="lines">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Paradoxes</div>
+                    <div class="stat-value" id="paradoxes">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Time Splices</div>
+                    <div class="stat-value" id="splices">3</div>
+                </div>
+            </div>
+
+            <div class="timeline-indicator">
+                <div class="indicator active" id="ind-past" style="background: rgba(255, 215, 0, 0.3); color: #ffd700;">⏮️ PAST</div>
+                <div class="indicator" id="ind-present" style="background: rgba(0, 255, 0, 0.3); color: #00ff00;">▶️ PRESENT</div>
+                <div class="indicator" id="ind-future" style="background: rgba(0, 255, 255, 0.3); color: #00ffff;">⏭️ FUTURE</div>
+            </div>
+
+            <div class="controls">
+                <div><strong>Controls:</strong></div>
+                <div>← → ↓: Move | ↑: Rotate | 1/2/3: Switch Timeline | SPACE: Time Splice (merge all timelines)</div>
+                <div style="margin-top: 10px;">
+                    <button class="button" id="startBtn" onclick="startGame()">START GAME</button>
+                    <button class="button" id="pauseBtn" onclick="togglePause()" disabled>PAUSE</button>
+                    <button class="button" onclick="location.reload()">RESTART</button>
+                </div>
+            </div>
+
+            <div class="message" id="message">Press START to begin your temporal journey...</div>
+        </div>
+
+        <div class="game-area">
+            <div class="timeline past">
+                <h3>⏮️ PAST</h3>
+                <canvas id="canvasPast" width="200" height="400"></canvas>
+            </div>
+            <div class="timeline present">
+                <h3>▶️ PRESENT</h3>
+                <canvas id="canvasPresent" width="200" height="400"></canvas>
+            </div>
+            <div class="timeline future">
+                <h3>⏭️ FUTURE</h3>
+                <canvas id="canvasFuture" width="200" height="400"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const COLS = 10;
+        const ROWS = 20;
+        const BLOCK_SIZE = 20;
+        const COLORS = ['#FF0D72', '#0DC2FF', '#0DFF72', '#F538FF', '#FF8E0D', '#FFE138', '#3877FF'];
+
+        const SHAPES = [
+            [[1,1,1,1]], // I
+            [[1,1],[1,1]], // O
+            [[0,1,0],[1,1,1]], // T
+            [[0,1,1],[1,1,0]], // S
+            [[1,1,0],[0,1,1]], // Z
+            [[1,0,0],[1,1,1]], // J
+            [[0,0,1],[1,1,1]]  // L
+        ];
+
+        let gameState = {
+            score: 0,
+            lines: 0,
+            paradoxes: 0,
+            splicesLeft: 3,
+            running: false,
+            paused: false,
+            activeTimeline: 0, // 0=Past, 1=Present, 2=Future
+            timeSpliced: false,
+            spliceTimer: 0
+        };
+
+        let timelines = [
+            { name: 'Past', board: createBoard(), piece: null, x: 0, y: 0, ctx: null },
+            { name: 'Present', board: createBoard(), piece: null, x: 0, y: 0, ctx: null },
+            { name: 'Future', board: createBoard(), piece: null, x: 0, y: 0, futureQueue: [], ctx: null }
+        ];
+
+        function createBoard() {
+            return Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+        }
+
+        function init() {
+            timelines[0].ctx = document.getElementById('canvasPast').getContext('2d');
+            timelines[1].ctx = document.getElementById('canvasPresent').getContext('2d');
+            timelines[2].ctx = document.getElementById('canvasFuture').getContext('2d');
+        }
+
+        function createPiece() {
+            const shapeIndex = Math.floor(Math.random() * SHAPES.length);
+            return {
+                shape: SHAPES[shapeIndex],
+                color: COLORS[shapeIndex]
+            };
+        }
+
+        function startGame() {
+            gameState.running = true;
+            gameState.paused = false;
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('pauseBtn').disabled = false;
+
+            // Initialize pieces for all timelines
+            timelines.forEach((timeline, i) => {
+                timeline.piece = createPiece();
+                timeline.x = Math.floor(COLS / 2) - 1;
+                timeline.y = 0;
+            });
+
+            // Generate future queue (preview 5 pieces ahead)
+            timelines[2].futureQueue = Array.from({ length: 5 }, () => createPiece());
+
+            showMessage('Time streams activated! Control all three timelines!');
+            gameLoop();
+        }
+
+        function togglePause() {
+            gameState.paused = !gameState.paused;
+            document.getElementById('pauseBtn').textContent = gameState.paused ? 'RESUME' : 'PAUSE';
+            if (!gameState.paused) gameLoop();
+        }
+
+        function gameLoop() {
+            if (!gameState.running || gameState.paused) return;
+
+            // Update all timelines
+            timelines.forEach((timeline, i) => {
+                if (!movePiece(i, 0, 1)) {
+                    lockPiece(i);
+                    clearLines(i);
+
+                    timeline.piece = createPiece();
+                    timeline.x = Math.floor(COLS / 2) - 1;
+                    timeline.y = 0;
+
+                    if (collision(i, timeline.piece, timeline.x, timeline.y)) {
+                        gameOver();
+                        return;
+                    }
+                }
+            });
+
+            // Handle time splice countdown
+            if (gameState.timeSpliced) {
+                gameState.spliceTimer--;
+                if (gameState.spliceTimer <= 0) {
+                    gameState.timeSpliced = false;
+                    showMessage('Time splice ended - timelines separated!');
+                }
+            }
+
+            render();
+            updateUI();
+
+            setTimeout(gameLoop, 500);
+        }
+
+        function movePiece(timelineIndex, dx, dy) {
+            const timeline = timelines[timelineIndex];
+            const newX = timeline.x + dx;
+            const newY = timeline.y + dy;
+
+            if (!collision(timelineIndex, timeline.piece, newX, newY)) {
+                timeline.x = newX;
+                timeline.y = newY;
+                return true;
+            }
+            return false;
+        }
+
+        function rotatePiece(timelineIndex) {
+            const timeline = timelines[timelineIndex];
+            const rotated = timeline.piece.shape[0].map((_, i) =>
+                timeline.piece.shape.map(row => row[i]).reverse()
+            );
+
+            const original = timeline.piece.shape;
+            timeline.piece.shape = rotated;
+
+            if (collision(timelineIndex, timeline.piece, timeline.x, timeline.y)) {
+                timeline.piece.shape = original;
+            }
+        }
+
+        function collision(timelineIndex, piece, x, y) {
+            const board = timelines[timelineIndex].board;
+            for (let row = 0; row < piece.shape.length; row++) {
+                for (let col = 0; col < piece.shape[row].length; col++) {
+                    if (piece.shape[row][col]) {
+                        const newY = y + row;
+                        const newX = x + col;
+                        if (newY >= ROWS || newX < 0 || newX >= COLS ||
+                            (newY >= 0 && board[newY][newX])) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        function lockPiece(timelineIndex) {
+            const timeline = timelines[timelineIndex];
+            timeline.piece.shape.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value) {
+                        const boardY = timeline.y + y;
+                        const boardX = timeline.x + x;
+                        if (boardY >= 0) {
+                            timeline.board[boardY][boardX] = timeline.piece.color;
+                        }
+                    }
+                });
+            });
+        }
+
+        function clearLines(timelineIndex) {
+            const timeline = timelines[timelineIndex];
+            let linesCleared = 0;
+
+            for (let row = ROWS - 1; row >= 0; row--) {
+                if (timeline.board[row].every(cell => cell !== 0)) {
+                    timeline.board.splice(row, 1);
+                    timeline.board.unshift(Array(COLS).fill(0));
+                    linesCleared++;
+                    row++; // Check same row again
+
+                    // TEMPORAL CASCADE: Clearing in Past affects Present
+                    if (timelineIndex === 0) {
+                        temporalCascade();
+                    }
+                }
+            }
+
+            if (linesCleared > 0) {
+                gameState.lines += linesCleared;
+                gameState.score += linesCleared * 100 * (timelineIndex + 1);
+                showMessage(`${timeline.name}: ${linesCleared} line(s) cleared!`, 'success');
+            }
+        }
+
+        function temporalCascade() {
+            // Shift Present timeline down by one row
+            const present = timelines[1];
+            present.board.pop();
+            present.board.unshift(Array(COLS).fill(0));
+            showMessage('⚡ Temporal Cascade: Past affects Present!', 'warning');
+        }
+
+        function timeSplice() {
+            if (gameState.splicesLeft <= 0 || gameState.timeSpliced) return;
+
+            gameState.timeSpliced = true;
+            gameState.spliceTimer = 20; // 10 seconds at 500ms intervals
+            gameState.splicesLeft--;
+
+            // Merge all three boards
+            for (let row = 0; row < ROWS; row++) {
+                for (let col = 0; col < COLS; col++) {
+                    // If any timeline has a block here, all get it
+                    const hasBlock = timelines.some(t => t.board[row][col] !== 0);
+                    if (hasBlock) {
+                        const color = timelines.find(t => t.board[row][col] !== 0)?.board[row][col] || COLORS[0];
+                        timelines.forEach(t => t.board[row][col] = color);
+                    }
+                }
+            }
+
+            showMessage('🌀 TIME SPLICE ACTIVATED! All timelines merged for 10 seconds!', 'warning');
+        }
+
+        function switchTimeline(index) {
+            gameState.activeTimeline = index;
+            updateTimelineIndicators();
+        }
+
+        function updateTimelineIndicators() {
+            ['past', 'present', 'future'].forEach((name, i) => {
+                const elem = document.getElementById(`ind-${name}`);
+                if (i === gameState.activeTimeline) {
+                    elem.classList.add('active');
+                } else {
+                    elem.classList.remove('active');
+                }
+            });
+        }
+
+        function render() {
+            timelines.forEach((timeline, i) => {
+                const ctx = timeline.ctx;
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, COLS * BLOCK_SIZE, ROWS * BLOCK_SIZE);
+
+                // Draw board
+                timeline.board.forEach((row, y) => {
+                    row.forEach((value, x) => {
+                        if (value) {
+                            ctx.fillStyle = value;
+                            ctx.fillRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE - 1, BLOCK_SIZE - 1);
+                        }
+                    });
+                });
+
+                // Draw current piece
+                if (timeline.piece) {
+                    ctx.fillStyle = timeline.piece.color;
+                    ctx.globalAlpha = i === gameState.activeTimeline ? 1 : 0.6;
+                    timeline.piece.shape.forEach((row, y) => {
+                        row.forEach((value, x) => {
+                            if (value) {
+                                ctx.fillRect(
+                                    (timeline.x + x) * BLOCK_SIZE,
+                                    (timeline.y + y) * BLOCK_SIZE,
+                                    BLOCK_SIZE - 1,
+                                    BLOCK_SIZE - 1
+                                );
+                            }
+                        });
+                    });
+                    ctx.globalAlpha = 1;
+                }
+
+                // Draw future preview (ghost pieces)
+                if (i === 2 && timeline.futureQueue.length > 0) {
+                    ctx.globalAlpha = 0.3;
+                    ctx.fillStyle = timeline.futureQueue[0].color;
+                    const previewY = timeline.y + 3;
+                    timeline.futureQueue[0].shape.forEach((row, y) => {
+                        row.forEach((value, x) => {
+                            if (value && previewY + y < ROWS) {
+                                ctx.fillRect(
+                                    (timeline.x + x) * BLOCK_SIZE,
+                                    (previewY + y) * BLOCK_SIZE,
+                                    BLOCK_SIZE - 1,
+                                    BLOCK_SIZE - 1
+                                );
+                            }
+                        });
+                    });
+                    ctx.globalAlpha = 1;
+                }
+            });
+        }
+
+        function updateUI() {
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('lines').textContent = gameState.lines;
+            document.getElementById('paradoxes').textContent = gameState.paradoxes;
+            document.getElementById('splices').textContent = gameState.splicesLeft;
+        }
+
+        function showMessage(text, type = '') {
+            const msgElem = document.getElementById('message');
+            msgElem.textContent = text;
+            msgElem.className = 'message ' + type;
+        }
+
+        function gameOver() {
+            gameState.running = false;
+            showMessage(`TIMELINE COLLAPSED! Final Score: ${gameState.score}`, 'warning');
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('pauseBtn').disabled = true;
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (!gameState.running || gameState.paused) return;
+
+            const active = gameState.activeTimeline;
+
+            switch(e.key) {
+                case 'ArrowLeft':
+                    movePiece(active, -1, 0);
+                    break;
+                case 'ArrowRight':
+                    movePiece(active, 1, 0);
+                    break;
+                case 'ArrowDown':
+                    movePiece(active, 0, 1);
+                    break;
+                case 'ArrowUp':
+                    rotatePiece(active);
+                    break;
+                case '1':
+                    switchTimeline(0);
+                    break;
+                case '2':
+                    switchTimeline(1);
+                    break;
+                case '3':
+                    switchTimeline(2);
+                    break;
+                case ' ':
+                    e.preventDefault();
+                    timeSplice();
+                    break;
+            }
+            render();
+        });
+
+        window.onload = init;
+    </script>
+</body>
+</html>
