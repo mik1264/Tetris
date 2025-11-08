@@ -130,6 +130,23 @@
             transition: width 0.3s;
         }
 
+        .volume-control {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #8e44ad;
+        }
+
+        .volume-control h3 {
+            color: #8e44ad;
+            margin-bottom: 10px;
+        }
+
+        .volume-slider {
+            width: 100%;
+            margin: 10px 0;
+        }
+
         .genre-selector {
             background: #f8f9fa;
             padding: 15px;
@@ -319,6 +336,14 @@
                     </div>
                 </div>
 
+                <div class="volume-control">
+                    <h3>🔊 Volume</h3>
+                    <input type="range" min="0" max="100" value="50" class="volume-slider" id="volumeSlider">
+                    <p style="text-align: center; margin-top: 5px; font-size: 0.9em;">
+                        <span id="volumeValue">50</span>%
+                    </p>
+                </div>
+
                 <div class="controls">
                     <h3>Controls</h3>
                     <p><strong>←/→</strong> Move (timing)</p>
@@ -326,6 +351,7 @@
                     <p><strong>↑</strong> Rotate</p>
                     <p><strong>Space</strong> Hard Drop</p>
                     <p><strong>P</strong> Pause</p>
+                    <p><strong>M</strong> Mute/Unmute</p>
                 </div>
             </div>
         </div>
@@ -402,6 +428,8 @@
         let lastTime = 0;
         let gameLoop = null;
         let currentGenre = 'jazz';
+        let volume = 0.5; // 0-1 scale
+        let isMuted = false;
 
         function initAudio() {
             if (!audioContext) {
@@ -410,7 +438,7 @@
         }
 
         function playNote(type, row, col) {
-            if (!audioContext) return;
+            if (!audioContext || isMuted) return;
 
             const baseFreq = INSTRUMENTS[type].freq;
             const pitchMultiplier = 1 + ((ROWS - row) / ROWS); // Higher = higher pitch
@@ -426,7 +454,8 @@
             oscillator.type = currentGenre === 'electronic' ? 'square' : 'sine';
             oscillator.frequency.value = frequency;
 
-            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            const baseGain = 0.3 * volume; // Apply volume control
+            gainNode.gain.setValueAtTime(baseGain, audioContext.currentTime);
             gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
 
             oscillator.start(audioContext.currentTime);
@@ -711,6 +740,22 @@
                         update(lastTime);
                     }
                     break;
+                case 'm':
+                case 'M':
+                    e.preventDefault();
+                    isMuted = !isMuted;
+                    document.getElementById('volumeValue').textContent = isMuted ? 'MUTED' : Math.round(volume * 100);
+                    break;
+            }
+        });
+
+        // Volume control
+        const volumeSlider = document.getElementById('volumeSlider');
+        volumeSlider.addEventListener('input', (e) => {
+            volume = e.target.value / 100;
+            document.getElementById('volumeValue').textContent = e.target.value;
+            if (isMuted && volume > 0) {
+                isMuted = false;
             }
         });
 
