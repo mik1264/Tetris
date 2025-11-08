@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Narratris - Story-Driven Tetris</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Georgia', serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #fff;
+        }
+
+        .game-container {
+            text-align: center;
+            background: rgba(30, 60, 114, 0.95);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            border: 2px solid #ffd700;
+        }
+
+        h1 {
+            color: #ffd700;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .subtitle {
+            color: #a8a8a8;
+            font-style: italic;
+            margin-bottom: 20px;
+        }
+
+        .game-area {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        canvas {
+            border: 3px solid #ffd700;
+            background: #0a0a0a;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+        }
+
+        .side-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            min-width: 300px;
+        }
+
+        .story-box {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(255, 215, 0, 0.05));
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #ffd700;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .story-box h3 {
+            color: #ffd700;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+
+        .story-text {
+            font-size: 0.9em;
+            line-height: 1.5;
+            text-align: left;
+            font-style: italic;
+        }
+
+        .character-legend {
+            background: rgba(42, 82, 152, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #2a5298;
+        }
+
+        .character-legend h3 {
+            color: #ffd700;
+            margin-bottom: 10px;
+        }
+
+        .character-item {
+            display: flex;
+            align-items: center;
+            margin: 8px 0;
+            font-size: 0.9em;
+        }
+
+        .character-shape {
+            width: 30px;
+            text-align: center;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .character-name {
+            flex: 1;
+        }
+
+        .character-status {
+            font-size: 0.8em;
+            color: #a8a8a8;
+        }
+
+        .alive { color: #2ecc71; }
+        .dead { color: #e74c3c; text-decoration: line-through; }
+
+        .choice-box {
+            background: rgba(231, 76, 60, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #e74c3c;
+            margin-top: 10px;
+        }
+
+        .choice-box h4 {
+            color: #e74c3c;
+            margin-bottom: 10px;
+        }
+
+        .choice-button {
+            padding: 8px 15px;
+            margin: 5px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid #ffd700;
+            border-radius: 5px;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: 'Georgia', serif;
+        }
+
+        .choice-button:hover {
+            background: rgba(255, 215, 0, 0.2);
+            transform: scale(1.05);
+        }
+
+        .info-box {
+            background: rgba(42, 82, 152, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #2a5298;
+        }
+
+        .info-box h3 {
+            color: #a8a8a8;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        button {
+            margin-top: 20px;
+            padding: 12px 30px;
+            font-size: 1.1em;
+            font-weight: bold;
+            background: linear-gradient(135deg, #ffd700, #ffb700);
+            color: #1e3c72;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 10px rgba(255, 215, 0, 0.3);
+            font-family: 'Georgia', serif;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 215, 0, 0.5);
+        }
+
+        .intro-screen {
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .intro-screen.hidden {
+            display: none;
+        }
+
+        .dialogue-popup {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.9);
+            border: 2px solid #ffd700;
+            border-radius: 10px;
+            padding: 15px;
+            max-width: 250px;
+            font-size: 0.85em;
+            z-index: 100;
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .game-over {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(30, 60, 114, 0.98);
+            color: white;
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            display: none;
+            z-index: 1000;
+            border: 3px solid #ffd700;
+            max-width: 500px;
+        }
+
+        .game-over.show {
+            display: block;
+        }
+
+        .ending-text {
+            background: rgba(255, 215, 0, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            line-height: 1.6;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <!-- Intro Screen -->
+        <div class="intro-screen" id="introScreen">
+            <h1>📖 Narratris</h1>
+            <p class="subtitle">Every Block Tells a Story</p>
+
+            <div style="margin: 20px 0; line-height: 1.8;">
+                <h3 style="color: #ffd700; margin-bottom: 15px;">A Story Emerges From Falling Blocks</h3>
+                <p>In Narratris, each tetromino shape is a <strong>character</strong> in an evolving story.</p>
+                <br>
+                <p><strong>The Cast:</strong></p>
+                <ul style="margin-left: 20px; margin-top: 10px;">
+                    <li>🟦 <strong>I-Block:</strong> The Hero - brave and straightforward</li>
+                    <li>🟨 <strong>O-Block:</strong> The Villain - solid and unyielding</li>
+                    <li>🟪 <strong>T-Block:</strong> The Mentor - balanced wisdom</li>
+                    <li>🟩 <strong>S-Block:</strong> The Trickster - unpredictable</li>
+                    <li>🟥 <strong>Z-Block:</strong> The Rival - mirror of S</li>
+                    <li>🟦 <strong>J-Block:</strong> The Sidekick - loyal support</li>
+                    <li>🟧 <strong>L-Block:</strong> The Love Interest - complement to J</li>
+                </ul>
+                <br>
+                <p><strong>How It Works:</strong></p>
+                <ul style="margin-left: 20px; margin-top: 10px;">
+                    <li>When characters touch, dialogue triggers</li>
+                    <li>Clearing lines affects the story (characters may die!)</li>
+                    <li>Your choices shape 12 different endings</li>
+                    <li>Build relationships or destroy them—the story is yours</li>
+                </ul>
+            </div>
+
+            <button onclick="startGame()">Begin Your Story</button>
+        </div>
+
+        <!-- Main Game -->
+        <div id="mainGame" style="display: none;">
+            <h1>📖 Narratris</h1>
+            <p class="subtitle">Chapter <span id="chapter">1</span></p>
+
+            <div class="game-area">
+                <canvas id="tetris" width="300" height="600"></canvas>
+
+                <div class="side-panel">
+                    <div class="story-box">
+                        <h3>The Story So Far...</h3>
+                        <div class="story-text" id="storyText">
+                            The blocks gather at the precipice of destiny...
+                        </div>
+                    </div>
+
+                    <div class="character-legend">
+                        <h3>Characters</h3>
+                        <div id="characterList"></div>
+                    </div>
+
+                    <div class="choice-box" id="choiceBox" style="display: none;">
+                        <h4>Story Choice!</h4>
+                        <div id="choices"></div>
+                    </div>
+
+                    <div class="info-box">
+                        <h3>Story Progress</h3>
+                        <div style="font-size: 1.2em; color: #ffd700;" id="storyScore">0</div>
+                        <div style="font-size: 0.9em; margin-top: 5px;">Relationships: <span id="relationships">0</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <button id="startBtn">Start Story</button>
+        </div>
+    </div>
+
+    <div class="game-over" id="gameOver">
+        <h2>The End</h2>
+        <div class="ending-text" id="endingText">
+            Your story concludes...
+        </div>
+        <p>Story Score: <span id="finalScore">0</span></p>
+        <p>Ending: <span id="endingType" style="color: #ffd700;">Unknown</span></p>
+        <button onclick="location.reload()">New Story</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('tetris');
+        const ctx = canvas.getContext('2d');
+
+        const COLS = 10;
+        const ROWS = 20;
+        const BLOCK_SIZE = 30;
+
+        // Character definitions
+        const CHARACTERS = {
+            'I': { name: 'Hero', color: '#00f0f0', status: 'alive', personality: 'brave' },
+            'O': { name: 'Villain', color: '#f0f000', status: 'alive', personality: 'evil' },
+            'T': { name: 'Mentor', color: '#a000f0', status: 'alive', personality: 'wise' },
+            'S': { name: 'Trickster', color: '#00f000', status: 'alive', personality: 'chaotic' },
+            'Z': { name: 'Rival', color: '#f00000', status: 'alive', personality: 'competitive' },
+            'J': { name: 'Sidekick', color: '#0000f0', status: 'alive', personality: 'loyal' },
+            'L': { name: 'Love Interest', color: '#f0a000', status: 'alive', personality: 'caring' }
+        };
+
+        const SHAPES = {
+            'I': [[1, 1, 1, 1]],
+            'O': [[1, 1], [1, 1]],
+            'T': [[0, 1, 0], [1, 1, 1]],
+            'S': [[0, 1, 1], [1, 1, 0]],
+            'Z': [[1, 1, 0], [0, 1, 1]],
+            'J': [[1, 0, 0], [1, 1, 1]],
+            'L': [[0, 0, 1], [1, 1, 1]]
+        };
+
+        // Story elements
+        const DIALOGUES = {
+            'I-O': ["Hero: 'You won't get away with this!'", "Villain: 'Try and stop me!'"],
+            'I-T': ["Hero: 'What should I do, master?'", "Mentor: 'Trust your instincts.'"],
+            'I-L': ["Hero: 'I'll protect you!'", "Love Interest: 'We're in this together.'"],
+            'S-Z': ["Trickster: 'Race you to the bottom!'", "Rival: 'You're on!'"],
+            'J-L': ["Sidekick: 'I've got your back!'", "Love Interest: 'Thank you, friend.'"],
+            'T-O': ["Mentor: 'There's still good in you.'", "Villain: 'That weakness will be your end.'"]
+        };
+
+        let board = [];
+        let currentPiece = null;
+        let score = 0;
+        let chapter = 1;
+        let storyEvents = [];
+        let relationships = {};
+        let gameRunning = false;
+        let gameLoop = null;
+        let dropCounter = 0;
+        let dropInterval = 1000;
+        let lastTime = 0;
+        let isPaused = false;
+        let characterDeaths = [];
+        let storyPath = 'neutral';
+
+        function startGame() {
+            document.getElementById('introScreen').classList.add('hidden');
+            document.getElementById('mainGame').style.display = 'block';
+            initCharacterList();
+        }
+
+        function initCharacterList() {
+            const list = document.getElementById('characterList');
+            list.innerHTML = '';
+            Object.entries(CHARACTERS).forEach(([shape, char]) => {
+                const item = document.createElement('div');
+                item.className = 'character-item';
+                item.innerHTML = `
+                    <span class="character-shape" style="color: ${char.color}">${shape}</span>
+                    <span class="character-name">${char.name}</span>
+                    <span class="character-status ${char.status}" id="status-${shape}">(${char.status})</span>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        function createBoard() {
+            board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+        }
+
+        function drawBlock(x, y, color) {
+            ctx.fillStyle = color;
+            ctx.fillRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+        }
+
+        function drawBoard() {
+            ctx.fillStyle = '#0a0a0a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            for (let row = 0; row < ROWS; row++) {
+                for (let col = 0; col < COLS; col++) {
+                    if (board[row][col]) {
+                        drawBlock(col, row, board[row][col]);
+                    }
+                }
+            }
+
+            // Draw grid
+            ctx.strokeStyle = 'rgba(255, 215, 0, 0.1)';
+            ctx.lineWidth = 1;
+            for (let i = 1; i < COLS; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i * BLOCK_SIZE, 0);
+                ctx.lineTo(i * BLOCK_SIZE, canvas.height);
+                ctx.stroke();
+            }
+            for (let i = 1; i < ROWS; i++) {
+                ctx.beginPath();
+                ctx.moveTo(0, i * BLOCK_SIZE);
+                ctx.lineTo(canvas.width, i * BLOCK_SIZE);
+                ctx.stroke();
+            }
+        }
+
+        function createPiece() {
+            const pieces = Object.keys(SHAPES);
+            const type = pieces[Math.floor(Math.random() * pieces.length)];
+
+            // Check if character is dead
+            if (CHARACTERS[type].status === 'dead') {
+                // Dead characters can't return
+                return createPiece(); // Recursively get another piece
+            }
+
+            return {
+                shape: SHAPES[type],
+                color: CHARACTERS[type].color,
+                x: Math.floor(COLS / 2) - Math.floor(SHAPES[type][0].length / 2),
+                y: 0,
+                type: type,
+                character: CHARACTERS[type]
+            };
+        }
+
+        function drawPiece(piece) {
+            piece.shape.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value) {
+                        drawBlock(piece.x + x, piece.y + y, piece.color);
+                    }
+                });
+            });
+        }
+
+        function checkCollision(piece, offsetX = 0, offsetY = 0) {
+            for (let y = 0; y < piece.shape.length; y++) {
+                for (let x = 0; x < piece.shape[y].length; x++) {
+                    if (piece.shape[y][x]) {
+                        const newX = piece.x + x + offsetX;
+                        const newY = piece.y + y + offsetY;
+
+                        if (newX < 0 || newX >= COLS || newY >= ROWS) {
+                            return true;
+                        }
+
+                        if (newY >= 0 && board[newY][newX]) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        function checkAdjacency() {
+            // Check if current piece is adjacent to other pieces
+            if (!currentPiece) return;
+
+            for (let y = 0; y < currentPiece.shape.length; y++) {
+                for (let x = 0; x < currentPiece.shape[y].length; x++) {
+                    if (currentPiece.shape[y][x]) {
+                        const pieceX = currentPiece.x + x;
+                        const pieceY = currentPiece.y + y;
+
+                        // Check adjacent cells
+                        const adjacentCells = [
+                            [pieceX - 1, pieceY],
+                            [pieceX + 1, pieceY],
+                            [pieceX, pieceY - 1],
+                            [pieceX, pieceY + 1]
+                        ];
+
+                        adjacentCells.forEach(([ax, ay]) => {
+                            if (ax >= 0 && ax < COLS && ay >= 0 && ay < ROWS && board[ay][ax]) {
+                                // Found adjacent piece, trigger dialogue
+                                const adjacentType = getCharacterType(board[ay][ax]);
+                                if (adjacentType) {
+                                    triggerDialogue(currentPiece.type, adjacentType);
+                                }
+                            }
+                        });
+                    }
+                }
+            }
+        }
+
+        function getCharacterType(color) {
+            for (let [type, char] of Object.entries(CHARACTERS)) {
+                if (char.color === color) return type;
+            }
+            return null;
+        }
+
+        function triggerDialogue(type1, type2) {
+            const key1 = `${type1}-${type2}`;
+            const key2 = `${type2}-${type1}`;
+            const dialogue = DIALOGUES[key1] || DIALOGUES[key2];
+
+            if (dialogue && Math.random() < 0.3) {
+                const text = dialogue[Math.floor(Math.random() * dialogue.length)];
+                addStoryEvent(text);
+
+                // Update relationships
+                const relKey = [type1, type2].sort().join('-');
+                relationships[relKey] = (relationships[relKey] || 0) + 1;
+                document.getElementById('relationships').textContent = Object.keys(relationships).length;
+            }
+        }
+
+        function addStoryEvent(text) {
+            storyEvents.push(text);
+            if (storyEvents.length > 5) storyEvents.shift();
+
+            const storyDiv = document.getElementById('storyText');
+            storyDiv.innerHTML = storyEvents.join('<br>');
+            storyDiv.scrollTop = storyDiv.scrollHeight;
+        }
+
+        function mergePiece() {
+            currentPiece.shape.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value) {
+                        const boardY = currentPiece.y + y;
+                        const boardX = currentPiece.x + x;
+                        if (boardY >= 0) {
+                            board[boardY][boardX] = currentPiece.color;
+                        }
+                    }
+                });
+            });
+        }
+
+        function clearLines() {
+            let linesCleared = 0;
+            const clearedRows = [];
+
+            for (let row = ROWS - 1; row >= 0; row--) {
+                if (board[row].every(cell => cell !== 0)) {
+                    clearedRows.push(row);
+                    board.splice(row, 1);
+                    board.unshift(Array(COLS).fill(0));
+                    linesCleared++;
+                    row++;
+                }
+            }
+
+            if (linesCleared > 0) {
+                // Story consequence: characters in cleared lines may die!
+                if (Math.random() < 0.3 && linesCleared >= 2) {
+                    killRandomCharacter();
+                }
+
+                score += [0, 40, 100, 300, 1200][linesCleared];
+
+                // Progress story
+                if (score > chapter * 500) {
+                    chapter++;
+                    document.getElementById('chapter').textContent = chapter;
+                    triggerStoryChoice();
+                }
+
+                updateScore();
+            }
+        }
+
+        function killRandomCharacter() {
+            const aliveChars = Object.entries(CHARACTERS).filter(([_, char]) => char.status === 'alive');
+            if (aliveChars.length > 2) { // Keep at least 2 characters alive
+                const [type, char] = aliveChars[Math.floor(Math.random() * aliveChars.length)];
+                char.status = 'dead';
+                characterDeaths.push(type);
+
+                document.getElementById(`status-${type}`).textContent = '(dead)';
+                document.getElementById(`status-${type}`).className = 'character-status dead';
+
+                addStoryEvent(`💀 ${char.name} has fallen! Their sacrifice will be remembered...`);
+            }
+        }
+
+        function triggerStoryChoice() {
+            const choices = [
+                { text: "Save the Hero", effect: () => { storyPath = 'heroic'; CHARACTERS['I'].status = 'alive'; } },
+                { text: "Join the Villain", effect: () => { storyPath = 'dark'; score += 500; } },
+                { text: "Seek Balance", effect: () => { storyPath = 'balanced'; } }
+            ];
+
+            const choiceBox = document.getElementById('choiceBox');
+            const choicesDiv = document.getElementById('choices');
+
+            choiceBox.style.display = 'block';
+            choicesDiv.innerHTML = '';
+
+            choices.forEach(choice => {
+                const button = document.createElement('button');
+                button.className = 'choice-button';
+                button.textContent = choice.text;
+                button.onclick = () => {
+                    choice.effect();
+                    choiceBox.style.display = 'none';
+                    addStoryEvent(`You chose: ${choice.text}`);
+                };
+                choicesDiv.appendChild(button);
+            });
+        }
+
+        function rotate(piece) {
+            const newShape = piece.shape[0].map((_, i) =>
+                piece.shape.map(row => row[i]).reverse()
+            );
+
+            const rotated = { ...piece, shape: newShape };
+
+            if (!checkCollision(rotated)) {
+                return rotated;
+            }
+
+            // Wall kick
+            for (let offset of [1, -1, 2, -2]) {
+                rotated.x = piece.x + offset;
+                if (!checkCollision(rotated)) {
+                    return rotated;
+                }
+            }
+
+            return piece;
+        }
+
+        function move(direction) {
+            if (!currentPiece || isPaused) return;
+
+            if (direction === 'left' && !checkCollision(currentPiece, -1, 0)) {
+                currentPiece.x--;
+                checkAdjacency();
+            } else if (direction === 'right' && !checkCollision(currentPiece, 1, 0)) {
+                currentPiece.x++;
+                checkAdjacency();
+            } else if (direction === 'down') {
+                if (!checkCollision(currentPiece, 0, 1)) {
+                    currentPiece.y++;
+                    score += 1;
+                    updateScore();
+                    checkAdjacency();
+                } else {
+                    placePiece();
+                }
+            }
+        }
+
+        function hardDrop() {
+            if (!currentPiece || isPaused) return;
+
+            while (!checkCollision(currentPiece, 0, 1)) {
+                currentPiece.y++;
+                score += 2;
+            }
+            updateScore();
+            placePiece();
+        }
+
+        function placePiece() {
+            mergePiece();
+            clearLines();
+            currentPiece = createPiece();
+
+            if (checkCollision(currentPiece)) {
+                gameOver();
+            }
+        }
+
+        function updateScore() {
+            document.getElementById('storyScore').textContent = score;
+        }
+
+        function determineEnding() {
+            const aliveCount = Object.values(CHARACTERS).filter(c => c.status === 'alive').length;
+            const heroAlive = CHARACTERS['I'].status === 'alive';
+            const villainAlive = CHARACTERS['O'].status === 'alive';
+
+            if (heroAlive && !villainAlive && aliveCount >= 5) {
+                return { type: 'Heroic Victory', text: 'The Hero triumphed, and peace was restored to the land.' };
+            } else if (!heroAlive && villainAlive) {
+                return { type: 'Dark Ending', text: 'Evil prevailed. The blocks fell into eternal darkness.' };
+            } else if (heroAlive && CHARACTERS['L'].status === 'alive' && relationships['I-L'] > 3) {
+                return { type: 'Love Conquers', text: 'Love found a way. The Hero and their beloved lived happily.' };
+            } else if (characterDeaths.length === 0) {
+                return { type: 'Perfect Harmony', text: 'No one fell. All characters found their place in perfect balance.' };
+            } else if (characterDeaths.length >= 5) {
+                return { type: 'Tragic Finale', text: 'So many lost... The few survivors carry on their legacy.' };
+            } else if (storyPath === 'balanced') {
+                return { type: 'Balanced Peace', text: 'Neither good nor evil prevailed. Balance was achieved.' };
+            } else {
+                return { type: 'Ambiguous End', text: 'The story ends, but questions remain...' };
+            }
+        }
+
+        function gameOver() {
+            gameRunning = false;
+            cancelAnimationFrame(gameLoop);
+
+            const ending = determineEnding();
+            document.getElementById('endingText').innerHTML = ending.text;
+            document.getElementById('endingType').textContent = ending.type;
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('gameOver').classList.add('show');
+        }
+
+        function update(time = 0) {
+            if (!gameRunning || isPaused) return;
+
+            const deltaTime = time - lastTime;
+            lastTime = time;
+            dropCounter += deltaTime;
+
+            if (dropCounter > dropInterval) {
+                move('down');
+                dropCounter = 0;
+            }
+
+            drawBoard();
+            if (currentPiece) {
+                drawPiece(currentPiece);
+            }
+
+            gameLoop = requestAnimationFrame(update);
+        }
+
+        function toggleGame() {
+            if (!gameRunning) {
+                createBoard();
+                score = 0;
+                chapter = 1;
+                storyEvents = [];
+                relationships = {};
+                characterDeaths = [];
+                dropCounter = 0;
+                dropInterval = 1000;
+                isPaused = false;
+                gameRunning = true;
+
+                // Reset characters
+                Object.values(CHARACTERS).forEach(char => char.status = 'alive');
+                initCharacterList();
+
+                updateScore();
+                currentPiece = createPiece();
+
+                document.getElementById('gameOver').classList.remove('show');
+                document.getElementById('startBtn').textContent = 'Restart Story';
+
+                addStoryEvent("The blocks gather at the precipice of destiny...");
+
+                lastTime = 0;
+                update();
+            } else {
+                location.reload();
+            }
+        }
+
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            if (!gameRunning) return;
+
+            switch(e.key) {
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    move('left');
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    move('right');
+                    break;
+                case 'ArrowDown':
+                    e.preventDefault();
+                    move('down');
+                    break;
+                case 'ArrowUp':
+                    e.preventDefault();
+                    if (currentPiece && !isPaused) {
+                        currentPiece = rotate(currentPiece);
+                    }
+                    break;
+                case ' ':
+                    e.preventDefault();
+                    hardDrop();
+                    break;
+                case 'p':
+                case 'P':
+                    e.preventDefault();
+                    isPaused = !isPaused;
+                    if (!isPaused) {
+                        lastTime = performance.now();
+                        update(lastTime);
+                    }
+                    break;
+            }
+        });
+
+        document.getElementById('startBtn').onclick = toggleGame;
+
+        // Initial draw
+        createBoard();
+        drawBoard();
+    </script>
+</body>
+</html>

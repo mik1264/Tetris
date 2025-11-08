@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Ecotris - Ecosystem Tetris</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Courier New', monospace;
+        }
+
+        .game-container {
+            display: flex;
+            gap: 30px;
+            align-items: flex-start;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        canvas {
+            border: 3px solid #333;
+            background: #2a4d3a;
+            image-rendering: pixelated;
+        }
+
+        .info-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            color: #333;
+        }
+
+        .ecosystem-info {
+            background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+            padding: 15px;
+            border-radius: 10px;
+            color: #1a1a1a;
+        }
+
+        .organism {
+            margin: 10px 0;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 5px;
+        }
+
+        .organism-name {
+            font-weight: bold;
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            margin-right: 10px;
+        }
+
+        .stats {
+            background: #f0f4f8;
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        .stat-item {
+            margin: 8px 0;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .controls {
+            background: #e1e8ed;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 14px;
+        }
+
+        .title {
+            font-size: 28px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            text-align: center;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: #7f8c8d;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .food-chain {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            margin-top: 10px;
+        }
+
+        .chain-arrow {
+            font-size: 20px;
+            color: #e74c3c;
+        }
+
+        .population-bar {
+            width: 100%;
+            height: 10px;
+            background: #ddd;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+
+        .population-fill {
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="info-panel">
+            <div>
+                <div class="title">ECOTRIS</div>
+                <div class="subtitle">Ecosystem Simulation Tetris</div>
+            </div>
+
+            <div class="ecosystem-info">
+                <h3>🌿 Ecosystem Status</h3>
+                <div class="organism">
+                    <span class="organism-name" style="background: #4CAF50;">Plant</span>
+                    <span>Producers</span>
+                    <div class="population-bar">
+                        <div class="population-fill" id="plant-pop" style="background: #4CAF50; width: 0%;"></div>
+                    </div>
+                </div>
+                <div class="organism">
+                    <span class="organism-name" style="background: #FFC107;">Herbivore</span>
+                    <span>Primary Consumer</span>
+                    <div class="population-bar">
+                        <div class="population-fill" id="herbivore-pop" style="background: #FFC107; width: 0%;"></div>
+                    </div>
+                </div>
+                <div class="organism">
+                    <span class="organism-name" style="background: #FF5722;">Carnivore</span>
+                    <span>Secondary Consumer</span>
+                    <div class="population-bar">
+                        <div class="population-fill" id="carnivore-pop" style="background: #FF5722; width: 0%;"></div>
+                    </div>
+                </div>
+                <div class="organism">
+                    <span class="organism-name" style="background: #9C27B0;">Apex</span>
+                    <span>Apex Predator</span>
+                    <div class="population-bar">
+                        <div class="population-fill" id="apex-pop" style="background: #9C27B0; width: 0%;"></div>
+                    </div>
+                </div>
+                <div class="organism">
+                    <span class="organism-name" style="background: #795548;">Decomposer</span>
+                    <span>Recycler</span>
+                    <div class="population-bar">
+                        <div class="population-fill" id="decomposer-pop" style="background: #795548; width: 0%;"></div>
+                    </div>
+                </div>
+
+                <div class="food-chain">
+                    <small>Food Chain Flow:</small>
+                    <span style="color: #4CAF50;">🌱 Plant</span>
+                    <span class="chain-arrow">↓</span>
+                    <span style="color: #FFC107;">🐰 Herbivore</span>
+                    <span class="chain-arrow">↓</span>
+                    <span style="color: #FF5722;">🦊 Carnivore</span>
+                    <span class="chain-arrow">↓</span>
+                    <span style="color: #9C27B0;">🦅 Apex</span>
+                    <span class="chain-arrow">↓</span>
+                    <span style="color: #795548;">🍄 Decomposer</span>
+                    <span class="chain-arrow">↓</span>
+                    <span style="color: #4CAF50;">🌱 Plant</span>
+                </div>
+            </div>
+
+            <div class="stats">
+                <h3>📊 Statistics</h3>
+                <div class="stat-item">
+                    <span>Biodiversity:</span>
+                    <span id="biodiversity">0</span>
+                </div>
+                <div class="stat-item">
+                    <span>Ecosystem Health:</span>
+                    <span id="health">100%</span>
+                </div>
+                <div class="stat-item">
+                    <span>Food Web Links:</span>
+                    <span id="links">0</span>
+                </div>
+                <div class="stat-item">
+                    <span>Score:</span>
+                    <span id="score">0</span>
+                </div>
+            </div>
+
+            <div class="controls">
+                <h3>🎮 Controls</h3>
+                <div>← → : Move</div>
+                <div>↓ : Soft Drop</div>
+                <div>↑ : Rotate</div>
+                <div>Space : Hard Drop</div>
+                <div>P : Pause</div>
+                <div><br><strong>Ecology Tips:</strong></div>
+                <div>• Adjacent organisms interact</div>
+                <div>• Predators eat prey below</div>
+                <div>• Plants grow with decomposers</div>
+                <div>• Balance all populations!</div>
+            </div>
+        </div>
+
+        <canvas id="gameCanvas"></canvas>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Game constants
+        const BLOCK_SIZE = 30;
+        const COLS = 10;
+        const ROWS = 20;
+        canvas.width = COLS * BLOCK_SIZE;
+        canvas.height = ROWS * BLOCK_SIZE;
+
+        // Organism types with food web relationships
+        const ORGANISMS = {
+            PLANT: {
+                color: '#4CAF50',
+                symbol: '🌱',
+                preyOf: ['HERBIVORE'],
+                feeds: [],
+                growsNear: ['DECOMPOSER']
+            },
+            HERBIVORE: {
+                color: '#FFC107',
+                symbol: '🐰',
+                preyOf: ['CARNIVORE'],
+                feeds: ['PLANT']
+            },
+            CARNIVORE: {
+                color: '#FF5722',
+                symbol: '🦊',
+                preyOf: ['APEX'],
+                feeds: ['HERBIVORE']
+            },
+            APEX: {
+                color: '#9C27B0',
+                symbol: '🦅',
+                preyOf: ['DECOMPOSER'],
+                feeds: ['CARNIVORE', 'HERBIVORE']
+            },
+            DECOMPOSER: {
+                color: '#795548',
+                symbol: '🍄',
+                preyOf: [],
+                feeds: ['APEX'],
+                enriches: ['PLANT']
+            }
+        };
+
+        // Tetromino shapes mapped to organisms
+        const SHAPES = [
+            [[1,1,1,1]], // I - Plant (photosynthesis line)
+            [[1,1,1],[0,1,0]], // T - Herbivore (grazer shape)
+            [[1,1,0],[0,1,1]], // Z - Carnivore (zigzag hunter)
+            [[0,1,1],[1,1,0]], // S - Apex (swooping predator)
+            [[1,1],[1,1]], // O - Decomposer (compact recycler)
+            [[1,1,1],[1,0,0]], // L - Plant variant
+            [[1,1,1],[0,0,1]] // J - Herbivore variant
+        ];
+
+        const ORGANISM_TYPES = Object.keys(ORGANISMS);
+
+        // Game state
+        let board = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+        let currentPiece = null;
+        let gameRunning = true;
+        let score = 0;
+        let dropCounter = 0;
+        let lastTime = 0;
+        let isPaused = false;
+
+        // Ecosystem tracking
+        let ecosystemData = {
+            populations: {
+                PLANT: 0,
+                HERBIVORE: 0,
+                CARNIVORE: 0,
+                APEX: 0,
+                DECOMPOSER: 0
+            },
+            interactions: [],
+            health: 100,
+            biodiversity: 0
+        };
+
+        class Piece {
+            constructor() {
+                this.typeIndex = Math.floor(Math.random() * ORGANISM_TYPES.length);
+                this.type = ORGANISM_TYPES[this.typeIndex];
+                this.shape = SHAPES[this.typeIndex % SHAPES.length];
+                this.x = Math.floor(COLS / 2) - Math.floor(this.shape[0].length / 2);
+                this.y = 0;
+                this.organism = ORGANISMS[this.type];
+            }
+
+            rotate() {
+                const rotated = this.shape[0].map((_, i) =>
+                    this.shape.map(row => row[i]).reverse()
+                );
+
+                const prevShape = this.shape;
+                this.shape = rotated;
+
+                if (this.collides()) {
+                    this.shape = prevShape;
+                }
+            }
+
+            collides() {
+                for (let y = 0; y < this.shape.length; y++) {
+                    for (let x = 0; x < this.shape[y].length; x++) {
+                        if (this.shape[y][x]) {
+                            const boardX = this.x + x;
+                            const boardY = this.y + y;
+
+                            if (boardX < 0 || boardX >= COLS || boardY >= ROWS) {
+                                return true;
+                            }
+
+                            if (boardY >= 0 && board[boardY][boardX]) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+                return false;
+            }
+
+            lock() {
+                for (let y = 0; y < this.shape.length; y++) {
+                    for (let x = 0; x < this.shape[y].length; x++) {
+                        if (this.shape[y][x]) {
+                            const boardY = this.y + y;
+                            const boardX = this.x + x;
+                            if (boardY >= 0) {
+                                board[boardY][boardX] = {
+                                    type: this.type,
+                                    organism: this.organism
+                                };
+                            }
+                        }
+                    }
+                }
+
+                // Update ecosystem after placing piece
+                updateEcosystem();
+                checkFoodWebInteractions();
+            }
+        }
+
+        function updateEcosystem() {
+            // Count populations
+            ecosystemData.populations = {
+                PLANT: 0,
+                HERBIVORE: 0,
+                CARNIVORE: 0,
+                APEX: 0,
+                DECOMPOSER: 0
+            };
+
+            for (let y = 0; y < ROWS; y++) {
+                for (let x = 0; x < COLS; x++) {
+                    if (board[y][x]) {
+                        ecosystemData.populations[board[y][x].type]++;
+                    }
+                }
+            }
+
+            // Calculate biodiversity (Shannon diversity index simplified)
+            let total = Object.values(ecosystemData.populations).reduce((a, b) => a + b, 0);
+            ecosystemData.biodiversity = 0;
+
+            for (let pop of Object.values(ecosystemData.populations)) {
+                if (pop > 0) {
+                    let proportion = pop / total;
+                    ecosystemData.biodiversity -= proportion * Math.log(proportion);
+                }
+            }
+            ecosystemData.biodiversity = Math.floor(ecosystemData.biodiversity * 100);
+
+            // Calculate ecosystem health
+            let idealRatio = { PLANT: 0.35, HERBIVORE: 0.25, CARNIVORE: 0.2, APEX: 0.1, DECOMPOSER: 0.1 };
+            ecosystemData.health = 100;
+
+            for (let type in idealRatio) {
+                let actual = ecosystemData.populations[type] / Math.max(total, 1);
+                let ideal = idealRatio[type];
+                let diff = Math.abs(actual - ideal);
+                ecosystemData.health -= diff * 100;
+            }
+            ecosystemData.health = Math.max(0, Math.floor(ecosystemData.health));
+
+            updateDisplay();
+        }
+
+        function checkFoodWebInteractions() {
+            ecosystemData.interactions = [];
+
+            for (let y = 0; y < ROWS; y++) {
+                for (let x = 0; x < COLS; x++) {
+                    if (board[y][x]) {
+                        let current = board[y][x];
+
+                        // Check adjacent cells for interactions
+                        let neighbors = [
+                            [y-1, x], [y+1, x], [y, x-1], [y, x+1]
+                        ];
+
+                        for (let [ny, nx] of neighbors) {
+                            if (ny >= 0 && ny < ROWS && nx >= 0 && nx < COLS && board[ny][nx]) {
+                                let neighbor = board[ny][nx];
+
+                                // Predator-prey interactions
+                                if (current.organism.feeds && current.organism.feeds.includes(neighbor.type)) {
+                                    ecosystemData.interactions.push({
+                                        predator: current.type,
+                                        prey: neighbor.type,
+                                        x: nx,
+                                        y: ny
+                                    });
+                                    score += 50; // Bonus for food web links
+                                }
+
+                                // Symbiotic relationships
+                                if (current.type === 'PLANT' && neighbor.type === 'DECOMPOSER') {
+                                    score += 30; // Nutrient cycling bonus
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        function updateDisplay() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('biodiversity').textContent = ecosystemData.biodiversity;
+            document.getElementById('health').textContent = ecosystemData.health + '%';
+            document.getElementById('links').textContent = ecosystemData.interactions.length;
+
+            // Update population bars
+            let maxPop = 20;
+            for (let type in ecosystemData.populations) {
+                let percentage = (ecosystemData.populations[type] / maxPop) * 100;
+                document.getElementById(type.toLowerCase() + '-pop').style.width = percentage + '%';
+            }
+        }
+
+        function clearLines() {
+            let linesCleared = 0;
+
+            for (let y = ROWS - 1; y >= 0; y--) {
+                if (board[y].every(cell => cell !== null)) {
+                    // Decomposition bonus - cleared lines feed back to ecosystem
+                    score += 100 * (linesCleared + 1);
+
+                    // Add decomposer bonus if decomposers present in cleared line
+                    let decomposerCount = board[y].filter(cell => cell && cell.type === 'DECOMPOSER').length;
+                    score += decomposerCount * 50;
+
+                    board.splice(y, 1);
+                    board.unshift(Array(COLS).fill(null));
+                    linesCleared++;
+                    y++; // Check the same row again
+                }
+            }
+
+            if (linesCleared > 0) {
+                score += linesCleared * ecosystemData.health; // Health multiplier
+                updateEcosystem();
+            }
+        }
+
+        function draw() {
+            // Clear canvas
+            ctx.fillStyle = '#2a4d3a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw grid
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.lineWidth = 1;
+            for (let x = 0; x <= COLS; x++) {
+                ctx.beginPath();
+                ctx.moveTo(x * BLOCK_SIZE, 0);
+                ctx.lineTo(x * BLOCK_SIZE, canvas.height);
+                ctx.stroke();
+            }
+            for (let y = 0; y <= ROWS; y++) {
+                ctx.beginPath();
+                ctx.moveTo(0, y * BLOCK_SIZE);
+                ctx.lineTo(canvas.width, y * BLOCK_SIZE);
+                ctx.stroke();
+            }
+
+            // Draw board
+            for (let y = 0; y < ROWS; y++) {
+                for (let x = 0; x < COLS; x++) {
+                    if (board[y][x]) {
+                        drawBlock(x, y, board[y][x].organism.color, board[y][x].organism.symbol);
+                    }
+                }
+            }
+
+            // Draw current piece
+            if (currentPiece && !isPaused) {
+                for (let y = 0; y < currentPiece.shape.length; y++) {
+                    for (let x = 0; x < currentPiece.shape[y].length; x++) {
+                        if (currentPiece.shape[y][x]) {
+                            drawBlock(
+                                currentPiece.x + x,
+                                currentPiece.y + y,
+                                currentPiece.organism.color,
+                                currentPiece.organism.symbol
+                            );
+                        }
+                    }
+                }
+
+                // Draw ghost piece
+                let ghostY = currentPiece.y;
+                while (!wouldCollide(currentPiece, 0, 1)) {
+                    currentPiece.y++;
+                }
+                let finalY = currentPiece.y;
+                currentPiece.y = ghostY;
+
+                for (let y = 0; y < currentPiece.shape.length; y++) {
+                    for (let x = 0; x < currentPiece.shape[y].length; x++) {
+                        if (currentPiece.shape[y][x]) {
+                            ctx.strokeStyle = currentPiece.organism.color;
+                            ctx.lineWidth = 2;
+                            ctx.strokeRect(
+                                (currentPiece.x + x) * BLOCK_SIZE + 2,
+                                (finalY + y) * BLOCK_SIZE + 2,
+                                BLOCK_SIZE - 4,
+                                BLOCK_SIZE - 4
+                            );
+                        }
+                    }
+                }
+            }
+
+            // Draw food web interactions
+            ctx.strokeStyle = 'rgba(255, 255, 0, 0.5)';
+            ctx.lineWidth = 3;
+            for (let interaction of ecosystemData.interactions) {
+                ctx.beginPath();
+                ctx.arc(
+                    interaction.x * BLOCK_SIZE + BLOCK_SIZE / 2,
+                    interaction.y * BLOCK_SIZE + BLOCK_SIZE / 2,
+                    BLOCK_SIZE / 2,
+                    0,
+                    Math.PI * 2
+                );
+                ctx.stroke();
+            }
+
+            // Draw pause overlay
+            if (isPaused) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = 'white';
+                ctx.font = '30px Courier New';
+                ctx.textAlign = 'center';
+                ctx.fillText('PAUSED', canvas.width / 2, canvas.height / 2);
+                ctx.font = '16px Courier New';
+                ctx.fillText('Press P to continue', canvas.width / 2, canvas.height / 2 + 30);
+            }
+
+            // Draw game over
+            if (!gameRunning) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = 'white';
+                ctx.font = '30px Courier New';
+                ctx.textAlign = 'center';
+                ctx.fillText('ECOSYSTEM COLLAPSED', canvas.width / 2, canvas.height / 2);
+                ctx.font = '16px Courier New';
+                ctx.fillText('Press R to restart', canvas.width / 2, canvas.height / 2 + 30);
+            }
+        }
+
+        function drawBlock(x, y, color, symbol = '') {
+            ctx.fillStyle = color;
+            ctx.fillRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+
+            // Draw border
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x * BLOCK_SIZE + 1, y * BLOCK_SIZE + 1, BLOCK_SIZE - 2, BLOCK_SIZE - 2);
+
+            // Draw symbol
+            if (symbol) {
+                ctx.font = '20px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(symbol, x * BLOCK_SIZE + BLOCK_SIZE / 2, y * BLOCK_SIZE + BLOCK_SIZE / 2);
+            }
+        }
+
+        function wouldCollide(piece, dx, dy) {
+            for (let y = 0; y < piece.shape.length; y++) {
+                for (let x = 0; x < piece.shape[y].length; x++) {
+                    if (piece.shape[y][x]) {
+                        const newX = piece.x + x + dx;
+                        const newY = piece.y + y + dy;
+
+                        if (newX < 0 || newX >= COLS || newY >= ROWS) {
+                            return true;
+                        }
+
+                        if (newY >= 0 && board[newY][newX]) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        function gameLoop(time = 0) {
+            if (!gameRunning) {
+                requestAnimationFrame(gameLoop);
+                return;
+            }
+
+            const deltaTime = time - lastTime;
+            lastTime = time;
+
+            if (!isPaused) {
+                dropCounter += deltaTime;
+
+                if (dropCounter > 500) {
+                    if (currentPiece) {
+                        if (!wouldCollide(currentPiece, 0, 1)) {
+                            currentPiece.y++;
+                        } else {
+                            currentPiece.lock();
+                            clearLines();
+                            currentPiece = new Piece();
+
+                            if (currentPiece.collides()) {
+                                gameRunning = false;
+                            }
+                        }
+                    } else {
+                        currentPiece = new Piece();
+                    }
+                    dropCounter = 0;
+                }
+            }
+
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            if (!gameRunning && e.key.toLowerCase() === 'r') {
+                // Reset game
+                board = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+                score = 0;
+                currentPiece = new Piece();
+                gameRunning = true;
+                ecosystemData.populations = {
+                    PLANT: 0,
+                    HERBIVORE: 0,
+                    CARNIVORE: 0,
+                    APEX: 0,
+                    DECOMPOSER: 0
+                };
+                updateDisplay();
+                return;
+            }
+
+            if (!gameRunning || !currentPiece) return;
+
+            if (e.key.toLowerCase() === 'p') {
+                isPaused = !isPaused;
+                return;
+            }
+
+            if (isPaused) return;
+
+            switch(e.key) {
+                case 'ArrowLeft':
+                    if (!wouldCollide(currentPiece, -1, 0)) {
+                        currentPiece.x--;
+                    }
+                    break;
+                case 'ArrowRight':
+                    if (!wouldCollide(currentPiece, 1, 0)) {
+                        currentPiece.x++;
+                    }
+                    break;
+                case 'ArrowDown':
+                    if (!wouldCollide(currentPiece, 0, 1)) {
+                        currentPiece.y++;
+                        score++;
+                    }
+                    break;
+                case 'ArrowUp':
+                    currentPiece.rotate();
+                    break;
+                case ' ':
+                    while (!wouldCollide(currentPiece, 0, 1)) {
+                        currentPiece.y++;
+                        score += 2;
+                    }
+                    currentPiece.lock();
+                    clearLines();
+                    currentPiece = new Piece();
+                    if (currentPiece.collides()) {
+                        gameRunning = false;
+                    }
+                    dropCounter = 0;
+                    break;
+            }
+        });
+
+        // Start game
+        currentPiece = new Piece();
+        updateDisplay();
+        gameLoop();
+    </script>
+</body>
+</html>
