@@ -59,6 +59,93 @@ The perfect fusion: Tetris mechanics meet Wittgenstein's philosophy! Play Tetris
 
 ---
 
+## 🟢 Matrix Tetris
+**File:** `matrix-tetris.html`
+
+Wake up, Neo... Experience Tetris within The Matrix simulation with 10 progressive reality-bending twists that unlock as you play!
+
+**The Concept:**
+- Classic Tetris gameplay infused with Matrix aesthetics
+- Progressive "reality distortions" unlock every level
+- Each twist fundamentally changes how you interact with the game
+- Digital rain background, green-on-black cyberpunk styling
+- Matrix philosophy: reality, choice, control, and freedom
+
+**The 10 Reality Twists:**
+
+1. **🌧️ Digital Rain** (Level 0)
+   - Animated falling green code background
+   - Enter the Matrix simulation
+
+2. **⚡ Glitch Vision** (Level 1)
+   - Pieces occasionally glitch with visual distortions
+   - "The code is showing through"
+
+3. **💊 Red Pill / Blue Pill** (Level 2)
+   - Make your choice: Red (2x points, faster gameplay) or Blue (slower, controlled)
+   - "This is your last chance. After this, there is no turning back."
+
+4. **⏱️ Bullet Time** (Level 3)
+   - Press B to slow down time temporarily
+   - 3 charges per game, use them wisely
+
+5. **👁️ Code Vision** (Level 4)
+   - See future pieces revealed as Matrix code
+   - "I can see the code now"
+
+6. **👤 Agent Smith** (Level 5)
+   - The system fights back! Corrupted red blocks invade your board
+   - Random blocks appear as the Matrix resists
+
+7. **🔄 Déjà Vu** (Level 6)
+   - "A glitch in the Matrix" - board pattern briefly repeats
+   - Reality isn't as stable as it seems
+
+8. **🕴️ The One** (Level 7)
+   - Press O to phase through blocks temporarily
+   - 3 charges to defy the laws of physics
+
+9. **🔧 Construct Mode** (Level 8)
+   - Click individual blocks to delete them
+   - Rebuild reality as you see fit
+
+10. **🎛️ System Override** (Level 9+)
+    - Press S to pause/resume gravity
+    - Full Neo powers: complete control over the simulation
+
+**Gameplay Features:**
+- Self-contained HTML file with no dependencies
+- Responsive Matrix-style green-on-black aesthetics
+- Animated digital rain background effect
+- Progressive difficulty with speed increases
+- Multiple power systems that unlock and combine
+- Matrix quotes and philosophical themes throughout
+
+**Controls:**
+- Arrow keys to move and rotate
+- Space for hard drop
+- P to pause
+- B for Bullet Time (Level 3+)
+- O for The One phase mode (Level 7+)
+- S for System Override gravity toggle (Level 9+)
+- Mouse click to delete blocks in Construct Mode (Level 8+)
+
+**What Makes It Special:**
+- Each twist builds on previous ones - by level 10, you have all powers available
+- The progression mirrors Neo's journey in The Matrix
+- Powers have limited charges, requiring strategic use
+- Combines classic Tetris with power-up mechanics
+- Matrix philosophy integrated into gameplay (choice, control, bending reality)
+
+**Difficulty:** Progressive from classic Tetris to reality-bending chaos
+
+**Recommended For:**
+- Matrix fans wanting a unique gameplay experience
+- Players who enjoy power-ups and game-changing mechanics
+- Anyone who wants to "free their mind" while playing Tetris
+
+---
+
 ## 🧠 Wittgenstein's Language Games Collection
 
 A series of educational games exploring Ludwig Wittgenstein's revolutionary philosophy of language from *Philosophical Investigations* (1953). Each game demonstrates a different aspect of how meaning emerges from use, context, and social practices.
@@ -187,6 +274,10 @@ The comprehensive introduction to language games, featuring four distinct worlds
 **For Fun with Philosophy:**
 - **Language Games Tetris** - Perfect entry point! Familiar gameplay with philosophical depth
 - Or play it after completing the educational games to see concepts applied to Tetris
+
+**For Matrix/Cyberpunk Fans:**
+- **Matrix Tetris** - Progressive reality-bending gameplay with power-ups and Matrix aesthetics
+- Best experienced if you enjoy The Matrix films and want a unique Tetris twist
 
 **For Classic Gaming:**
 - **Classic Tetris** - Pure block-stacking fun without philosophy
