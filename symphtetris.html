@@ -287,8 +287,8 @@
         }
         setInterval(drawMatrixRain, 33);
 
-        // Audio context
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        // Audio context (initialized on first user interaction)
+        let audioCtx = null;
 
         const INSTRUMENTS = {
             I: { name: 'Bass', icon: '🎸', color: '#ff0000', baseFreq: 110, notes: [] },
@@ -322,6 +322,17 @@
 
         function playNote(freq, row) {
             if (freq === 0) return; // Drums
+
+            // Initialize audio context on first user interaction
+            if (!audioCtx) {
+                try {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                } catch (e) {
+                    console.warn('Audio not available:', e);
+                    return;
+                }
+            }
+
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             const pitchMultiplier = Math.pow(2, (20 - row) / 12);
@@ -330,8 +341,7 @@
             gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
             gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
             osc.connect(gain);
-            gain.connect(audioCtx.dest
-ination);
+            gain.connect(audioCtx.destination);
             osc.start();
             osc.stop(audioCtx.currentTime + 0.3);
         }

@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MATRIX TETRIS COLLECTION - 10 Ultra-Innovative Games</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #0f0;
+            overflow-x: hidden;
+        }
+
+        #matrix-rain {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            opacity: 0.2;
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 60px;
+            animation: glitch 5s infinite;
+        }
+
+        @keyframes glitch {
+            0%, 90%, 100% { transform: translate(0); }
+            92% { transform: translate(-2px, 2px); }
+            94% { transform: translate(2px, -2px); }
+            96% { transform: translate(-2px, -2px); }
+            98% { transform: translate(2px, 2px); }
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            text-shadow: 0 0 20px #0f0, 0 0 40px #0f0, 0 0 60px #0f0;
+            margin-bottom: 15px;
+            letter-spacing: 8px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+
+        .subtitle {
+            font-size: 1.3rem;
+            opacity: 0.8;
+            margin-bottom: 10px;
+        }
+
+        .tagline {
+            font-size: 1rem;
+            color: #0ff;
+            font-style: italic;
+        }
+
+        .intro {
+            background: rgba(0, 20, 0, 0.9);
+            border: 2px solid #0f0;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 50px;
+            box-shadow: 0 0 30px rgba(0, 255, 0, 0.3);
+            line-height: 1.8;
+        }
+
+        .intro h2 {
+            font-size: 1.8rem;
+            margin-bottom: 15px;
+            text-shadow: 0 0 10px #0f0;
+        }
+
+        .games-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin-bottom: 50px;
+        }
+
+        .game-card {
+            background: rgba(0, 20, 0, 0.9);
+            border: 2px solid #0a0;
+            border-radius: 15px;
+            padding: 25px;
+            transition: all 0.3s;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .game-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 255, 0, 0.1), transparent);
+            transition: left 0.5s;
+        }
+
+        .game-card:hover::before {
+            left: 100%;
+        }
+
+        .game-card:hover {
+            border-color: #0f0;
+            box-shadow: 0 0 30px rgba(0, 255, 0, 0.5);
+            transform: translateY(-5px);
+        }
+
+        .game-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            display: block;
+            text-align: center;
+        }
+
+        .game-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-shadow: 0 0 5px #0f0;
+        }
+
+        .game-subtitle {
+            font-size: 0.9rem;
+            color: #0ff;
+            margin-bottom: 15px;
+            font-style: italic;
+        }
+
+        .game-desc {
+            font-size: 0.9rem;
+            line-height: 1.6;
+            margin-bottom: 15px;
+            opacity: 0.9;
+        }
+
+        .game-features {
+            font-size: 0.85rem;
+            opacity: 0.7;
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+
+        .play-btn {
+            display: inline-block;
+            background: rgba(0, 80, 0, 0.8);
+            border: 2px solid #0f0;
+            color: #0f0;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: bold;
+            transition: all 0.3s;
+            text-align: center;
+        }
+
+        .play-btn:hover {
+            background: rgba(0, 150, 0, 0.9);
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
+            transform: scale(1.05);
+        }
+
+        .innovation-badge {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(255, 0, 255, 0.2);
+            border: 1px solid #f0f;
+            color: #f0f;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+
+        footer {
+            text-align: center;
+            padding: 40px 20px;
+            border-top: 2px solid #0a0;
+            margin-top: 50px;
+        }
+
+        footer p {
+            margin: 10px 0;
+            opacity: 0.7;
+        }
+
+        .category {
+            margin-bottom: 50px;
+        }
+
+        .category-title {
+            font-size: 2rem;
+            text-align: center;
+            margin-bottom: 30px;
+            text-shadow: 0 0 10px #0ff;
+            color: #0ff;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+
+            .games-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="matrix-rain"></canvas>
+
+    <div class="container">
+        <header>
+            <h1>⚡ MATRIX TETRIS ⚡</h1>
+            <div class="subtitle">Ultra-Innovative Collection</div>
+            <div class="tagline">"What if Tetris wasn't just about blocks?"</div>
+        </header>
+
+        <div class="intro">
+            <h2>Welcome to the Future of Tetris</h2>
+            <p>
+                This collection contains <strong>10 genuinely innovative Tetris variations</strong> that push the boundaries of what's possible in puzzle gaming. Each game features stunning Matrix digital rain aesthetics and mechanics never seen before in Tetris history.
+            </p>
+            <p style="margin-top: 15px;">
+                From managing <strong>quantum superposition</strong> to negotiating <strong>diplomatic alliances</strong>, from composing <strong>symphonies</strong> to contemplating <strong>philosophy</strong> — these aren't just Tetris clones. They're entirely new gaming experiences built on the Tetris foundation.
+            </p>
+        </div>
+
+        <div class="category">
+            <div class="category-title">🧠 Mind-Bending Physics</div>
+            <div class="games-grid">
+                <div class="game-card" onclick="window.location.href='chronotris.html'">
+                    <div class="innovation-badge">TEMPORAL</div>
+                    <div class="game-icon">⏳</div>
+                    <div class="game-title">CHRONOTRIS</div>
+                    <div class="game-subtitle">Multi-Timeline Tetris</div>
+                    <div class="game-desc">
+                        Manage <strong>three parallel timelines</strong> simultaneously. Past affects Present, Future shows echoes. Temporal cascades and paradoxes create unprecedented strategic depth.
+                    </div>
+                    <div class="game-features">
+                        ⚡ 3 boards, 1 game • Time Splice ability • Paradox penalties
+                    </div>
+                    <a href="chronotris.html" class="play-btn">▶ ENTER THE TIMESTREAM</a>
+                </div>
+
+                <div class="game-card" onclick="window.location.href='quantris.html'">
+                    <div class="innovation-badge">QUANTUM</div>
+                    <div class="game-icon">⚛️</div>
+                    <div class="game-title">QUANTRIS</div>
+                    <div class="game-subtitle">Quantum Superposition Tetris</div>
+                    <div class="game-desc">
+                        Pieces exist in <strong>superposition of ALL 7 shapes</strong> until observed. Manipulate probability distributions, predict collapses, and leverage quantum entanglement.
+                    </div>
+                    <div class="game-features">
+                        ⚡ Wavefunction collapse • Probability manipulation • Entanglement
+                    </div>
+                    <a href="quantris.html" class="play-btn">▶ COLLAPSE THE WAVEFUNCTION</a>
+                </div>
+
+                <div class="game-card" onclick="window.location.href='oblivitris.html'">
+                    <div class="innovation-badge">MEMORY</div>
+                    <div class="game-icon">👁️</div>
+                    <div class="game-title">OBLIVITRIS</div>
+                    <div class="game-subtitle">Memory-Based Invisible Tetris</div>
+                    <div class="game-desc">
+                        Placed pieces <strong>gradually fade from visibility</strong>. Play from spatial memory alone. Limited sonar pulses reveal the board briefly.
+                    </div>
+                    <div class="game-features">
+                        ⚡ 10s fade timeline • 3 sonar pulses • Ghost memory • Archaeologist mode
+                    </div>
+                    <a href="oblivitris.html" class="play-btn">▶ TEST YOUR MEMORY</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="category">
+            <div class="category-title">🎨 Creative & Artistic</div>
+            <div class="games-grid">
+                <div class="game-card" onclick="window.location.href='symphtetris.html'">
+                    <div class="innovation-badge">MUSICAL</div>
+                    <div class="game-icon">🎵</div>
+                    <div class="game-title">SYMPHTETRIS</div>
+                    <div class="game-subtitle">Musical Composition Tetris</div>
+                    <div class="game-desc">
+                        Every placement is a <strong>musical note</strong>. Compose symphonies with 7 instruments. Harmonious combinations sound beautiful and give bonuses.
+                    </div>
+                    <div class="game-features">
+                        ⚡ Web Audio API • 7 instruments • Chord detection • Jazz/Classical/Electronic modes
+                    </div>
+                    <a href="symphtetris.html" class="play-btn">▶ COMPOSE YOUR SYMPHONY</a>
+                </div>
+
+                <div class="game-card" onclick="window.location.href='narratris.html'">
+                    <div class="innovation-badge">STORY</div>
+                    <div class="game-icon">📖</div>
+                    <div class="game-title">NARRATRIS</div>
+                    <div class="game-subtitle">Story-Driven Character Tetris</div>
+                    <div class="game-desc">
+                        Each piece is a <strong>Matrix character</strong>. Witness emergent storytelling through piece interactions. Clearing lines creates moral dilemmas. Multiple endings!
+                    </div>
+                    <div class="game-features">
+                        ⚡ Neo, Trinity, Morpheus • Dynamic dialogue • 12 endings • Character survival
+                    </div>
+                    <a href="narratris.html" class="play-btn">▶ ENTER THE NARRATIVE</a>
+                </div>
+
+                <div class="game-card" onclick="window.location.href='empathris.html'">
+                    <div class="innovation-badge">EMOTION</div>
+                    <div class="game-icon">🧠</div>
+                    <div class="game-title">EMPATHRIS</div>
+                    <div class="game-subtitle">Emotion-Responsive Tetris</div>
+                    <div class="game-desc">
+                        Gameplay changes based on <strong>your emotional state</strong>. Frustrated = faster pieces. Happy = splits into singles. Focused = optimal hints.
+                    </div>
+                    <div class="game-features">
+                        ⚡ 5 emotional states • Combo abilities • Zen Mode • Emotional regulation gameplay
+                    </div>
+                    <a href="empathris.html" class="play-btn">▶ FEEL THE GAME</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="category">
+            <div class="category-title">🎓 Educational & Strategic</div>
+            <div class="games-grid">
+                <div class="game-card" onclick="window.location.href='philosophtris.html'">
+                    <div class="innovation-badge">PHILOSOPHY</div>
+                    <div class="game-icon">⚛️</div>
+                    <div class="game-title">PHILOSOPHTRIS</div>
+                    <div class="game-subtitle">Multi-Ruleset Philosophical Tetris</div>
+                    <div class="game-desc">
+                        Each philosophy <strong>changes the rules of reality</strong>. Platonism, Nihilism, Absurdism, Buddhism, and more. Perfect companion to Wittgenstein games!
+                    </div>
+                    <div class="game-features">
+                        ⚡ 7 philosophical systems • Custom win conditions • Sisyphean mode • Enlightenment
+                    </div>
+                    <a href="philosophtris.html" class="play-btn">▶ CONTEMPLATE EXISTENCE</a>
+                </div>
+
+                <div class="game-card" onclick="window.location.href='ecotris.html'">
+                    <div class="innovation-badge">ECOLOGY</div>
+                    <div class="game-icon">🌍</div>
+                    <div class="game-title">ECOTRIS</div>
+                    <div class="game-subtitle">Ecosystem Simulation Tetris</div>
+                    <div class="game-desc">
+                        Pieces are <strong>organisms in a food chain</strong>. Predators need prey. Maintain ecosystem balance or watch extinctions trigger meteor showers.
+                    </div>
+                    <div class="game-features">
+                        ⚡ Food chain simulation • Symbiosis bonuses • Extinction events • Balance meter
+                    </div>
+                    <a href="ecotris.html" class="play-btn">▶ BUILD AN ECOSYSTEM</a>
+                </div>
+
+                <div class="game-card" onclick="window.location.href='architris.html'">
+                    <div class="innovation-badge">ENGINEERING</div>
+                    <div class="game-icon">🏗️</div>
+                    <div class="game-title">ARCHITRIS</div>
+                    <div class="game-subtitle">Structural Engineering Tetris</div>
+                    <div class="game-desc">
+                        Build <strong>structurally sound buildings</strong>. Materials have strength limits. Pieces collapse under stress. Survive earthquakes and wind!
+                    </div>
+                    <div class="game-features">
+                        ⚡ Stress visualization • Collapse physics • Wind/earthquake events • Blueprint challenges
+                    </div>
+                    <a href="architris.html" class="play-btn">▶ ENGINEER STRUCTURES</a>
+                </div>
+
+                <div class="game-card" onclick="window.location.href='diplomtetris.html'">
+                    <div class="innovation-badge">SOCIAL</div>
+                    <div class="game-icon">🤝</div>
+                    <div class="game-title">DIPLOMTETRIS</div>
+                    <div class="game-subtitle">Negotiation-Based Multiplayer</div>
+                    <div class="game-desc">
+                        <strong>Negotiate with AI opponents</strong> for pieces. Trade, form alliances, sabotage, or betray. Combines Tetris with social deduction.
+                    </div>
+                    <div class="game-features">
+                        ⚡ Auction system • Trade negotiations • Alliance mode • Betrayal mechanics
+                    </div>
+                    <a href="diplomtetris.html" class="play-btn">▶ NEGOTIATE FOR VICTORY</a>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <h3 style="font-size: 1.5rem; margin-bottom: 20px; text-shadow: 0 0 10px #0f0;">⚡ Choose Your Reality ⚡</h3>
+            <p>All games feature Matrix digital rain aesthetics and are playable directly in your browser.</p>
+            <p>No installation, no dependencies, just pure innovation.</p>
+            <p style="margin-top: 30px; opacity: 0.5;">
+                "There is no spoon. Only Tetris." — Neo (probably)
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        // Matrix rain effect
+        const canvas = document.getElementById('matrix-rain');
+        const ctx = canvas.getContext('2d');
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const columns = Math.floor(canvas.width / 20);
+        const drops = Array(columns).fill(1);
+
+        const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ⚡⏳⚛️🎵📖🌍👁️🏗️🤝';
+
+        function draw() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = '#0f0';
+            ctx.font = '15px monospace';
+
+            for (let i = 0; i < drops.length; i++) {
+                const text = chars[Math.floor(Math.random() * chars.length)];
+                ctx.fillText(text, i * 20, drops[i] * 20);
+
+                if (drops[i] * 20 > canvas.height && Math.random() > 0.975) {
+                    drops[i] = 0;
+                }
+
+                drops[i]++;
+            }
+        }
+
+        setInterval(draw, 33);
+
+        // Responsive canvas
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+    </script>
+</body>
+</html>
