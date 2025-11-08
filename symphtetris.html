@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SYMPHTETRIS - Musical Composition Tetris</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #e056fd 0%, #000046 100%);
+        }
+
+        .game-container {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 90vw;
+        }
+
+        h1 {
+            color: #8e44ad;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .subtitle {
+            color: #7f8c8d;
+            margin-bottom: 20px;
+            font-style: italic;
+        }
+
+        .game-area {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            align-items: flex-start;
+            flex-wrap: wrap;
+        }
+
+        canvas {
+            border: 3px solid #8e44ad;
+            background: #000;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .side-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            min-width: 280px;
+        }
+
+        .info-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #8e44ad;
+        }
+
+        .info-box h3 {
+            color: #8e44ad;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .stat {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .instrument-legend {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 15px;
+            border-radius: 10px;
+            color: white;
+            border: 2px solid #8e44ad;
+            font-size: 0.85em;
+        }
+
+        .instrument-item {
+            display: flex;
+            align-items: center;
+            margin: 8px 0;
+            padding: 5px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+        }
+
+        .instrument-color {
+            width: 20px;
+            height: 20px;
+            border: 2px solid white;
+            margin-right: 10px;
+            border-radius: 3px;
+        }
+
+        .harmony-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #8e44ad;
+        }
+
+        .harmony-box h3 {
+            color: #8e44ad;
+            margin-bottom: 10px;
+        }
+
+        .harmony-meter {
+            background: #ecf0f1;
+            height: 20px;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .harmony-fill {
+            background: linear-gradient(90deg, #f39c12, #e67e22);
+            height: 100%;
+            transition: width 0.3s;
+        }
+
+        .genre-selector {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #8e44ad;
+        }
+
+        .genre-selector h3 {
+            color: #8e44ad;
+            margin-bottom: 10px;
+        }
+
+        .genre-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .genre-btn {
+            padding: 10px;
+            background: #ecf0f1;
+            border: 2px solid #bdc3c7;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: bold;
+        }
+
+        .genre-btn.active {
+            background: #8e44ad;
+            color: white;
+            border-color: #8e44ad;
+        }
+
+        .controls {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #8e44ad;
+            text-align: left;
+            font-size: 0.85em;
+        }
+
+        .controls h3 {
+            color: #8e44ad;
+            margin-bottom: 10px;
+        }
+
+        button.main-btn {
+            margin-top: 20px;
+            padding: 12px 30px;
+            font-size: 1.1em;
+            font-weight: bold;
+            background: #8e44ad;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        button.main-btn:hover {
+            background: #7d3c98;
+            transform: translateY(-2px);
+        }
+
+        .game-over {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            color: white;
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            display: none;
+            z-index: 1000;
+            max-width: 500px;
+        }
+
+        .game-over.show {
+            display: block;
+        }
+
+        .game-over h2 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            color: #a78bfa;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 1em;
+            display: none;
+            z-index: 999;
+        }
+
+        .notification.show {
+            display: block;
+            animation: slideDown 0.3s;
+        }
+
+        @keyframes slideDown {
+            from { top: -100px; opacity: 0; }
+            to { top: 20px; opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🎵 SYMPHTETRIS</h1>
+        <p class="subtitle">Musical Composition Tetris: Create music as you play</p>
+
+        <div class="game-area">
+            <div>
+                <canvas id="tetris" width="300" height="600"></canvas>
+            </div>
+
+            <div class="side-panel">
+                <div class="info-box">
+                    <h3>Score</h3>
+                    <div class="stat" id="score">0</div>
+                </div>
+
+                <div class="info-box">
+                    <h3>Harmony Bonus</h3>
+                    <div class="stat" id="harmonyBonus">0</div>
+                </div>
+
+                <div class="instrument-legend">
+                    <h3>🎹 Instruments</h3>
+                    <div class="instrument-item">
+                        <div class="instrument-color" style="background: #00f0f0;"></div>
+                        <span>I = 🎸 Bass</span>
+                    </div>
+                    <div class="instrument-item">
+                        <div class="instrument-color" style="background: #f0f000;"></div>
+                        <span>O = 🥁 Drums</span>
+                    </div>
+                    <div class="instrument-item">
+                        <div class="instrument-color" style="background: #a000f0;"></div>
+                        <span>T = 🎹 Piano</span>
+                    </div>
+                    <div class="instrument-item">
+                        <div class="instrument-color" style="background: #00f000;"></div>
+                        <span>S = 🎻 Violin</span>
+                    </div>
+                    <div class="instrument-item">
+                        <div class="instrument-color" style="background: #f00000;"></div>
+                        <span>Z = 🎸 Guitar</span>
+                    </div>
+                    <div class="instrument-item">
+                        <div class="instrument-color" style="background: #0000f0;"></div>
+                        <span>J = 🎺 Brass</span>
+                    </div>
+                    <div class="instrument-item">
+                        <div class="instrument-color" style="background: #f0a000;"></div>
+                        <span>L = 🎹 Synth</span>
+                    </div>
+                </div>
+
+                <div class="harmony-box">
+                    <h3>🎼 Harmony Meter</h3>
+                    <div class="harmony-meter">
+                        <div class="harmony-fill" id="harmonyMeter"></div>
+                    </div>
+                    <p style="font-size: 0.85em; color: #555;">
+                        Match instruments for harmonious chords!
+                    </p>
+                </div>
+
+                <div class="genre-selector">
+                    <h3>Genre</h3>
+                    <div class="genre-buttons">
+                        <button class="genre-btn active" data-genre="jazz">🎷 Jazz</button>
+                        <button class="genre-btn" data-genre="classical">🎻 Classical</button>
+                        <button class="genre-btn" data-genre="electronic">🎧 Electronic</button>
+                        <button class="genre-btn" data-genre="rock">🎸 Rock</button>
+                    </div>
+                </div>
+
+                <div class="controls">
+                    <h3>Controls</h3>
+                    <p><strong>←/→</strong> Move (timing)</p>
+                    <p><strong>↓</strong> Soft Drop</p>
+                    <p><strong>↑</strong> Rotate</p>
+                    <p><strong>Space</strong> Hard Drop</p>
+                    <p><strong>P</strong> Pause</p>
+                </div>
+            </div>
+        </div>
+
+        <button class="main-btn" id="startBtn">Start Symphony</button>
+    </div>
+
+    <div class="notification" id="notification"></div>
+
+    <div class="game-over" id="gameOver">
+        <h2>SYMPHONY COMPLETE</h2>
+        <p style="font-size: 1.2em; margin: 20px 0;">Final Score: <span id="finalScore">0</span></p>
+        <p style="font-size: 1em; margin: 10px 0;">Harmony Bonuses: <span id="finalHarmony">0</span></p>
+        <p style="font-size: 0.9em; margin: 15px 0; color: #a78bfa;">
+            Musical Rank: <span id="musicRank">Novice Composer</span>
+        </p>
+        <button class="main-btn" id="restartBtn">New Symphony</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('tetris');
+        const ctx = canvas.getContext('2d');
+        const COLS = 10;
+        const ROWS = 20;
+        const BLOCK_SIZE = 30;
+
+        const SHAPES = {
+            'I': [[1, 1, 1, 1]],
+            'O': [[1, 1], [1, 1]],
+            'T': [[0, 1, 0], [1, 1, 1]],
+            'S': [[0, 1, 1], [1, 1, 0]],
+            'Z': [[1, 1, 0], [0, 1, 1]],
+            'J': [[1, 0, 0], [1, 1, 1]],
+            'L': [[0, 0, 1], [1, 1, 1]]
+        };
+
+        const COLORS = {
+            'I': '#00f0f0',
+            'O': '#f0f000',
+            'T': '#a000f0',
+            'S': '#00f000',
+            'Z': '#f00000',
+            'J': '#0000f0',
+            'L': '#f0a000'
+        };
+
+        const INSTRUMENTS = {
+            'I': { name: 'Bass', freq: 100 },
+            'O': { name: 'Drums', freq: 80 },
+            'T': { name: 'Piano', freq: 440 },
+            'S': { name: 'Violin', freq: 880 },
+            'Z': { name: 'Guitar', freq: 330 },
+            'J': { name: 'Brass', freq: 220 },
+            'L': { name: 'Synth', freq: 550 }
+        };
+
+        const HARMONIOUS_COMBOS = [
+            ['I', 'T', 'S'], // Bass + Piano + Violin
+            ['T', 'S'], // Piano + Violin
+            ['I', 'Z'], // Bass + Guitar
+            ['J', 'L'], // Brass + Synth
+        ];
+
+        let audioContext = null;
+        let board = [];
+        let currentPiece = null;
+        let score = 0;
+        let harmonyBonus = 0;
+        let harmonyMeter = 0;
+        let gameRunning = false;
+        let isPaused = false;
+        let dropCounter = 0;
+        let dropInterval = 1000;
+        let lastTime = 0;
+        let gameLoop = null;
+        let currentGenre = 'jazz';
+
+        function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function playNote(type, row, col) {
+            if (!audioContext) return;
+
+            const baseFreq = INSTRUMENTS[type].freq;
+            const pitchMultiplier = 1 + ((ROWS - row) / ROWS); // Higher = higher pitch
+            const frequency = baseFreq * pitchMultiplier;
+            const duration = 0.15;
+
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.type = currentGenre === 'electronic' ? 'square' : 'sine';
+            oscillator.frequency.value = frequency;
+
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + duration);
+        }
+
+        function createBoard() {
+            board = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+        }
+
+        function createPiece() {
+            const pieces = Object.keys(SHAPES);
+            const type = pieces[Math.floor(Math.random() * pieces.length)];
+            return {
+                shape: SHAPES[type],
+                color: COLORS[type],
+                x: Math.floor(COLS / 2) - Math.floor(SHAPES[type][0].length / 2),
+                y: 0,
+                type: type
+            };
+        }
+
+        function drawBlock(x, y, color) {
+            ctx.fillStyle = color;
+            ctx.fillRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+        }
+
+        function drawBoard() {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            for (let row = 0; row < ROWS; row++) {
+                for (let col = 0; col < COLS; col++) {
+                    if (board[row][col]) {
+                        drawBlock(col, row, board[row][col].color);
+                    }
+                }
+            }
+        }
+
+        function drawPiece(piece) {
+            piece.shape.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value) {
+                        drawBlock(piece.x + x, piece.y + y, piece.color);
+                    }
+                });
+            });
+        }
+
+        function checkCollision(piece, offsetX = 0, offsetY = 0) {
+            for (let y = 0; y < piece.shape.length; y++) {
+                for (let x = 0; x < piece.shape[y].length; x++) {
+                    if (piece.shape[y][x]) {
+                        const newX = piece.x + x + offsetX;
+                        const newY = piece.y + y + offsetY;
+
+                        if (newX < 0 || newX >= COLS || newY >= ROWS) return true;
+                        if (newY >= 0 && board[newY][newX]) return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        function mergePiece() {
+            currentPiece.shape.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value) {
+                        const boardY = currentPiece.y + y;
+                        const boardX = currentPiece.x + x;
+                        if (boardY >= 0) {
+                            board[boardY][boardX] = {
+                                color: currentPiece.color,
+                                type: currentPiece.type
+                            };
+                            playNote(currentPiece.type, boardY, boardX);
+                        }
+                    }
+                });
+            });
+        }
+
+        function checkHarmony(lineTypes) {
+            for (let combo of HARMONIOUS_COMBOS) {
+                if (combo.every(type => lineTypes.includes(type))) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function clearLines() {
+            let linesCleared = 0;
+
+            for (let row = ROWS - 1; row >= 0; row--) {
+                if (board[row].every(cell => cell !== null)) {
+                    const lineTypes = board[row].map(cell => cell.type);
+                    const isHarmonious = checkHarmony(lineTypes);
+
+                    if (isHarmonious) {
+                        harmonyBonus += 100;
+                        harmonyMeter = Math.min(100, harmonyMeter + 20);
+                        showNotification('🎵 HARMONIOUS CHORD! +100');
+                    } else {
+                        harmonyMeter = Math.max(0, harmonyMeter - 5);
+                    }
+
+                    board.splice(row, 1);
+                    board.unshift(Array(COLS).fill(null));
+                    linesCleared++;
+                    row++;
+                }
+            }
+
+            if (linesCleared > 0) {
+                score += [0, 40, 100, 300, 1200][linesCleared];
+                updateUI();
+            }
+        }
+
+        function rotate(piece) {
+            const newShape = piece.shape[0].map((_, i) =>
+                piece.shape.map(row => row[i]).reverse()
+            );
+
+            const rotated = { ...piece, shape: newShape };
+
+            if (!checkCollision(rotated)) return rotated;
+
+            for (let offset of [1, -1, 2, -2]) {
+                rotated.x = piece.x + offset;
+                if (!checkCollision(rotated)) return rotated;
+            }
+
+            return piece;
+        }
+
+        function move(direction) {
+            if (!currentPiece || isPaused) return;
+
+            if (direction === 'left' && !checkCollision(currentPiece, -1, 0)) {
+                currentPiece.x--;
+            } else if (direction === 'right' && !checkCollision(currentPiece, 1, 0)) {
+                currentPiece.x++;
+            } else if (direction === 'down') {
+                if (!checkCollision(currentPiece, 0, 1)) {
+                    currentPiece.y++;
+                    score += 1;
+                    updateUI();
+                } else {
+                    placePiece();
+                }
+            }
+        }
+
+        function hardDrop() {
+            if (!currentPiece || isPaused) return;
+
+            while (!checkCollision(currentPiece, 0, 1)) {
+                currentPiece.y++;
+                score += 2;
+            }
+            updateUI();
+            placePiece();
+        }
+
+        function placePiece() {
+            mergePiece();
+            clearLines();
+            spawnPiece();
+        }
+
+        function spawnPiece() {
+            currentPiece = createPiece();
+            if (checkCollision(currentPiece)) gameOver();
+        }
+
+        function showNotification(message) {
+            const notif = document.getElementById('notification');
+            notif.textContent = message;
+            notif.classList.add('show');
+            setTimeout(() => notif.classList.remove('show'), 2000);
+        }
+
+        function updateUI() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('harmonyBonus').textContent = harmonyBonus;
+            document.getElementById('harmonyMeter').style.width = harmonyMeter + '%';
+        }
+
+        function getMusicRank() {
+            if (harmonyBonus === 0) return 'Novice Composer';
+            if (harmonyBonus < 300) return 'Apprentice Musician';
+            if (harmonyBonus < 600) return 'Skilled Composer';
+            if (harmonyBonus < 1000) return 'Master Conductor';
+            return 'Legendary Maestro';
+        }
+
+        function gameOver() {
+            gameRunning = false;
+            cancelAnimationFrame(gameLoop);
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('finalHarmony').textContent = harmonyBonus;
+            document.getElementById('musicRank').textContent = getMusicRank();
+            document.getElementById('gameOver').classList.add('show');
+        }
+
+        function update(time = 0) {
+            if (!gameRunning || isPaused) return;
+
+            const deltaTime = time - lastTime;
+            lastTime = time;
+            dropCounter += deltaTime;
+
+            if (dropCounter > dropInterval) {
+                move('down');
+                dropCounter = 0;
+            }
+
+            drawBoard();
+            if (currentPiece) drawPiece(currentPiece);
+
+            gameLoop = requestAnimationFrame(update);
+        }
+
+        function startGame() {
+            initAudio();
+            createBoard();
+            score = 0;
+            harmonyBonus = 0;
+            harmonyMeter = 0;
+            dropCounter = 0;
+            isPaused = false;
+            gameRunning = true;
+
+            updateUI();
+            spawnPiece();
+
+            document.getElementById('gameOver').classList.remove('show');
+            document.getElementById('startBtn').textContent = 'Restart Symphony';
+
+            lastTime = 0;
+            update();
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (!gameRunning) return;
+
+            switch(e.key) {
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    move('left');
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    move('right');
+                    break;
+                case 'ArrowDown':
+                    e.preventDefault();
+                    move('down');
+                    break;
+                case 'ArrowUp':
+                    e.preventDefault();
+                    if (currentPiece && !isPaused) {
+                        currentPiece = rotate(currentPiece);
+                    }
+                    break;
+                case ' ':
+                    e.preventDefault();
+                    hardDrop();
+                    break;
+                case 'p':
+                case 'P':
+                    e.preventDefault();
+                    isPaused = !isPaused;
+                    if (!isPaused) {
+                        lastTime = performance.now();
+                        update(lastTime);
+                    }
+                    break;
+            }
+        });
+
+        document.querySelectorAll('.genre-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.genre-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentGenre = btn.dataset.genre;
+            });
+        });
+
+        document.getElementById('startBtn').addEventListener('click', startGame);
+        document.getElementById('restartBtn').addEventListener('click', startGame);
+
+        drawBoard();
+    </script>
+</body>
+</html>
