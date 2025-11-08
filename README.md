@@ -14,6 +14,89 @@ A classic Tetris implementation with smooth controls and scoring.
 
 ---
 
+## 📊 Framework-Based Tetris Collection
+
+Three diverse Tetris implementations showcasing different HTML/JavaScript visualization frameworks. Each version offers unique visual and technical approaches to the classic game.
+
+### 🎨 D3.js Tetris
+**File:** `tetris-d3.html`
+
+Experience Tetris through data-driven DOM manipulation and SVG rendering!
+
+**Technical Features:**
+- SVG-based game board with smooth D3.js transitions
+- Data binding for dynamic block rendering
+- Real-time updates using D3's enter/exit/update pattern
+- Declarative approach to visualization
+
+**What's Unique:**
+- Each block is a data point rendered using D3's powerful selection API
+- Smooth fade-in animations when pieces lock
+- Next piece preview rendered as SVG elements
+- Demonstrates D3's strength in data-to-visual transformations
+
+**Best For:** Developers interested in data visualization frameworks and SVG manipulation
+
+---
+
+### 🌐 Three.js Tetris
+**File:** `tetris-three.html`
+
+Play Tetris in stunning 3D with WebGL-powered graphics!
+
+**Technical Features:**
+- Full 3D game board rendered with Three.js
+- Real-time lighting with ambient, directional, and point lights
+- Interactive camera controls (mouse rotation and zoom)
+- Shadow mapping and fog effects
+- Animated rotating lights creating dynamic atmosphere
+
+**What's Unique:**
+- True 3D blocks with depth and perspective
+- Phong shading with emissive materials for glowing blocks
+- Camera manipulation: rotate view by dragging, zoom with scroll wheel
+- Grid helper and wireframe board outline for spatial reference
+- Blocks cast shadows on the game board
+
+**Controls:**
+- Mouse: Drag to rotate camera view
+- Scroll: Zoom in/out
+- A/D or ←/→: Move piece horizontally
+- W/S: Rotate piece
+- Space: Hard drop
+
+**Best For:** Game developers and 3D graphics enthusiasts
+
+---
+
+### 📈 Chart.js Tetris
+**File:** `tetris-chart.html`
+
+Tetris reimagined as live data visualization!
+
+**Technical Features:**
+- Game board rendered as a horizontal stacked bar chart
+- Real-time score history line chart
+- Column heights bar chart showing board distribution
+- Multiple coordinated views updating simultaneously
+
+**What's Unique:**
+- Each row of the game board is a bar in a stacked chart
+- Blocks are represented as chart segments with data-driven colors
+- Live performance metrics track your gameplay
+- See Tetris through the lens of data analytics
+- Three synchronized charts: main board, score trends, and column distribution
+
+**What You Learn:**
+- Creative applications of chart libraries beyond traditional graphs
+- Chart.js can visualize game state, not just data sets
+- Multi-chart dashboards with coordinated updates
+- Using visualization tools in unexpected contexts
+
+**Best For:** Data visualization enthusiasts and creative developers
+
+---
+
 ## 🎮🧠 Language Games Tetris
 **File:** `language-tetris.html`
 
@@ -190,6 +273,17 @@ The comprehensive introduction to language games, featuring four distinct worlds
 
 **For Classic Gaming:**
 - **Classic Tetris** - Pure block-stacking fun without philosophy
+
+**For Technical Exploration:**
+1. **D3.js Tetris** - Learn data-driven DOM manipulation and SVG
+2. **Three.js Tetris** - Explore 3D graphics and WebGL
+3. **Chart.js Tetris** - Discover creative uses of charting libraries
+
+**For Framework Comparison:**
+- Play all three framework-based versions to compare approaches:
+  - D3.js: Declarative, data-driven, SVG-based
+  - Three.js: 3D, WebGL, game-oriented
+  - Chart.js: Dashboard-style, analytics-focused
 
 ---
 
