@@ -62,6 +62,40 @@
             line-height: 1.6;
         }
 
+        .feature-highlights {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 30px auto;
+            max-width: 900px;
+            backdrop-filter: blur(10px);
+        }
+
+        .feature-highlights h3 {
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .feature-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .feature-icon {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
         .games-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
@@ -91,7 +125,7 @@
         }
 
         .game-card:hover {
-            transform: translateY(-10px);
+            transform: translateY(-10px) scale(1.02);
             box-shadow: 0 15px 50px rgba(0, 0, 0, 0.4);
         }
 
@@ -99,6 +133,12 @@
             font-size: 4em;
             margin-bottom: 15px;
             text-align: center;
+            animation: bounce 2s ease-in-out infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
         }
 
         .game-title {
@@ -182,6 +222,24 @@
         .difficulty.medium { background: #ff9800; color: white; }
         .difficulty.hard { background: #f44336; color: white; }
 
+        .new-badge {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #ff4081;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: bold;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
         footer {
             text-align: center;
             margin-top: 50px;
@@ -234,16 +292,43 @@
             </div>
         </header>
 
+        <div class="feature-highlights">
+            <h3>✨ Enhanced Features ✨</h3>
+            <div class="feature-grid">
+                <div class="feature-item">
+                    <div class="feature-icon">🎨</div>
+                    <div><strong>Diverse Aesthetics</strong></div>
+                    <div style="font-size: 0.9em; margin-top: 5px;">Each game has unique, modern visual style</div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">🎯</div>
+                    <div><strong>Unique Mechanics</strong></div>
+                    <div style="font-size: 0.9em; margin-top: 5px;">Completely new gameplay in every variation</div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">📱</div>
+                    <div><strong>Mobile Ready</strong></div>
+                    <div style="font-size: 0.9em; margin-top: 5px;">Responsive design, works everywhere</div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">⚡</div>
+                    <div><strong>No Dependencies</strong></div>
+                    <div style="font-size: 0.9em; margin-top: 5px;">Self-contained HTML files, instant play</div>
+                </div>
+            </div>
+        </div>
+
         <div class="games-grid">
             <!-- CHRONOTRIS -->
             <div class="game-card chronotris" onclick="window.location.href='chronotris.html'">
+                <div class="new-badge">EPIC</div>
                 <div class="game-icon">⏱️</div>
                 <div class="game-title">CHRONOTRIS</div>
                 <div class="game-tagline">Multi-Timeline Tetris</div>
                 <div class="difficulty hard">Hard</div>
                 <div class="game-description">
                     Control three parallel timelines simultaneously! Manage Past, Present, and Future boards with
-                    temporal cascades and time splicing mechanics.
+                    temporal cascades and time splicing mechanics. Mind-bending multitasking!
                 </div>
                 <ul class="game-features">
                     <li>Three simultaneous game boards</li>
@@ -262,12 +347,12 @@
                 <div class="difficulty medium">Medium</div>
                 <div class="game-description">
                     Your emotional state changes the game! Switch between emotions to unlock different gameplay effects,
-                    from piece splitting to time slowdown.
+                    from piece splitting to time slowdown. Feel the blocks!
                 </div>
                 <ul class="game-features">
-                    <li>6 emotional states</li>
+                    <li>6 emotional states (Happy, Calm, Angry, etc.)</li>
                     <li>Dynamic gameplay modifiers</li>
-                    <li>Emotion combo system</li>
+                    <li>Emotion stability combo system</li>
                     <li>Biofeedback-inspired mechanics</li>
                 </ul>
                 <a href="empathris.html" class="play-button">FEEL THE GAME</a>
@@ -281,70 +366,73 @@
                 <div class="difficulty medium">Medium</div>
                 <div class="game-description">
                     Each tetromino is a character in an unfolding story. Create interactions, make moral choices,
-                    and unlock multiple endings based on who survives.
+                    and unlock multiple endings based on who survives. Every game tells a tale!
                 </div>
                 <ul class="game-features">
-                    <li>7 unique characters</li>
+                    <li>7 unique characters with personalities</li>
                     <li>Emergent narrative system</li>
-                    <li>Multiple story endings</li>
-                    <li>Moral dilemmas</li>
+                    <li>Multiple story endings to discover</li>
+                    <li>Moral dilemmas in every decision</li>
                 </ul>
                 <a href="narratris.html" class="play-button">BEGIN THE TALE</a>
             </div>
 
             <!-- ECOTRIS -->
             <div class="game-card ecotris" onclick="window.location.href='ecotris.html'">
+                <div class="new-badge">COMPLEX</div>
                 <div class="game-icon">🌿</div>
                 <div class="game-title">ECOTRIS</div>
                 <div class="game-tagline">Ecosystem Simulation Tetris</div>
                 <div class="difficulty hard">Hard</div>
                 <div class="game-description">
                     Build a balanced food chain! Species must feed on each other to survive. Achieve symbiosis bonuses
-                    while avoiding extinction events.
+                    while avoiding extinction events. Nature finds a way!
                 </div>
                 <ul class="game-features">
-                    <li>Food chain mechanics</li>
-                    <li>Ecosystem health meter</li>
-                    <li>Symbiosis bonus system</li>
-                    <li>Extinction penalties</li>
+                    <li>Realistic food chain mechanics</li>
+                    <li>Ecosystem health tracking</li>
+                    <li>Symbiosis bonus rewards</li>
+                    <li>Extinction event penalties</li>
                 </ul>
                 <a href="ecotris.html" class="play-button">GROW ECOSYSTEM</a>
             </div>
 
             <!-- OBLIVITRIS -->
             <div class="game-card oblivitris" onclick="window.location.href='oblivitris.html'">
+                <div class="new-badge">CHALLENGE</div>
                 <div class="game-icon">👁️</div>
                 <div class="game-title">OBLIVITRIS</div>
                 <div class="game-tagline">Memory-Based Invisible Tetris</div>
                 <div class="difficulty hard">Hard</div>
                 <div class="game-description">
                     Pieces gradually fade from view after placement. Trust your spatial memory or use limited sonar
-                    pulses to reveal the board!
+                    pulses to reveal the board! The ultimate memory challenge!
                 </div>
                 <ul class="game-features">
-                    <li>Progressive fading mechanic</li>
+                    <li>Progressive piece fading (3s→invisible)</li>
                     <li>3 sonar pulse reveals</li>
-                    <li>Ghost memory system</li>
-                    <li>Archaeologist mode bonus</li>
+                    <li>Ghost memory hints</li>
+                    <li>Archaeologist mode bonus achievement</li>
                 </ul>
                 <a href="oblivitris.html" class="play-button">TEST MEMORY</a>
             </div>
 
             <!-- QUANTRIS -->
             <div class="game-card quantris" onclick="window.location.href='quantris.html'">
+                <div class="new-badge">MIND-BENDING</div>
                 <div class="game-icon">⚛️</div>
                 <div class="game-title">QUANTRIS</div>
                 <div class="game-tagline">Quantum Superposition Tetris</div>
                 <div class="difficulty hard">Hard</div>
                 <div class="game-description">
                     Pieces exist in superposition—all shapes at once—until you place them! Manipulate probabilities
-                    through rotation and master entanglement.
+                    through rotation and master entanglement. Schrödinger's Tetris!
                 </div>
                 <ul class="game-features">
                     <li>Quantum superposition mechanics</li>
-                    <li>Probability manipulation</li>
-                    <li>Piece entanglement</li>
-                    <li>Wave function collapse</li>
+                    <li>Probability manipulation via rotation</li>
+                    <li>Piece entanglement every 5 collapses</li>
+                    <li>Wave function collapse on placement</li>
                 </ul>
                 <a href="quantris.html" class="play-button">COLLAPSE REALITY</a>
             </div>
@@ -357,13 +445,13 @@
                 <div class="difficulty easy">Easy</div>
                 <div class="game-description">
                     Every placement is a musical note! Create harmonious chords for bonus points across three genre
-                    modes: Jazz, Classical, and Electronic.
+                    modes: Jazz, Classical, and Electronic. Compose as you play!
                 </div>
                 <ul class="game-features">
-                    <li>7 unique instruments</li>
-                    <li>Harmony detection system</li>
-                    <li>3 genre modes</li>
-                    <li>Musical composition mechanic</li>
+                    <li>7 unique instrument sounds</li>
+                    <li>Harmony detection for bonus points</li>
+                    <li>3 genre modes with different feels</li>
+                    <li>Live musical composition display</li>
                 </ul>
                 <a href="symphtetris.html" class="play-button">COMPOSE MUSIC</a>
             </div>
@@ -376,47 +464,68 @@
                 <div class="difficulty hard">Hard</div>
                 <div class="game-description">
                     Build structurally sound buildings! Different materials have different strengths. Balance weight
-                    distribution or watch your structure collapse!
+                    distribution or watch your structure collapse! Physics-based challenge!
                 </div>
                 <ul class="game-features">
-                    <li>Stress visualization</li>
-                    <li>Material strength system</li>
-                    <li>Stability calculations</li>
-                    <li>Physics-based collapse</li>
+                    <li>Real-time stress visualization</li>
+                    <li>Material strength differences</li>
+                    <li>Stability calculations and balance</li>
+                    <li>Physics-based structural collapse</li>
                 </ul>
                 <a href="architris.html" class="play-button">BUILD STRUCTURE</a>
             </div>
 
             <!-- PHILOSOPHTRIS -->
             <div class="game-card philosophtris" onclick="window.location.href='philosophtris.html'">
+                <div class="new-badge">UNIQUE</div>
                 <div class="game-icon">🏛️</div>
                 <div class="game-title">PHILOSOPHTRIS</div>
                 <div class="game-tagline">Multi-Ruleset Philosophical Tetris</div>
                 <div class="difficulty medium">Medium</div>
                 <div class="game-description">
                     Each philosophical school changes the rules! Experience Platonism, Nihilism, Buddhism, Absurdism,
-                    and more—each with unique win conditions.
+                    and more—each with unique win conditions. Perfect match for Wittgenstein collection!
                 </div>
                 <ul class="game-features">
-                    <li>8 philosophical systems</li>
+                    <li>8 philosophical systems to explore</li>
                     <li>Unique rules per philosophy</li>
-                    <li>Enlightenment mechanics</li>
-                    <li>Perfect for this repository!</li>
+                    <li>Enlightenment achievement mechanics</li>
+                    <li>Perfect thematic fit for this repository!</li>
                 </ul>
                 <a href="philosophtris.html" class="play-button">SEEK WISDOM</a>
             </div>
         </div>
 
         <footer>
-            <p><strong>Part of the Wittgenstein Language Games Collection</strong></p>
+            <p><strong>🎓 Part of the Wittgenstein Language Games Collection</strong></p>
             <p>Exploring philosophy, language, and meaning through interactive gameplay.</p>
             <p>
                 <a href="index.html" class="repository-link">← Back to Main Collection</a>
             </p>
             <p style="margin-top: 20px; font-size: 0.9em; opacity: 0.7;">
-                Each game is self-contained with no dependencies. Just click and play!
+                Each game is self-contained with no dependencies. Just click and play!<br>
+                All games feature keyboard controls: ← → ↓ (move) | ↑ (rotate)
             </p>
         </footer>
     </div>
+
+    <script>
+        // Add smooth scroll behavior
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+
+        // Add hover sound effect visualization
+        document.querySelectorAll('.game-card').forEach(card => {
+            card.addEventListener('mouseenter', function() {
+                this.style.transition = 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)';
+            });
+        });
+    </script>
 </body>
 </html>
