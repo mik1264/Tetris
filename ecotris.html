@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ECOTRIS - Ecosystem Tetris</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Verdana', sans-serif;
+            background: linear-gradient(135deg, #134e5e 0%, #71b280 50%, #a8d5ba 100%);
+            color: #1b5e20;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            text-align: center;
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        h1 {
+            font-size: 3.5em;
+            margin-bottom: 10px;
+            color: #2e7d32;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+            filter: drop-shadow(0 0 20px rgba(76, 175, 80, 0.3));
+        }
+
+        .subtitle {
+            font-size: 1.3em;
+            margin-bottom: 20px;
+            color: #388e3c;
+        }
+
+        .game-area {
+            display: flex;
+            justify-content: center;
+            gap: 25px;
+            margin: 25px 0;
+            flex-wrap: wrap;
+        }
+
+        .game-board {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+            border: 4px solid #4caf50;
+        }
+
+        canvas {
+            border: 3px solid #2e7d32;
+            background: linear-gradient(180deg, #e8f5e9 0%, #c8e6c9 100%);
+            display: block;
+            box-shadow: inset 0 0 20px rgba(46, 125, 50, 0.1);
+            border-radius: 8px;
+        }
+
+        .ecosystem-panel {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+            border: 4px solid #4caf50;
+            max-width: 400px;
+            text-align: left;
+        }
+
+        .panel-title {
+            font-size: 1.8em;
+            color: #2e7d32;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .species-list {
+            margin: 15px 0;
+        }
+
+        .species-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px;
+            margin: 8px 0;
+            background: linear-gradient(90deg, #e8f5e9, #f1f8e9);
+            border-radius: 8px;
+            border-left: 4px solid;
+            transition: all 0.3s;
+        }
+
+        .species-item.extinct {
+            opacity: 0.3;
+            filter: grayscale(100%);
+        }
+
+        .species-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .species-icon {
+            font-size: 1.8em;
+        }
+
+        .species-name {
+            font-weight: bold;
+            color: #1b5e20;
+        }
+
+        .species-role {
+            font-size: 0.85em;
+            color: #558b2f;
+        }
+
+        .species-count {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #2e7d32;
+            min-width: 40px;
+            text-align: right;
+        }
+
+        .balance-meter {
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(76, 175, 80, 0.1);
+            border-radius: 10px;
+            border: 2px solid #4caf50;
+        }
+
+        .balance-label {
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #2e7d32;
+        }
+
+        .balance-bar-container {
+            background: rgba(0, 0, 0, 0.1);
+            height: 25px;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .balance-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #4caf50, #8bc34a);
+            transition: width 0.5s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 0.85em;
+        }
+
+        .stats {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+            border: 4px solid #4caf50;
+            margin-top: 20px;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-around;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .stat {
+            flex: 1;
+            min-width: 100px;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #558b2f;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #2e7d32;
+            margin-top: 5px;
+        }
+
+        button {
+            background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%);
+            color: white;
+            border: none;
+            padding: 15px 35px;
+            font-size: 1.2em;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 50px;
+            margin: 5px;
+            transition: all 0.3s;
+            box-shadow: 0 8px 20px rgba(76, 175, 80, 0.4);
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 30px rgba(76, 175, 80, 0.6);
+        }
+
+        button:disabled {
+            background: #9e9e9e;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .alert {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.98);
+            color: #2e7d32;
+            padding: 20px 40px;
+            border-radius: 15px;
+            font-weight: bold;
+            font-size: 1.2em;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            border: 3px solid #4caf50;
+            z-index: 1000;
+            animation: slideIn 0.3s;
+        }
+
+        @keyframes slideIn {
+            from { transform: translate(-50%, -100px); opacity: 0; }
+            to { transform: translate(-50%, 0); opacity: 1; }
+        }
+
+        .instructions {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+            border: 4px solid #4caf50;
+            margin-top: 20px;
+            text-align: left;
+        }
+
+        .instructions h3 {
+            color: #2e7d32;
+            margin-bottom: 15px;
+        }
+
+        .instructions ul {
+            line-height: 2;
+            list-style-position: inside;
+        }
+
+        @media (max-width: 768px) {
+            h1 { font-size: 2.5em; }
+            .game-area { flex-direction: column; align-items: center; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌿 ECOTRIS 🌿</h1>
+        <div class="subtitle">Ecosystem Simulation Tetris - Balance Nature's Food Chain</div>
+
+        <div class="game-area">
+            <div class="game-board">
+                <canvas id="gameCanvas" width="240" height="480"></canvas>
+            </div>
+
+            <div class="ecosystem-panel">
+                <div class="panel-title">🌍 Ecosystem Status</div>
+
+                <div class="balance-meter">
+                    <div class="balance-label">Ecosystem Health</div>
+                    <div class="balance-bar-container">
+                        <div class="balance-bar" id="balanceBar" style="width: 100%;">100%</div>
+                    </div>
+                </div>
+
+                <div class="species-list" id="speciesList"></div>
+
+                <div style="margin-top: 20px; padding: 15px; background: rgba(139, 195, 74, 0.1); border-radius: 8px; font-size: 0.9em; line-height: 1.6;">
+                    <strong style="color: #2e7d32;">Balance Tips:</strong><br>
+                    • Keep all species alive<br>
+                    • Predators need prey nearby<br>
+                    • Plants + Decomposers = Bonus
+                </div>
+            </div>
+        </div>
+
+        <div class="stats">
+            <div class="stat-row">
+                <div class="stat">
+                    <div class="stat-label">Score</div>
+                    <div class="stat-value" id="score">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Lines</div>
+                    <div class="stat-value" id="lines">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Symbiosis Bonuses</div>
+                    <div class="stat-value" id="bonuses">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Extinctions</div>
+                    <div class="stat-value" id="extinctions" style="color: #f44336;">0</div>
+                </div>
+            </div>
+        </div>
+
+        <div style="margin: 20px 0;">
+            <button onclick="startGame()">START ECOSYSTEM</button>
+            <button id="pauseBtn" onclick="togglePause()" disabled>PAUSE</button>
+        </div>
+
+        <div class="instructions">
+            <h3>🌱 HOW ECOTRIS WORKS:</h3>
+            <ul>
+                <li><strong>🦁 Apex Predator (I-piece):</strong> Needs mid-tier predators to feed</li>
+                <li><strong>🐰 Herbivore (O-piece):</strong> Needs plants to survive</li>
+                <li><strong>🌱 Plant (T-piece):</strong> Foundation of the ecosystem</li>
+                <li><strong>🍄 Decomposer (S/Z-pieces):</strong> Recycles dead matter</li>
+                <li><strong>🐺 Mid-Predator (J/L-pieces):</strong> Eats herbivores</li>
+                <li><strong>Energy Flow:</strong> Pieces "feed" when adjacent to correct prey</li>
+                <li><strong>Symbiosis:</strong> Plant + Decomposer combinations give bonuses</li>
+                <li><strong>Extinction:</strong> If a species disappears completely, meteor shower penalty!</li>
+                <li><strong>Goal:</strong> Maintain balance, not just clear lines!</li>
+            </ul>
+            <p style="margin-top: 15px; font-style: italic; color: #558b2f;">
+                <strong>Controls:</strong> ← → Move | ↑ Rotate | ↓ Soft Drop | SPACE Hard Drop
+            </p>
+        </div>
+    </div>
+
+    <script>
+        const COLS = 12;
+        const ROWS = 24;
+        const BLOCK_SIZE = 20;
+
+        const SPECIES = {
+            'I': { name: 'Apex Predator', icon: '🦁', role: 'Top Predator', color: '#ff6f00', feeds: ['J', 'L'], count: 0 },
+            'O': { name: 'Herbivore', icon: '🐰', role: 'Plant Eater', color: '#8d6e63', feeds: ['T'], count: 0 },
+            'T': { name: 'Plant', icon: '🌱', role: 'Producer', color: '#4caf50', feeds: [], count: 0 },
+            'S': { name: 'Decomposer', icon: '🍄', role: 'Recycler', color: '#795548', feeds: [], count: 0 },
+            'Z': { name: 'Decomposer B', icon: '🦠', role: 'Recycler', color: '#9c27b0', feeds: [], count: 0 },
+            'J': { name: 'Mid Predator', icon: '🐺', role: 'Hunter', color: '#607d8b', feeds: ['O'], count: 0 },
+            'L': { name: 'Mid Predator B', icon: '🦊', role: 'Hunter', color: '#ff5722', feeds: ['O'], count: 0 }
+        };
+
+        const SHAPES = {
+            'I': [[1,1,1,1]],
+            'O': [[1,1],[1,1]],
+            'T': [[0,1,0],[1,1,1]],
+            'S': [[0,1,1],[1,1,0]],
+            'Z': [[1,1,0],[0,1,1]],
+            'J': [[1,0,0],[1,1,1]],
+            'L': [[0,0,1],[1,1,1]]
+        };
+
+        let gameState = {
+            board: [],
+            score: 0,
+            lines: 0,
+            bonuses: 0,
+            extinctions: 0,
+            isPlaying: false,
+            isPaused: false,
+            piece: null,
+            pieceX: 0,
+            pieceY: 0,
+            pieceType: null,
+            species: JSON.parse(JSON.stringify(SPECIES)),
+            lastFeedCheck: 0
+        };
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function createBoard() {
+            return Array(ROWS).fill(null).map(() => Array(COLS).fill(0));
+        }
+
+        function getRandomPiece() {
+            const types = Object.keys(SHAPES);
+            return types[Math.floor(Math.random() * types.length)];
+        }
+
+        function updateSpeciesList() {
+            const list = document.getElementById('speciesList');
+            list.innerHTML = '';
+
+            Object.entries(gameState.species).forEach(([type, species]) => {
+                const item = document.createElement('div');
+                item.className = `species-item ${species.count === 0 ? 'extinct' : ''}`;
+                item.style.borderLeftColor = species.color;
+
+                item.innerHTML = `
+                    <div class="species-info">
+                        <div class="species-icon">${species.icon}</div>
+                        <div>
+                            <div class="species-name">${species.name}</div>
+                            <div class="species-role">${species.role}</div>
+                        </div>
+                    </div>
+                    <div class="species-count">${species.count}</div>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        function countSpecies() {
+            // Reset counts
+            Object.keys(gameState.species).forEach(type => {
+                gameState.species[type].count = 0;
+            });
+
+            // Count pieces on board
+            for (let y = 0; y < ROWS; y++) {
+                for (let x = 0; x < COLS; x++) {
+                    const cell = gameState.board[y][x];
+                    if (cell && gameState.species[cell]) {
+                        gameState.species[cell].count++;
+                    }
+                }
+            }
+
+            updateSpeciesList();
+            updateEcosystemHealth();
+        }
+
+        function updateEcosystemHealth() {
+            const aliveSpecies = Object.values(gameState.species).filter(s => s.count > 0).length;
+            const totalSpecies = Object.keys(gameState.species).length;
+            const health = Math.round((aliveSpecies / totalSpecies) * 100);
+
+            const bar = document.getElementById('balanceBar');
+            bar.style.width = health + '%';
+            bar.textContent = health + '%';
+
+            if (health < 50) {
+                bar.style.background = 'linear-gradient(90deg, #f44336, #e53935)';
+            } else if (health < 75) {
+                bar.style.background = 'linear-gradient(90deg, #ff9800, #fb8c00)';
+            } else {
+                bar.style.background = 'linear-gradient(90deg, #4caf50, #8bc34a)';
+            }
+        }
+
+        function checkFeeding() {
+            // Check if predators are fed
+            for (let y = 0; y < ROWS; y++) {
+                for (let x = 0; x < COLS; x++) {
+                    const predator = gameState.board[y][x];
+                    if (predator && gameState.species[predator].feeds.length > 0) {
+                        // Check adjacent cells for prey
+                        const adjacent = [
+                            [y-1, x], [y+1, x], [y, x-1], [y, x+1]
+                        ];
+
+                        let fed = false;
+                        for (const [ay, ax] of adjacent) {
+                            if (ay >= 0 && ay < ROWS && ax >= 0 && ax < COLS) {
+                                const prey = gameState.board[ay][ax];
+                                if (prey && gameState.species[predator].feeds.includes(prey)) {
+                                    fed = true;
+                                    break;
+                                }
+                            }
+                        }
+
+                        // Visual feedback (could add glow effect)
+                        if (fed && Math.random() < 0.1) {
+                            gameState.score += 5;
+                        }
+                    }
+                }
+            }
+        }
+
+        function checkSymbiosis() {
+            let bonusGiven = false;
+
+            for (let y = 0; y < ROWS; y++) {
+                for (let x = 0; x < COLS - 1; x++) {
+                    const cell1 = gameState.board[y][x];
+                    const cell2 = gameState.board[y][x + 1];
+
+                    // Plant + Decomposer symbiosis
+                    if ((cell1 === 'T' && (cell2 === 'S' || cell2 === 'Z')) ||
+                        (cell2 === 'T' && (cell1 === 'S' || cell1 === 'Z'))) {
+                        if (Math.random() < 0.05) {
+                            gameState.score += 50;
+                            gameState.bonuses++;
+                            bonusGiven = true;
+                            showAlert('🌱🍄 Symbiosis Bonus! +50 points');
+                        }
+                    }
+                }
+            }
+
+            if (bonusGiven) {
+                updateStats();
+            }
+        }
+
+        function checkExtinction() {
+            Object.entries(gameState.species).forEach(([type, species]) => {
+                if (species.count === 0 && species.wasAlive) {
+                    species.wasAlive = false;
+                    gameState.extinctions++;
+                    showAlert(`⚠️ EXTINCTION! ${species.icon} ${species.name} has died out! Meteor shower!`);
+
+                    // Add garbage blocks as penalty
+                    for (let i = 0; i < 2; i++) {
+                        gameState.board.pop();
+                        const garbage = Array(COLS).fill(0).map(() => Math.random() > 0.4 ? getRandomPiece() : 0);
+                        gameState.board.push(garbage);
+                    }
+
+                    updateStats();
+                }
+            });
+        }
+
+        function spawnPiece() {
+            gameState.pieceType = getRandomPiece();
+            gameState.piece = SHAPES[gameState.pieceType].map(row => [...row]);
+            gameState.pieceX = Math.floor(COLS / 2) - 1;
+            gameState.pieceY = 0;
+
+            if (collision()) {
+                endGame();
+            }
+        }
+
+        function collision() {
+            for (let y = 0; y < gameState.piece.length; y++) {
+                for (let x = 0; x < gameState.piece[y].length; x++) {
+                    if (gameState.piece[y][x]) {
+                        const newX = gameState.pieceX + x;
+                        const newY = gameState.pieceY + y;
+                        if (newX < 0 || newX >= COLS || newY >= ROWS) return true;
+                        if (newY >= 0 && gameState.board[newY][newX]) return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        function mergePiece() {
+            for (let y = 0; y < gameState.piece.length; y++) {
+                for (let x = 0; x < gameState.piece[y].length; x++) {
+                    if (gameState.piece[y][x]) {
+                        const newY = gameState.pieceY + y;
+                        const newX = gameState.pieceX + x;
+                        if (newY >= 0) {
+                            gameState.board[newY][newX] = gameState.pieceType;
+                        }
+                    }
+                }
+            }
+
+            countSpecies();
+            checkSymbiosis();
+        }
+
+        function clearLines() {
+            let linesCleared = 0;
+
+            for (let y = ROWS - 1; y >= 0; y--) {
+                if (gameState.board[y].every(cell => cell !== 0)) {
+                    gameState.board.splice(y, 1);
+                    gameState.board.unshift(Array(COLS).fill(0));
+                    linesCleared++;
+                    y++;
+                }
+            }
+
+            if (linesCleared > 0) {
+                gameState.lines += linesCleared;
+                gameState.score += linesCleared * 100;
+
+                countSpecies();
+
+                // Mark species as alive if they exist
+                Object.entries(gameState.species).forEach(([type, species]) => {
+                    if (species.count > 0) species.wasAlive = true;
+                });
+
+                checkExtinction();
+                updateStats();
+            }
+        }
+
+        function move(dx, dy) {
+            gameState.pieceX += dx;
+            gameState.pieceY += dy;
+
+            if (collision()) {
+                gameState.pieceX -= dx;
+                gameState.pieceY -= dy;
+
+                if (dy > 0) {
+                    mergePiece();
+                    clearLines();
+                    spawnPiece();
+                }
+                return false;
+            }
+            return true;
+        }
+
+        function rotate() {
+            const oldPiece = gameState.piece;
+            gameState.piece = gameState.piece[0].map((_, i) =>
+                gameState.piece.map(row => row[i]).reverse()
+            );
+
+            if (collision()) {
+                gameState.piece = oldPiece;
+            }
+        }
+
+        function hardDrop() {
+            while (move(0, 1)) {}
+        }
+
+        function draw() {
+            // Clear canvas with gradient
+            const gradient = ctx.createLinearGradient(0, 0, 0, ROWS * BLOCK_SIZE);
+            gradient.addColorStop(0, '#e8f5e9');
+            gradient.addColorStop(1, '#c8e6c9');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, COLS * BLOCK_SIZE, ROWS * BLOCK_SIZE);
+
+            // Draw grid
+            ctx.strokeStyle = 'rgba(46, 125, 50, 0.15)';
+            for (let y = 0; y < ROWS; y++) {
+                for (let x = 0; x < COLS; x++) {
+                    ctx.strokeRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+                }
+            }
+
+            // Draw board
+            for (let y = 0; y < ROWS; y++) {
+                for (let x = 0; x < COLS; x++) {
+                    if (gameState.board[y][x]) {
+                        const type = gameState.board[y][x];
+                        ctx.fillStyle = SPECIES[type].color;
+                        ctx.fillRect(x * BLOCK_SIZE + 1, y * BLOCK_SIZE + 1, BLOCK_SIZE - 2, BLOCK_SIZE - 2);
+
+                        // Draw icon
+                        ctx.font = '13px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(SPECIES[type].icon,
+                            x * BLOCK_SIZE + BLOCK_SIZE / 2,
+                            y * BLOCK_SIZE + BLOCK_SIZE / 2);
+                    }
+                }
+            }
+
+            // Draw current piece
+            if (gameState.piece) {
+                ctx.fillStyle = SPECIES[gameState.pieceType].color;
+
+                for (let y = 0; y < gameState.piece.length; y++) {
+                    for (let x = 0; x < gameState.piece[y].length; x++) {
+                        if (gameState.piece[y][x]) {
+                            const drawX = (gameState.pieceX + x) * BLOCK_SIZE + 1;
+                            const drawY = (gameState.pieceY + y) * BLOCK_SIZE + 1;
+                            ctx.fillRect(drawX, drawY, BLOCK_SIZE - 2, BLOCK_SIZE - 2);
+
+                            ctx.font = '13px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            ctx.fillText(SPECIES[gameState.pieceType].icon,
+                                (gameState.pieceX + x) * BLOCK_SIZE + BLOCK_SIZE / 2,
+                                (gameState.pieceY + y) * BLOCK_SIZE + BLOCK_SIZE / 2);
+                        }
+                    }
+                }
+            }
+        }
+
+        function updateStats() {
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('lines').textContent = gameState.lines;
+            document.getElementById('bonuses').textContent = gameState.bonuses;
+            document.getElementById('extinctions').textContent = gameState.extinctions;
+        }
+
+        function showAlert(message) {
+            const alert = document.createElement('div');
+            alert.className = 'alert';
+            alert.textContent = message;
+            document.body.appendChild(alert);
+            setTimeout(() => alert.remove(), 3000);
+        }
+
+        function gameLoop() {
+            if (!gameState.isPlaying || gameState.isPaused) return;
+
+            move(0, 1);
+            checkFeeding();
+            draw();
+            setTimeout(gameLoop, 500);
+        }
+
+        function startGame() {
+            gameState = {
+                board: createBoard(),
+                score: 0,
+                lines: 0,
+                bonuses: 0,
+                extinctions: 0,
+                isPlaying: true,
+                isPaused: false,
+                piece: null,
+                pieceX: 0,
+                pieceY: 0,
+                pieceType: null,
+                species: JSON.parse(JSON.stringify(SPECIES)),
+                lastFeedCheck: 0
+            };
+
+            spawnPiece();
+            updateStats();
+            updateSpeciesList();
+            document.getElementById('pauseBtn').disabled = false;
+
+            gameLoop();
+        }
+
+        function togglePause() {
+            gameState.isPaused = !gameState.isPaused;
+            document.getElementById('pauseBtn').textContent = gameState.isPaused ? 'RESUME' : 'PAUSE';
+            if (!gameState.isPaused) gameLoop();
+        }
+
+        function endGame() {
+            gameState.isPlaying = false;
+            const aliveSpecies = Object.values(gameState.species).filter(s => s.count > 0).length;
+            showAlert(`🌍 ECOSYSTEM COLLAPSED! Score: ${gameState.score} | Species Alive: ${aliveSpecies}/7`);
+            document.getElementById('pauseBtn').disabled = true;
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (!gameState.isPlaying || gameState.isPaused) return;
+
+            switch(e.key) {
+                case 'ArrowLeft': move(-1, 0); break;
+                case 'ArrowRight': move(1, 0); break;
+                case 'ArrowDown': move(0, 1); break;
+                case 'ArrowUp': rotate(); break;
+                case ' ': e.preventDefault(); hardDrop(); break;
+            }
+            draw();
+        });
+
+        draw();
+        updateSpeciesList();
+    </script>
+</body>
+</html>

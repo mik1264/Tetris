@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NARRATRIS - Story-Driven Tetris</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Georgia', serif;
+            background: linear-gradient(135deg, #f5e6d3 0%, #d4a574 50%, #8b7355 100%);
+            background-attachment: fixed;
+            color: #3e2723;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            text-align: center;
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        h1 {
+            font-size: 3.5em;
+            margin-bottom: 10px;
+            color: #5d4037;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+            font-weight: normal;
+            letter-spacing: 3px;
+        }
+
+        .subtitle {
+            font-size: 1.4em;
+            margin-bottom: 20px;
+            color: #6d4c41;
+            font-style: italic;
+        }
+
+        .game-area {
+            display: flex;
+            justify-content: center;
+            gap: 25px;
+            margin: 25px 0;
+            flex-wrap: wrap;
+        }
+
+        .game-board {
+            background: #fff9e6;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3),
+                        inset 0 0 0 3px #8b7355;
+            border: 10px solid #d4a574;
+        }
+
+        canvas {
+            border: 3px solid #5d4037;
+            background: #fffef7;
+            display: block;
+            box-shadow: inset 0 0 15px rgba(93, 64, 55, 0.1);
+        }
+
+        .story-panel {
+            background: #fff9e6;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3),
+                        inset 0 0 0 3px #8b7355;
+            border: 10px solid #d4a574;
+            max-width: 400px;
+            text-align: left;
+        }
+
+        .story-title {
+            font-size: 1.8em;
+            color: #5d4037;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #d4a574;
+            padding-bottom: 10px;
+        }
+
+        .story-text {
+            font-size: 1.1em;
+            line-height: 1.8;
+            color: #4e342e;
+            margin: 15px 0;
+            background: rgba(255, 255, 255, 0.5);
+            padding: 15px;
+            border-left: 4px solid #8b7355;
+            border-radius: 5px;
+        }
+
+        .character-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .character-card {
+            background: rgba(255, 255, 255, 0.7);
+            padding: 10px;
+            border-radius: 8px;
+            border: 2px solid #d4a574;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .character-card.alive {
+            border-color: #4caf50;
+            box-shadow: 0 0 15px rgba(76, 175, 80, 0.3);
+        }
+
+        .character-card.dead {
+            opacity: 0.3;
+            border-color: #f44336;
+            filter: grayscale(100%);
+        }
+
+        .character-icon {
+            font-size: 2em;
+            margin: 5px 0;
+        }
+
+        .character-name {
+            font-size: 0.85em;
+            font-weight: bold;
+            color: #5d4037;
+        }
+
+        .stats {
+            background: #fff9e6;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3),
+                        inset 0 0 0 3px #8b7355;
+            border: 10px solid #d4a574;
+            margin-top: 20px;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-around;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .stat {
+            flex: 1;
+            min-width: 100px;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #6d4c41;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #5d4037;
+            margin-top: 5px;
+        }
+
+        button {
+            background: linear-gradient(135deg, #8b7355 0%, #6d4c41 100%);
+            color: #fff9e6;
+            border: none;
+            padding: 15px 35px;
+            font-size: 1.2em;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 8px;
+            margin: 5px;
+            transition: all 0.3s;
+            font-family: 'Georgia', serif;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+        }
+
+        button:disabled {
+            background: #bcaaa4;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .dialogue-box {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 249, 230, 0.98);
+            border: 5px solid #8b7355;
+            border-radius: 15px;
+            padding: 25px 35px;
+            max-width: 600px;
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            animation: slideUp 0.4s;
+        }
+
+        @keyframes slideUp {
+            from { bottom: -200px; opacity: 0; }
+            to { bottom: 20px; opacity: 1; }
+        }
+
+        .dialogue-character {
+            font-weight: bold;
+            color: #5d4037;
+            font-size: 1.3em;
+            margin-bottom: 10px;
+        }
+
+        .dialogue-text {
+            font-size: 1.1em;
+            line-height: 1.6;
+            color: #4e342e;
+        }
+
+        .choice-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            justify-content: center;
+        }
+
+        .choice-btn {
+            padding: 10px 20px;
+            font-size: 1em;
+            background: #8b7355;
+            color: #fff9e6;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .choice-btn:hover {
+            background: #6d4c41;
+            transform: scale(1.05);
+        }
+
+        .ending-panel {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 249, 230, 0.98);
+            border: 10px solid #8b7355;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 600px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+            z-index: 1001;
+            text-align: center;
+        }
+
+        .instructions {
+            background: #fff9e6;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3),
+                        inset 0 0 0 3px #8b7355;
+            border: 10px solid #d4a574;
+            margin-top: 20px;
+            text-align: left;
+        }
+
+        .instructions h3 {
+            color: #5d4037;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+
+        .instructions ul {
+            line-height: 2;
+            list-style-position: inside;
+        }
+
+        @media (max-width: 768px) {
+            h1 { font-size: 2.5em; }
+            .game-area { flex-direction: column; align-items: center; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📖 NARRATRIS 📖</h1>
+        <div class="subtitle">Story-Driven Tetris - Where Every Piece Has a Tale to Tell</div>
+
+        <div class="game-area">
+            <div class="game-board">
+                <canvas id="gameCanvas" width="240" height="480"></canvas>
+            </div>
+
+            <div class="story-panel">
+                <div class="story-title">📜 The Chronicles</div>
+                <div class="story-text" id="storyText">
+                    In the kingdom of Tetronia, seven heroes have gathered to stop the rising chaos...
+                    Each block represents a character. When they meet, stories unfold.
+                </div>
+
+                <h4 style="color: #5d4037; margin: 20px 0 10px 0;">Active Characters:</h4>
+                <div class="character-grid" id="characterGrid"></div>
+
+                <div style="margin-top: 20px; padding: 15px; background: rgba(93, 64, 55, 0.1); border-radius: 8px;">
+                    <strong style="color: #5d4037;">Current Arc:</strong>
+                    <div id="currentArc" style="margin-top: 5px; font-size: 0.95em;">Beginning of the Tale</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats">
+            <div class="stat-row">
+                <div class="stat">
+                    <div class="stat-label">Score</div>
+                    <div class="stat-value" id="score">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Lines</div>
+                    <div class="stat-value" id="lines">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Stories Told</div>
+                    <div class="stat-value" id="stories">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Survivors</div>
+                    <div class="stat-value" id="survivors">7</div>
+                </div>
+            </div>
+        </div>
+
+        <div style="margin: 20px 0;">
+            <button onclick="startGame()">BEGIN THE TALE</button>
+            <button id="pauseBtn" onclick="togglePause()" disabled>PAUSE</button>
+        </div>
+
+        <div class="instructions">
+            <h3>📚 HOW NARRATRIS WORKS:</h3>
+            <ul>
+                <li><strong>🦸 Hero (I-piece):</strong> The brave protagonist seeking justice</li>
+                <li><strong>😈 Villain (O-piece):</strong> The dark force causing chaos</li>
+                <li><strong>🧙 Mentor (T-piece):</strong> The wise guide offering counsel</li>
+                <li><strong>⚔️ Rival (S/Z-pieces):</strong> The complex anti-hero</li>
+                <li><strong>👥 Companions (J/L-pieces):</strong> Loyal allies on the journey</li>
+                <li><strong>Dialogue Triggers:</strong> When specific pieces touch, story events unfold</li>
+                <li><strong>Tragic Clears:</strong> Clearing lines destroys characters - choose wisely!</li>
+                <li><strong>Multiple Endings:</strong> Your choices determine the fate of Tetronia</li>
+            </ul>
+            <p style="margin-top: 15px; font-style: italic; color: #6d4c41;">
+                <strong>Controls:</strong> ← → Move | ↑ Rotate | ↓ Soft Drop | SPACE Hard Drop
+            </p>
+        </div>
+    </div>
+
+    <script>
+        const COLS = 12;
+        const ROWS = 24;
+        const BLOCK_SIZE = 20;
+
+        const CHARACTERS = {
+            'I': { name: 'Hero', icon: '🦸', color: '#2196f3', alive: true },
+            'O': { name: 'Villain', icon: '😈', color: '#9c27b0', alive: true },
+            'T': { name: 'Mentor', icon: '🧙', color: '#ff9800', alive: true },
+            'S': { name: 'Rival', icon: '⚔️', color: '#f44336', alive: true },
+            'Z': { name: 'Shadow', icon: '🌙', color: '#607d8b', alive: true },
+            'J': { name: 'Companion', icon: '👥', color: '#4caf50', alive: true },
+            'L': { name: 'Guardian', icon: '🛡️', color: '#00bcd4', alive: true }
+        };
+
+        const SHAPES = {
+            'I': [[1,1,1,1]],
+            'O': [[1,1],[1,1]],
+            'T': [[0,1,0],[1,1,1]],
+            'S': [[0,1,1],[1,1,0]],
+            'Z': [[1,1,0],[0,1,1]],
+            'J': [[1,0,0],[1,1,1]],
+            'L': [[0,0,1],[1,1,1]]
+        };
+
+        const STORY_ARCS = [
+            { threshold: 0, name: 'Beginning of the Tale', text: 'The heroes gather as darkness looms...' },
+            { threshold: 5, name: 'The First Trial', text: 'The companions face their first challenge together.' },
+            { threshold: 10, name: 'Rising Tension', text: 'Rivalries emerge and alliances are tested.' },
+            { threshold: 20, name: 'The Great Betrayal', text: 'Not all who seem allies remain true...' },
+            { threshold: 30, name: 'Final Confrontation', text: 'The ultimate battle between light and darkness begins!' }
+        ];
+
+        const DIALOGUES = {
+            'I-O': { char: 'Hero & Villain', text: '"We meet again, old enemy. This ends today!" "Does it, hero? Or does it just begin?"' },
+            'I-T': { char: 'Hero & Mentor', text: '"Master, guide me!" "The strength you seek lies within you, young one."' },
+            'I-S': { char: 'Hero & Rival', text: '"Why do you fight me?" "Because only through conflict do we grow stronger!"' },
+            'O-T': { char: 'Villain & Mentor', text: '"Even you cannot stop the inevitable!" "Perhaps. But I can delay it long enough."' },
+            'J-L': { char: 'Companions', text: '"Together, friend?" "Together. Always."' },
+            'S-Z': { char: 'Rivals United', text: '"An alliance of shadows..." "...is the strongest kind."' }
+        };
+
+        let gameState = {
+            board: [],
+            score: 0,
+            lines: 0,
+            storiesTold: 0,
+            isPlaying: false,
+            isPaused: false,
+            piece: null,
+            pieceX: 0,
+            pieceY: 0,
+            pieceType: null,
+            characters: JSON.parse(JSON.stringify(CHARACTERS)),
+            currentArc: STORY_ARCS[0],
+            lastDialogue: null
+        };
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function createBoard() {
+            return Array(ROWS).fill(null).map(() => Array(COLS).fill(0));
+        }
+
+        function getRandomPiece() {
+            const types = Object.keys(SHAPES);
+            return types[Math.floor(Math.random() * types.length)];
+        }
+
+        function updateCharacterGrid() {
+            const grid = document.getElementById('characterGrid');
+            grid.innerHTML = '';
+
+            Object.entries(gameState.characters).forEach(([type, char]) => {
+                const card = document.createElement('div');
+                card.className = `character-card ${char.alive ? 'alive' : 'dead'}`;
+                card.innerHTML = `
+                    <div class="character-icon">${char.icon}</div>
+                    <div class="character-name">${char.name}</div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function updateStoryArc() {
+            for (let i = STORY_ARCS.length - 1; i >= 0; i--) {
+                if (gameState.lines >= STORY_ARCS[i].threshold) {
+                    if (gameState.currentArc !== STORY_ARCS[i]) {
+                        gameState.currentArc = STORY_ARCS[i];
+                        document.getElementById('currentArc').textContent = STORY_ARCS[i].name;
+                        showStoryUpdate(STORY_ARCS[i].name, STORY_ARCS[i].text);
+                    }
+                    break;
+                }
+            }
+        }
+
+        function showStoryUpdate(title, text) {
+            document.getElementById('storyText').innerHTML = `<strong>${title}:</strong><br>${text}`;
+        }
+
+        function checkDialogue() {
+            // Check if specific pieces are adjacent on the board
+            for (let y = 0; y < ROWS; y++) {
+                for (let x = 0; x < COLS - 1; x++) {
+                    const cell1 = gameState.board[y][x];
+                    const cell2 = gameState.board[y][x + 1];
+
+                    if (cell1 && cell2 && cell1 !== cell2) {
+                        const key1 = `${cell1}-${cell2}`;
+                        const key2 = `${cell2}-${cell1}`;
+
+                        const dialogue = DIALOGUES[key1] || DIALOGUES[key2];
+                        if (dialogue && gameState.lastDialogue !== dialogue.text) {
+                            gameState.lastDialogue = dialogue.text;
+                            gameState.storiesTold++;
+                            showDialogue(dialogue);
+                            updateStats();
+                        }
+                    }
+                }
+            }
+        }
+
+        function showDialogue(dialogue) {
+            const existingDialogue = document.querySelector('.dialogue-box');
+            if (existingDialogue) existingDialogue.remove();
+
+            const box = document.createElement('div');
+            box.className = 'dialogue-box';
+            box.innerHTML = `
+                <div class="dialogue-character">${dialogue.char}</div>
+                <div class="dialogue-text">${dialogue.text}</div>
+            `;
+            document.body.appendChild(box);
+
+            setTimeout(() => box.remove(), 5000);
+        }
+
+        function spawnPiece() {
+            gameState.pieceType = getRandomPiece();
+            gameState.piece = SHAPES[gameState.pieceType].map(row => [...row]);
+            gameState.pieceX = Math.floor(COLS / 2) - 1;
+            gameState.pieceY = 0;
+
+            if (collision()) {
+                endGame();
+            }
+        }
+
+        function collision() {
+            for (let y = 0; y < gameState.piece.length; y++) {
+                for (let x = 0; x < gameState.piece[y].length; x++) {
+                    if (gameState.piece[y][x]) {
+                        const newX = gameState.pieceX + x;
+                        const newY = gameState.pieceY + y;
+                        if (newX < 0 || newX >= COLS || newY >= ROWS) return true;
+                        if (newY >= 0 && gameState.board[newY][newX]) return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        function mergePiece() {
+            for (let y = 0; y < gameState.piece.length; y++) {
+                for (let x = 0; x < gameState.piece[y].length; x++) {
+                    if (gameState.piece[y][x]) {
+                        const newY = gameState.pieceY + y;
+                        const newX = gameState.pieceX + x;
+                        if (newY >= 0) {
+                            gameState.board[newY][newX] = gameState.pieceType;
+                        }
+                    }
+                }
+            }
+
+            checkDialogue();
+        }
+
+        function clearLines() {
+            let linesCleared = 0;
+            const clearedCharacters = new Set();
+
+            for (let y = ROWS - 1; y >= 0; y--) {
+                if (gameState.board[y].every(cell => cell !== 0)) {
+                    // Mark characters in this line as potentially dead
+                    gameState.board[y].forEach(char => {
+                        if (char) clearedCharacters.add(char);
+                    });
+
+                    gameState.board.splice(y, 1);
+                    gameState.board.unshift(Array(COLS).fill(0));
+                    linesCleared++;
+                    y++;
+                }
+            }
+
+            if (linesCleared > 0) {
+                gameState.lines += linesCleared;
+                gameState.score += linesCleared * 100;
+
+                // Mark cleared characters as dead
+                clearedCharacters.forEach(charType => {
+                    if (gameState.characters[charType].alive) {
+                        gameState.characters[charType].alive = false;
+                        showStoryUpdate('Tragic Loss', `${gameState.characters[charType].name} has fallen in battle... ${gameState.characters[charType].icon}`);
+                    }
+                });
+
+                updateCharacterGrid();
+                updateStoryArc();
+                updateStats();
+            }
+        }
+
+        function move(dx, dy) {
+            gameState.pieceX += dx;
+            gameState.pieceY += dy;
+
+            if (collision()) {
+                gameState.pieceX -= dx;
+                gameState.pieceY -= dy;
+
+                if (dy > 0) {
+                    mergePiece();
+                    clearLines();
+                    spawnPiece();
+                }
+                return false;
+            }
+            return true;
+        }
+
+        function rotate() {
+            const oldPiece = gameState.piece;
+            gameState.piece = gameState.piece[0].map((_, i) =>
+                gameState.piece.map(row => row[i]).reverse()
+            );
+
+            if (collision()) {
+                gameState.piece = oldPiece;
+            }
+        }
+
+        function hardDrop() {
+            while (move(0, 1)) {}
+        }
+
+        function draw() {
+            ctx.fillStyle = '#fffef7';
+            ctx.fillRect(0, 0, COLS * BLOCK_SIZE, ROWS * BLOCK_SIZE);
+
+            // Draw grid
+            ctx.strokeStyle = 'rgba(93, 64, 55, 0.1)';
+            for (let y = 0; y < ROWS; y++) {
+                for (let x = 0; x < COLS; x++) {
+                    ctx.strokeRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+                }
+            }
+
+            // Draw board
+            for (let y = 0; y < ROWS; y++) {
+                for (let x = 0; x < COLS; x++) {
+                    if (gameState.board[y][x]) {
+                        const charType = gameState.board[y][x];
+                        ctx.fillStyle = CHARACTERS[charType].color;
+                        ctx.fillRect(x * BLOCK_SIZE + 1, y * BLOCK_SIZE + 1, BLOCK_SIZE - 2, BLOCK_SIZE - 2);
+
+                        // Draw character icon
+                        ctx.font = '14px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(CHARACTERS[charType].icon, x * BLOCK_SIZE + BLOCK_SIZE / 2, y * BLOCK_SIZE + BLOCK_SIZE / 2);
+                    }
+                }
+            }
+
+            // Draw current piece
+            if (gameState.piece) {
+                ctx.fillStyle = CHARACTERS[gameState.pieceType].color;
+
+                for (let y = 0; y < gameState.piece.length; y++) {
+                    for (let x = 0; x < gameState.piece[y].length; x++) {
+                        if (gameState.piece[y][x]) {
+                            const drawX = (gameState.pieceX + x) * BLOCK_SIZE + 1;
+                            const drawY = (gameState.pieceY + y) * BLOCK_SIZE + 1;
+                            ctx.fillRect(drawX, drawY, BLOCK_SIZE - 2, BLOCK_SIZE - 2);
+
+                            ctx.font = '14px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            ctx.fillText(CHARACTERS[gameState.pieceType].icon,
+                                (gameState.pieceX + x) * BLOCK_SIZE + BLOCK_SIZE / 2,
+                                (gameState.pieceY + y) * BLOCK_SIZE + BLOCK_SIZE / 2);
+                        }
+                    }
+                }
+            }
+        }
+
+        function updateStats() {
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('lines').textContent = gameState.lines;
+            document.getElementById('stories').textContent = gameState.storiesTold;
+
+            const survivors = Object.values(gameState.characters).filter(c => c.alive).length;
+            document.getElementById('survivors').textContent = survivors;
+        }
+
+        function gameLoop() {
+            if (!gameState.isPlaying || gameState.isPaused) return;
+
+            move(0, 1);
+            draw();
+            setTimeout(gameLoop, 500);
+        }
+
+        function startGame() {
+            gameState = {
+                board: createBoard(),
+                score: 0,
+                lines: 0,
+                storiesTold: 0,
+                isPlaying: true,
+                isPaused: false,
+                piece: null,
+                pieceX: 0,
+                pieceY: 0,
+                pieceType: null,
+                characters: JSON.parse(JSON.stringify(CHARACTERS)),
+                currentArc: STORY_ARCS[0],
+                lastDialogue: null
+            };
+
+            spawnPiece();
+            updateStats();
+            updateCharacterGrid();
+            document.getElementById('currentArc').textContent = STORY_ARCS[0].name;
+            document.getElementById('pauseBtn').disabled = false;
+
+            gameLoop();
+        }
+
+        function togglePause() {
+            gameState.isPaused = !gameState.isPaused;
+            document.getElementById('pauseBtn').textContent = gameState.isPaused ? 'RESUME' : 'PAUSE';
+            if (!gameState.isPaused) gameLoop();
+        }
+
+        function endGame() {
+            gameState.isPlaying = false;
+
+            const survivors = Object.values(gameState.characters).filter(c => c.alive).length;
+            let ending = '';
+
+            if (survivors === 7) ending = 'Perfect Ending: All heroes survived! The kingdom celebrates eternal peace.';
+            else if (survivors >= 5) ending = 'Good Ending: Most heroes survived. Peace is restored, though scars remain.';
+            else if (survivors >= 3) ending = 'Bittersweet Ending: Victory came at a great cost. The survivors mourn their fallen.';
+            else if (survivors >= 1) ending = 'Dark Ending: Only one hero remains, haunted by the memories of the lost.';
+            else ending = 'Tragic Ending: All heroes have fallen. Darkness covers the land...';
+
+            const panel = document.createElement('div');
+            panel.className = 'ending-panel';
+            panel.innerHTML = `
+                <h2 style="color: #5d4037; margin-bottom: 20px; font-size: 2em;">📖 THE TALE CONCLUDES 📖</h2>
+                <p style="font-size: 1.2em; line-height: 1.8; margin: 20px 0;">${ending}</p>
+                <div style="margin: 20px 0; padding: 15px; background: rgba(93, 64, 55, 0.1); border-radius: 8px;">
+                    <strong>Final Stats:</strong><br>
+                    Score: ${gameState.score} | Lines: ${gameState.lines} | Stories Told: ${gameState.storiesTold}<br>
+                    Survivors: ${survivors}/7
+                </div>
+                <button onclick="location.reload()" style="margin-top: 20px;">Begin a New Tale</button>
+            `;
+            document.body.appendChild(panel);
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (!gameState.isPlaying || gameState.isPaused) return;
+
+            switch(e.key) {
+                case 'ArrowLeft': move(-1, 0); break;
+                case 'ArrowRight': move(1, 0); break;
+                case 'ArrowDown': move(0, 1); break;
+                case 'ArrowUp': rotate(); break;
+                case ' ': e.preventDefault(); hardDrop(); break;
+            }
+            draw();
+        });
+
+        draw();
+        updateCharacterGrid();
+    </script>
+</body>
+</html>
