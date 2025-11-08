@@ -230,7 +230,7 @@
 
         <div class="controls">
             <h3>Controls</h3>
-            <p><strong>←/→</strong> Move | <strong>↑</strong> Rotate | <strong>↓</strong> Soft Drop | <strong>Space</strong> Hard Drop</p>
+            <p><strong>←/→</strong> Move | <strong>↑</strong> Rotate | <strong>↓</strong> Soft Drop | <strong>Space</strong> Hard Drop | <strong>P</strong> Pause</p>
             <button id="start-btn">Start Game</button>
             <button id="pause-btn" style="display:none;">Pause</button>
         </div>
@@ -496,6 +496,16 @@
                 gameState.level = Math.floor(gameState.lines / 10) + 1;
                 updateStats();
                 updateScoreChart();
+                updateGameSpeed();
+            }
+        }
+
+        // Update game speed based on level
+        function updateGameSpeed() {
+            if (gameState.gameLoop) {
+                clearInterval(gameState.gameLoop);
+                const speed = Math.max(100, 1000 - (gameState.level - 1) * 100);
+                gameState.gameLoop = setInterval(gameLoop, speed);
             }
         }
 
@@ -620,7 +630,12 @@
 
         // Hard drop
         function hardDrop() {
-            while (movePiece(0, 1)) {}
+            let dropDistance = 0;
+            while (movePiece(0, 1)) {
+                dropDistance++;
+            }
+            gameState.score += dropDistance * 2; // Hard drop bonus
+            updateStats();
             lockPiece();
         }
 
@@ -706,7 +721,16 @@
 
         // Event listeners
         document.addEventListener('keydown', (e) => {
-            if (gameState.gameOver || gameState.paused) return;
+            if (gameState.gameOver) return;
+
+            // Allow P key even when paused
+            if (e.key.toLowerCase() === 'p') {
+                e.preventDefault();
+                togglePause();
+                return;
+            }
+
+            if (gameState.paused) return;
 
             switch(e.key) {
                 case 'ArrowLeft':
@@ -719,7 +743,10 @@
                     break;
                 case 'ArrowDown':
                     e.preventDefault();
-                    movePiece(0, 1);
+                    if (movePiece(0, 1)) {
+                        gameState.score += 1; // Soft drop bonus
+                        updateStats();
+                    }
                     break;
                 case 'ArrowUp':
                     e.preventDefault();

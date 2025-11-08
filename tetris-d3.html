@@ -73,6 +73,13 @@
             filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
         }
 
+        .cell.ghost {
+            opacity: 0.3;
+            stroke: rgba(255, 255, 255, 0.5);
+            stroke-width: 2;
+            stroke-dasharray: 3, 3;
+        }
+
         .info-panel {
             min-width: 200px;
         }
@@ -180,12 +187,50 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+            from { opacity: 0; transform: scale(0.8); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        @keyframes lineClear {
+            0% { opacity: 1; transform: scaleY(1); }
+            50% { opacity: 0.5; transform: scaleY(1.1); }
+            100% { opacity: 0; transform: scaleY(0); }
         }
 
         .cell.filled {
-            animation: fadeIn 0.2s ease-in;
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        .cell.clearing {
+            animation: lineClear 0.5s ease-out;
+        }
+
+        .paused-overlay {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            z-index: 10;
+        }
+
+        .paused-text {
+            color: white;
+            font-size: 3em;
+            font-weight: bold;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+        }
+
+        @media (max-width: 768px) {
+            .game-area {
+                flex-direction: column;
+                align-items: center;
+            }
         }
     </style>
 </head>
@@ -197,6 +242,9 @@
         <div class="game-area">
             <div class="board-container">
                 <svg id="game-board"></svg>
+                <div class="paused-overlay" id="paused-overlay">
+                    <div class="paused-text">PAUSED</div>
+                </div>
             </div>
 
             <div class="info-panel">
@@ -225,7 +273,7 @@
 
         <div class="controls">
             <h3>Controls</h3>
-            <p><strong>←/→</strong> Move | <strong>↑</strong> Rotate | <strong>↓</strong> Soft Drop | <strong>Space</strong> Hard Drop</p>
+            <p><strong>←/→</strong> Move | <strong>↑</strong> Rotate | <strong>↓</strong> Soft Drop | <strong>Space</strong> Hard Drop | <strong>P</strong> Pause</p>
             <button id="start-btn">Start Game</button>
             <button id="pause-btn" style="display:none;">Pause</button>
         </div>
@@ -345,6 +393,22 @@
             });
         }
 
+        // Get ghost piece position
+        function getGhostPosition() {
+            if (!gameState.currentPiece) return null;
+
+            const ghost = {
+                ...gameState.currentPiece,
+                blocks: gameState.currentPiece.blocks.map(b => [...b])
+            };
+
+            while (!checkCollision(ghost, 0, 1)) {
+                ghost.y++;
+            }
+
+            return ghost;
+        }
+
         // Merge piece to board
         function mergePiece() {
             gameState.currentPiece.blocks.forEach(([bx, by]) => {
@@ -374,6 +438,16 @@
                 gameState.score += [0, 100, 300, 500, 800][linesCleared] * gameState.level;
                 gameState.level = Math.floor(gameState.lines / 10) + 1;
                 updateStats();
+                updateGameSpeed();
+            }
+        }
+
+        // Update game speed based on level
+        function updateGameSpeed() {
+            if (gameState.gameLoop) {
+                clearInterval(gameState.gameLoop);
+                const speed = Math.max(100, 1000 - (gameState.level - 1) * 100);
+                gameState.gameLoop = setInterval(gameLoop, speed);
             }
         }
 
@@ -393,6 +467,23 @@
                         });
                     }
                 }
+            }
+
+            // Add ghost piece
+            const ghost = getGhostPosition();
+            if (ghost && ghost.y !== gameState.currentPiece.y) {
+                ghost.blocks.forEach(([bx, by]) => {
+                    const x = ghost.x + bx;
+                    const y = ghost.y + by;
+                    if (y >= 0) {
+                        cellData.push({
+                            x,
+                            y,
+                            color: gameState.currentPiece.color,
+                            type: 'ghost'
+                        });
+                    }
+                });
             }
 
             // Add current piece
@@ -418,27 +509,32 @@
             // Exit
             cells.exit()
                 .transition()
-                .duration(200)
+                .duration(150)
                 .attr('opacity', 0)
                 .remove();
 
             // Enter
-            cells.enter()
+            const enterCells = cells.enter()
                 .append('rect')
-                .attr('class', 'cell filled')
+                .attr('class', d => `cell ${d.type === 'ghost' ? 'ghost' : 'filled'}`)
                 .attr('x', d => d.x * CELL_SIZE + 1)
                 .attr('y', d => d.y * CELL_SIZE + 1)
                 .attr('width', CELL_SIZE - 2)
                 .attr('height', CELL_SIZE - 2)
                 .attr('rx', 3)
-                .attr('fill', d => d.color)
-                .attr('opacity', 0)
+                .attr('fill', d => d.color);
+
+            // Apply opacity based on type
+            enterCells
+                .attr('opacity', d => d.type === 'ghost' ? 0.3 : 0)
+                .filter(d => d.type !== 'ghost')
                 .transition()
-                .duration(200)
+                .duration(150)
                 .attr('opacity', 1);
 
             // Update
-            cells.attr('fill', d => d.color);
+            cells.attr('fill', d => d.color)
+                .attr('class', d => `cell ${d.type === 'ghost' ? 'ghost' : 'filled'}`);
         }
 
         // Render next piece
@@ -479,21 +575,40 @@
             return false;
         }
 
-        // Rotate current piece
+        // Rotate current piece with wall kicks
         function rotate() {
             const rotated = rotatePiece(gameState.currentPiece);
             rotated.x = gameState.currentPiece.x;
             rotated.y = gameState.currentPiece.y;
 
+            // Try normal rotation
             if (!checkCollision(rotated)) {
                 gameState.currentPiece = rotated;
                 render();
+                return;
+            }
+
+            // Try wall kicks (move left/right if rotation blocked)
+            const kicks = [[-1, 0], [1, 0], [-2, 0], [2, 0], [0, -1]];
+            for (const [kickX, kickY] of kicks) {
+                rotated.x = gameState.currentPiece.x + kickX;
+                rotated.y = gameState.currentPiece.y + kickY;
+                if (!checkCollision(rotated)) {
+                    gameState.currentPiece = rotated;
+                    render();
+                    return;
+                }
             }
         }
 
         // Hard drop
         function hardDrop() {
-            while (movePiece(0, 1)) {}
+            let dropDistance = 0;
+            while (movePiece(0, 1)) {
+                dropDistance++;
+            }
+            gameState.score += dropDistance * 2; // Bonus points for hard drop
+            updateStats();
             lockPiece();
         }
 
@@ -549,6 +664,7 @@
             d3.select('#game-over').style('display', 'none');
             d3.select('#start-btn').style('display', 'none');
             d3.select('#pause-btn').style('display', 'inline-block');
+            d3.select('#paused-overlay').style('display', 'none');
         }
 
         // End game
@@ -565,13 +681,25 @@
 
         // Toggle pause
         function togglePause() {
+            if (gameState.gameOver) return;
+
             gameState.paused = !gameState.paused;
             d3.select('#pause-btn').text(gameState.paused ? 'Resume' : 'Pause');
+            d3.select('#paused-overlay').style('display', gameState.paused ? 'flex' : 'none');
         }
 
         // Event listeners
         document.addEventListener('keydown', (e) => {
-            if (gameState.gameOver || gameState.paused) return;
+            if (gameState.gameOver) return;
+
+            // Allow P key even when paused
+            if (e.key.toLowerCase() === 'p') {
+                e.preventDefault();
+                togglePause();
+                return;
+            }
+
+            if (gameState.paused) return;
 
             switch(e.key) {
                 case 'ArrowLeft':
@@ -584,7 +712,10 @@
                     break;
                 case 'ArrowDown':
                     e.preventDefault();
-                    movePiece(0, 1);
+                    if (movePiece(0, 1)) {
+                        gameState.score += 1; // Soft drop bonus
+                        updateStats();
+                    }
                     break;
                 case 'ArrowUp':
                     e.preventDefault();
