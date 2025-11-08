@@ -557,6 +557,7 @@
             gameState.timeSpliceActive = true;
             gameState.timeSpliceAvailable = false;
             gameState.timeSpliceDuration = 10000; // 10 seconds
+            gameState.timeSpliceSpeed = 0.5;
 
             // Merge all timelines visually (they still exist separately)
             showMessage('⚡ TIME SPLICE ACTIVE! All timelines merged for 10 seconds!', 'splice-active');
@@ -664,7 +665,7 @@
             if (dropCounter > dropInterval) {
                 // Update all timelines simultaneously
                 ['past', 'present', 'future'].forEach(timeline => {
-                    if (pieces[timeline] && !gameState.timeSpliceActive) {
+                    if (pieces[timeline]) {
                         pieces[timeline].y++;
                         if (collide(pieces[timeline], timelines[timeline])) {
                             pieces[timeline].y--;
@@ -713,7 +714,8 @@
 
             // Update level
             gameState.level = Math.floor(gameState.lines / 10) + 1;
-            dropInterval = Math.max(100, 1000 - (gameState.level - 1) * 50);
+            const baseInterval = 1000 - (gameState.level - 1) * 50;
+            dropInterval = Math.max(100, gameState.timeSpliceActive ? baseInterval * 2 : baseInterval);
         }
 
         function endGame() {

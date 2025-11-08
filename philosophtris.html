@@ -617,12 +617,15 @@
                 if (phil.sisyphean && linesCleared > 0) {
                     // Lines reappear after 3 seconds
                     setTimeout(() => {
-                        clearedLines.forEach((line, index) => {
-                            const targetY = ROWS - 1 - index;
-                            if (targetY >= 0) {
-                                board[targetY] = line.slice();
-                            }
-                        });
+                        if (!gameState.gameOver) { // Add safety check
+                            clearedLines.forEach((line, index) => {
+                                const targetY = ROWS - 1 - index;
+                                // Only respawn if no current piece will collide
+                                if (targetY >= 0 && targetY < ROWS - 5) {
+                                    board[targetY] = line.slice();
+                                }
+                            });
+                        }
                     }, 3000);
                 }
 

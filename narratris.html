@@ -637,7 +637,36 @@
         function getEnding() {
             const survivors = Object.values(gameState.characterStatus).filter(s => s.alive).length;
             const totalRelationships = gameState.relationships.length;
+            const heroAlive = gameState.characterStatus['I'].alive;
+            const villainAlive = gameState.characterStatus['O'].alive;
+            const mentorAlive = gameState.characterStatus['T'].alive;
 
+            // New ending 1: Hero & Villain both survive
+            if (heroAlive && villainAlive && survivors === 2) {
+                return "⚔️ Eternal Rivals - Only Hero and Villain remain, locked in endless conflict.";
+            }
+            // New ending 2: Mentor survives alone
+            if (mentorAlive && survivors === 1) {
+                return "🧙 The Last Guardian - Mentor alone remembers the fallen. Wisdom preserved but at great cost.";
+            }
+            // New ending 3: All good characters (Hero, Mentor, Healer)
+            if (heroAlive && mentorAlive && gameState.characterStatus['J'].alive && survivors === 3) {
+                return "✨ Light Triumphant - The forces of good prevailed. Evil was vanquished.";
+            }
+            // New ending 4: All dark characters (Villain, Shadow, Rival)
+            if (villainAlive && gameState.characterStatus['Z'].alive && gameState.characterStatus['S'].alive) {
+                return "🌑 Darkness Ascendant - Evil reigns. The world falls into shadow.";
+            }
+            // New ending 5: High relationships, low survivors
+            if (totalRelationships > 10 && survivors <= 2) {
+                return "💔 Love's Requiem - Deep bonds formed, but too few remain to honor them.";
+            }
+            // New ending 6: Low relationships, high survivors
+            if (totalRelationships < 3 && survivors >= 5) {
+                return "🤝 Strangers' Victory - They survived together but never truly connected.";
+            }
+
+            // Original 6 endings...
             if (survivors === 7 && totalRelationships > 5) {
                 return "✨ Perfect Harmony - All characters survived and formed deep bonds. A tale of unity and friendship!";
             } else if (survivors === 0) {

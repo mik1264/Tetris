@@ -277,7 +277,7 @@
         <div class="memory-panel">
             <div class="sonar-status">
                 <h3>Sonar Pulses Remaining</h3>
-                <div class="sonar-count" id="sonarCount">3</div>
+                <div class="sonar-count" id="sonarCount">5</div>
                 <button class="sonar-btn" id="sonarBtn">📡 ACTIVATE SONAR (S)</button>
             </div>
 
@@ -366,14 +366,14 @@
             L: [[0,0,1],[1,1,1]]
         };
 
-        const FADE_START = 3000; // Start fading after 3 seconds
-        const FADE_COMPLETE = 10000; // Completely invisible after 10 seconds
+        const FADE_START_BASE = 3000; // Start fading after 3 seconds
+        const FADE_COMPLETE_BASE = 10000; // Completely invisible after 10 seconds
 
         // Game state
         let gameState = {
             score: 0,
             lines: 0,
-            sonarPulses: 3,
+            sonarPulses: 5,
             perfectMemoryClears: 0,
             memoryFails: 0,
             sonarActive: false,
@@ -409,6 +409,11 @@
             if (gameState.sonarActive) return 1;
 
             const age = currentTime - placementTime;
+
+            // Calculate dynamic fade times based on difficulty
+            const difficultyFactor = Math.max(0.3, 1 - (gameState.score / 10000));
+            const FADE_START = FADE_START_BASE * difficultyFactor;
+            const FADE_COMPLETE = FADE_COMPLETE_BASE * difficultyFactor;
 
             if (age < FADE_START) {
                 return 1; // Fully visible

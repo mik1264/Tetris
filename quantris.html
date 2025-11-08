@@ -548,7 +548,10 @@
         }
 
         function collide(piece) {
-            if (piece.inSuperposition) return false; // Superposition doesn't collide
+            if (piece.inSuperposition) {
+                // Check bounds only for superposition
+                return piece.x < 0 || piece.x + 4 > COLS || piece.y + 4 > ROWS;
+            }
 
             return piece.shape.some((row, dy) => {
                 return row.some((value, dx) => {

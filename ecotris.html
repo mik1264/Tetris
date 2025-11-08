@@ -666,6 +666,14 @@
                 health += 10;
             }
 
+            // Check overpopulation
+            Object.keys(gameState.populations).forEach(type => {
+                if (gameState.populations[type] > 30) {
+                    gameState.ecosystemHealth -= 5;
+                    showAlert(`⚠️ ${SPECIES[type].name} overpopulation!`);
+                }
+            });
+
             gameState.ecosystemHealth = Math.max(0, Math.min(100, health));
         }
 
@@ -770,8 +778,8 @@
                 dropCounter = 0;
             }
 
-            // Check feeding every 2 seconds
-            if (feedingCheckCounter > 2000) {
+            // Check feeding every 5 seconds
+            if (feedingCheckCounter > 5000) {
                 checkFeeding();
                 checkExtinctions();
                 calculateEcosystemHealth();

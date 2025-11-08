@@ -606,12 +606,44 @@
                 gameState.harmonies += totalHarmony;
                 gameState.dissonances += totalDissonance;
 
-                // Calculate score based on harmony
+                // Calculate score based on harmony and genre
                 let multiplier = 1;
-                if (totalHarmony > totalDissonance) {
-                    multiplier = 2;
-                } else if (totalDissonance > totalHarmony) {
-                    multiplier = 0.5;
+
+                // Genre-specific scoring rules
+                switch(gameState.currentGenre) {
+                    case 'jazz':
+                        // Jazz rewards improvisation (dissonance is okay)
+                        multiplier = 1.5 + (totalDissonance * 0.2);
+                        break;
+                    case 'classical':
+                        // Classical demands perfect harmony
+                        if (totalHarmony > totalDissonance * 2) {
+                            multiplier = 3;
+                        } else if (totalDissonance > 0) {
+                            multiplier = 0.3;
+                        } else {
+                            multiplier = 2;
+                        }
+                        break;
+                    case 'electronic':
+                        // Electronic rewards complexity (lots of notes)
+                        const complexity = totalHarmony + totalDissonance;
+                        multiplier = 1 + (complexity * 0.3);
+                        break;
+                    case 'rock':
+                        // Rock rewards power (simple but strong)
+                        if (totalHarmony >= 2 && totalDissonance <= 1) {
+                            multiplier = 2.5;
+                        } else {
+                            multiplier = 1.2;
+                        }
+                        break;
+                    default:
+                        if (totalHarmony > totalDissonance) {
+                            multiplier = 2;
+                        } else if (totalDissonance > totalHarmony) {
+                            multiplier = 0.5;
+                        }
                 }
 
                 gameState.score += Math.floor(linesCleared * 100 * multiplier);
