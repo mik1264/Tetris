@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CHRONOTRIS - Multi-Timeline Matrix Tetris</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #0f0;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        #matrix-rain {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            opacity: 0.15;
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            text-shadow: 0 0 10px #0f0, 0 0 20px #0f0;
+            margin-bottom: 20px;
+            letter-spacing: 4px;
+        }
+
+        .game-container {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .timeline {
+            background: rgba(0, 20, 0, 0.9);
+            border: 2px solid #0f0;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+        }
+
+        .timeline h2 {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+            text-shadow: 0 0 5px #0f0;
+        }
+
+        canvas {
+            border: 1px solid #0a0;
+            background: #000;
+            image-rendering: pixelated;
+            box-shadow: inset 0 0 20px rgba(0, 255, 0, 0.1);
+        }
+
+        .controls {
+            background: rgba(0, 20, 0, 0.9);
+            border: 2px solid #0f0;
+            border-radius: 10px;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto 20px;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            text-shadow: 0 0 5px #0f0;
+        }
+
+        .abilities {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .ability {
+            background: rgba(0, 50, 0, 0.8);
+            border: 1px solid #0f0;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .ability:hover:not(.disabled) {
+            background: rgba(0, 100, 0, 0.9);
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
+            transform: scale(1.05);
+        }
+
+        .ability.disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .ability.active {
+            background: rgba(0, 150, 0, 0.9);
+            animation: pulse 0.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 10px rgba(0, 255, 0, 0.5); }
+            50% { box-shadow: 0 0 20px rgba(0, 255, 0, 0.9); }
+        }
+
+        .instructions {
+            margin-top: 10px;
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 20, 0, 0.95);
+            border: 3px solid #0f0;
+            padding: 30px;
+            border-radius: 15px;
+            z-index: 1000;
+            text-align: center;
+            box-shadow: 0 0 30px rgba(0, 255, 0, 0.5);
+            display: none;
+        }
+
+        .message.show {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+            to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        }
+
+        button {
+            background: rgba(0, 50, 0, 0.8);
+            color: #0f0;
+            border: 2px solid #0f0;
+            padding: 10px 25px;
+            font-family: 'Courier New', monospace;
+            font-size: 1rem;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-top: 15px;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: rgba(0, 100, 0, 0.9);
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
+        }
+
+        .paradox-warning {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 0, 0, 0.3);
+            border: 2px solid #f00;
+            color: #f00;
+            padding: 10px 20px;
+            border-radius: 5px;
+            z-index: 100;
+            display: none;
+            animation: flashRed 0.5s infinite;
+        }
+
+        @keyframes flashRed {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .paradox-warning.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="matrix-rain"></canvas>
+    <div class="paradox-warning" id="paradox-warning">⚠️ TEMPORAL PARADOX DETECTED ⚠️</div>
+
+    <div class="container">
+        <h1>⏳ CHRONOTRIS ⏳</h1>
+
+        <div class="controls">
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-label">SCORE</div>
+                    <div class="stat-value" id="score">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">LEVEL</div>
+                    <div class="stat-value" id="level">1</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">LINES</div>
+                    <div class="stat-value" id="lines">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">PARADOXES</div>
+                    <div class="stat-value" id="paradoxes">0</div>
+                </div>
+            </div>
+            <div class="abilities">
+                <div class="ability" id="time-splice-btn" onclick="activateTimeSplice()">
+                    [SPACE] TIME SPLICE (10s merge)
+                </div>
+            </div>
+            <div class="instructions">
+                ← → Rotate | ↓ Fast Drop | A/D Switch Timeline | SPACE Time Splice
+            </div>
+        </div>
+
+        <div class="game-container">
+            <div class="timeline">
+                <h2>📜 PAST</h2>
+                <canvas id="canvas-past" width="200" height="400"></canvas>
+            </div>
+            <div class="timeline">
+                <h2>⚡ PRESENT</h2>
+                <canvas id="canvas-present" width="200" height="400"></canvas>
+            </div>
+            <div class="timeline">
+                <h2>🔮 FUTURE</h2>
+                <canvas id="canvas-future" width="200" height="400"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="message" id="game-over-msg">
+        <h2 style="font-size: 2rem; margin-bottom: 15px;">TIMELINE COLLAPSED</h2>
+        <p id="final-score"></p>
+        <p style="margin-top: 10px; font-size: 0.9rem; opacity: 0.8;">The timelines have converged into entropy.</p>
+        <button onclick="location.reload()">RESTART TIMELINE</button>
+    </div>
+
+    <script>
+        // Matrix rain effect
+        const rainCanvas = document.getElementById('matrix-rain');
+        const rainCtx = rainCanvas.getContext('2d');
+        rainCanvas.width = window.innerWidth;
+        rainCanvas.height = window.innerHeight;
+
+        const columns = Math.floor(rainCanvas.width / 20);
+        const drops = Array(columns).fill(1);
+
+        function drawMatrixRain() {
+            rainCtx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+            rainCtx.fillRect(0, 0, rainCanvas.width, rainCanvas.height);
+            rainCtx.fillStyle = '#0f0';
+            rainCtx.font = '15px monospace';
+
+            for (let i = 0; i < drops.length; i++) {
+                const text = String.fromCharCode(0x30A0 + Math.random() * 96);
+                rainCtx.fillText(text, i * 20, drops[i] * 20);
+                if (drops[i] * 20 > rainCanvas.height && Math.random() > 0.975) {
+                    drops[i] = 0;
+                }
+                drops[i]++;
+            }
+        }
+
+        setInterval(drawMatrixRain, 33);
+
+        // Game constants
+        const COLS = 10;
+        const ROWS = 20;
+        const BLOCK_SIZE = 20;
+        const COLORS = ['#003300', '#00ff00', '#00cc00', '#009900', '#00ff66', '#00ff33', '#33ff00'];
+
+        const SHAPES = [
+            [[1,1,1,1]], // I
+            [[1,1],[1,1]], // O
+            [[0,1,0],[1,1,1]], // T
+            [[1,1,0],[0,1,1]], // S
+            [[0,1,1],[1,1,0]], // Z
+            [[1,0,0],[1,1,1]], // L
+            [[0,0,1],[1,1,1]]  // J
+        ];
+
+        // Game state
+        let gameState = {
+            score: 0,
+            level: 1,
+            lines: 0,
+            paradoxes: 0,
+            gameOver: false,
+            activeTimeline: 'present', // past, present, future
+            timeSpliceActive: false,
+            timeSpliceTimer: 0,
+            timeSpliceCooldown: 0
+        };
+
+        // Timeline boards
+        const timelines = {
+            past: { board: createBoard(), piece: null, x: 0, y: 0, canvas: null, ctx: null },
+            present: { board: createBoard(), piece: null, x: 0, y: 0, canvas: null, ctx: null },
+            future: { board: createBoard(), piece: null, x: 0, y: 0, canvas: null, ctx: null }
+        };
+
+        // Future preview history (for the 5-second echo)
+        let futureHistory = [];
+
+        function createBoard() {
+            return Array(ROWS).fill(null).map(() => Array(COLS).fill(0));
+        }
+
+        function init() {
+            // Initialize canvases
+            timelines.past.canvas = document.getElementById('canvas-past');
+            timelines.past.ctx = timelines.past.canvas.getContext('2d');
+            timelines.present.canvas = document.getElementById('canvas-present');
+            timelines.present.ctx = timelines.present.canvas.getContext('2d');
+            timelines.future.canvas = document.getElementById('canvas-future');
+            timelines.future.ctx = timelines.future.canvas.getContext('2d');
+
+            // Start with pieces in all timelines
+            newPiece('past');
+            newPiece('present');
+            newPiece('future');
+
+            // Start game loop
+            setInterval(update, 500);
+            setInterval(draw, 50);
+
+            // Handle cooldowns
+            setInterval(() => {
+                if (gameState.timeSpliceCooldown > 0) gameState.timeSpliceCooldown--;
+                updateAbilityUI();
+            }, 1000);
+        }
+
+        function newPiece(timeline) {
+            const t = timelines[timeline];
+            t.piece = SHAPES[Math.floor(Math.random() * SHAPES.length)];
+            t.x = Math.floor(COLS / 2) - Math.floor(t.piece[0].length / 2);
+            t.y = 0;
+
+            if (collides(t.board, t.piece, t.x, t.y)) {
+                gameState.gameOver = true;
+                showGameOver();
+            }
+        }
+
+        function collides(board, piece, x, y) {
+            for (let row = 0; row < piece.length; row++) {
+                for (let col = 0; col < piece[row].length; col++) {
+                    if (piece[row][col] &&
+                        (y + row >= ROWS || x + col < 0 || x + col >= COLS ||
+                         (y + row >= 0 && board[y + row][x + col]))) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        function merge(timeline) {
+            const t = timelines[timeline];
+            for (let row = 0; row < t.piece.length; row++) {
+                for (let col = 0; col < t.piece[row].length; col++) {
+                    if (t.piece[row][col]) {
+                        if (t.y + row >= 0) {
+                            t.board[t.y + row][t.x + col] = 1;
+                        }
+                    }
+                }
+            }
+        }
+
+        function clearLines(timeline) {
+            const t = timelines[timeline];
+            let linesCleared = 0;
+
+            for (let row = ROWS - 1; row >= 0; row--) {
+                if (t.board[row].every(cell => cell === 1)) {
+                    t.board.splice(row, 1);
+                    t.board.unshift(Array(COLS).fill(0));
+                    linesCleared++;
+                    row++; // Check same row again
+                }
+            }
+
+            if (linesCleared > 0) {
+                gameState.lines += linesCleared;
+                gameState.score += linesCleared * 100 * gameState.level;
+                gameState.level = Math.floor(gameState.lines / 10) + 1;
+
+                // Temporal Cascade: clearing in Past affects Present
+                if (timeline === 'past') {
+                    temporalCascade(linesCleared);
+                }
+
+                updateStats();
+            }
+        }
+
+        function temporalCascade(linesCleared) {
+            // Shift Present timeline down when Past clears lines
+            const present = timelines.present.board;
+            for (let i = 0; i < linesCleared; i++) {
+                present.pop();
+                present.unshift(Array(COLS).fill(0));
+            }
+        }
+
+        function checkParadox() {
+            // Simple paradox check: if Present has blocks that Past doesn't support
+            const past = timelines.past.board;
+            const present = timelines.present.board;
+
+            let paradoxFound = false;
+            for (let row = 0; row < ROWS; row++) {
+                for (let col = 0; col < COLS; col++) {
+                    // If Present has a block but Past is empty below it (simplified logic)
+                    if (present[row][col] && row < ROWS - 1 && !past[row + 1][col] && Math.random() < 0.1) {
+                        paradoxFound = true;
+                        break;
+                    }
+                }
+                if (paradoxFound) break;
+            }
+
+            if (paradoxFound) {
+                gameState.paradoxes++;
+                updateStats();
+                showParadoxWarning();
+                addGarbageLines();
+            }
+        }
+
+        function showParadoxWarning() {
+            const warning = document.getElementById('paradox-warning');
+            warning.classList.add('show');
+            setTimeout(() => warning.classList.remove('show'), 2000);
+        }
+
+        function addGarbageLines() {
+            // Add 1-2 random garbage lines to Present timeline
+            const lines = Math.floor(Math.random() * 2) + 1;
+            const present = timelines.present.board;
+
+            for (let i = 0; i < lines; i++) {
+                present.shift();
+                const garbageLine = Array(COLS).fill(0).map(() => Math.random() < 0.7 ? 1 : 0);
+                present.push(garbageLine);
+            }
+        }
+
+        function activateTimeSplice() {
+            if (gameState.timeSpliceCooldown > 0 || gameState.timeSpliceActive) return;
+
+            gameState.timeSpliceActive = true;
+            gameState.timeSpliceTimer = 20; // 10 seconds at 500ms update rate
+            gameState.timeSpliceCooldown = 30; // 15 second cooldown
+            updateAbilityUI();
+
+            // Merge all three boards (simplified: average them)
+            mergeTimelines();
+        }
+
+        function mergeTimelines() {
+            // Create a merged board from all three timelines
+            const merged = createBoard();
+
+            for (let row = 0; row < ROWS; row++) {
+                for (let col = 0; col < COLS; col++) {
+                    const count = (timelines.past.board[row][col] ? 1 : 0) +
+                                  (timelines.present.board[row][col] ? 1 : 0) +
+                                  (timelines.future.board[row][col] ? 1 : 0);
+                    merged[row][col] = count >= 2 ? 1 : 0; // Majority rule
+                }
+            }
+
+            // Apply merged board to all timelines
+            timelines.past.board = JSON.parse(JSON.stringify(merged));
+            timelines.present.board = JSON.parse(JSON.stringify(merged));
+            timelines.future.board = JSON.parse(JSON.stringify(merged));
+        }
+
+        function update() {
+            if (gameState.gameOver) return;
+
+            // Handle Time Splice duration
+            if (gameState.timeSpliceActive) {
+                gameState.timeSpliceTimer--;
+                if (gameState.timeSpliceTimer <= 0) {
+                    gameState.timeSpliceActive = false;
+                    updateAbilityUI();
+                }
+            }
+
+            // Update all timelines
+            Object.keys(timelines).forEach(key => {
+                const t = timelines[key];
+                t.y++;
+
+                if (collides(t.board, t.piece, t.x, t.y)) {
+                    t.y--;
+                    merge(key);
+                    clearLines(key);
+                    newPiece(key);
+
+                    // Check for paradox after merging
+                    if (Math.random() < 0.15) {
+                        checkParadox();
+                    }
+                }
+            });
+        }
+
+        function draw() {
+            Object.keys(timelines).forEach(key => {
+                const t = timelines[key];
+                const ctx = t.ctx;
+
+                // Clear canvas
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, t.canvas.width, t.canvas.height);
+
+                // Draw board
+                for (let row = 0; row < ROWS; row++) {
+                    for (let col = 0; col < COLS; col++) {
+                        if (t.board[row][col]) {
+                            ctx.fillStyle = key === 'past' ? '#006600' :
+                                            key === 'present' ? '#00ff00' : '#00ff66';
+                            ctx.fillRect(col * BLOCK_SIZE, row * BLOCK_SIZE, BLOCK_SIZE - 1, BLOCK_SIZE - 1);
+                        }
+                    }
+                }
+
+                // Draw current piece
+                if (t.piece) {
+                    ctx.fillStyle = key === 'past' ? '#009900' :
+                                    key === 'present' ? '#00ff00' : '#00ffff';
+                    for (let row = 0; row < t.piece.length; row++) {
+                        for (let col = 0; col < t.piece[row].length; col++) {
+                            if (t.piece[row][col]) {
+                                ctx.fillRect((t.x + col) * BLOCK_SIZE, (t.y + row) * BLOCK_SIZE,
+                                            BLOCK_SIZE - 1, BLOCK_SIZE - 1);
+                            }
+                        }
+                    }
+                }
+
+                // Future Echo: ghost preview in Future timeline
+                if (key === 'future') {
+                    ctx.fillStyle = 'rgba(0, 255, 255, 0.3)';
+                    const ghostY = t.y + 5; // 5 blocks ahead
+                    for (let row = 0; row < t.piece.length; row++) {
+                        for (let col = 0; col < t.piece[row].length; col++) {
+                            if (t.piece[row][col] && ghostY + row < ROWS) {
+                                ctx.fillRect((t.x + col) * BLOCK_SIZE, (ghostY + row) * BLOCK_SIZE,
+                                            BLOCK_SIZE - 1, BLOCK_SIZE - 1);
+                            }
+                        }
+                    }
+                }
+
+                // Draw Time Splice overlay
+                if (gameState.timeSpliceActive) {
+                    ctx.fillStyle = 'rgba(0, 255, 255, 0.2)';
+                    ctx.fillRect(0, 0, t.canvas.width, t.canvas.height);
+                }
+            });
+        }
+
+        function rotatePiece() {
+            const t = timelines[gameState.activeTimeline];
+            const rotated = t.piece[0].map((_, i) => t.piece.map(row => row[i]).reverse());
+
+            if (!collides(t.board, rotated, t.x, t.y)) {
+                t.piece = rotated;
+            }
+        }
+
+        function movePiece(dx) {
+            const t = timelines[gameState.activeTimeline];
+            t.x += dx;
+
+            if (collides(t.board, t.piece, t.x, t.y)) {
+                t.x -= dx;
+            }
+        }
+
+        function dropPiece() {
+            const t = timelines[gameState.activeTimeline];
+            while (!collides(t.board, t.piece, t.x, t.y + 1)) {
+                t.y++;
+            }
+        }
+
+        function switchTimeline(direction) {
+            const order = ['past', 'present', 'future'];
+            const current = order.indexOf(gameState.activeTimeline);
+            if (direction === 'left') {
+                gameState.activeTimeline = order[(current - 1 + 3) % 3];
+            } else {
+                gameState.activeTimeline = order[(current + 1) % 3];
+            }
+        }
+
+        function updateStats() {
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('level').textContent = gameState.level;
+            document.getElementById('lines').textContent = gameState.lines;
+            document.getElementById('paradoxes').textContent = gameState.paradoxes;
+        }
+
+        function updateAbilityUI() {
+            const btn = document.getElementById('time-splice-btn');
+            if (gameState.timeSpliceActive) {
+                btn.classList.add('active');
+                btn.innerHTML = `⚡ TIME SPLICE ACTIVE (${Math.ceil(gameState.timeSpliceTimer / 2)}s)`;
+            } else if (gameState.timeSpliceCooldown > 0) {
+                btn.classList.add('disabled');
+                btn.innerHTML = `[SPACE] TIME SPLICE (${gameState.timeSpliceCooldown}s cooldown)`;
+            } else {
+                btn.classList.remove('active', 'disabled');
+                btn.innerHTML = `[SPACE] TIME SPLICE (10s merge)`;
+            }
+        }
+
+        function showGameOver() {
+            document.getElementById('final-score').textContent =
+                `Final Score: ${gameState.score} | Lines: ${gameState.lines} | Paradoxes: ${gameState.paradoxes}`;
+            document.getElementById('game-over-msg').classList.add('show');
+        }
+
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            if (gameState.gameOver) return;
+
+            switch(e.key) {
+                case 'ArrowLeft':
+                    movePiece(-1);
+                    break;
+                case 'ArrowRight':
+                    movePiece(1);
+                    break;
+                case 'ArrowUp':
+                    rotatePiece();
+                    break;
+                case 'ArrowDown':
+                    dropPiece();
+                    break;
+                case 'a':
+                case 'A':
+                    switchTimeline('left');
+                    break;
+                case 'd':
+                case 'D':
+                    switchTimeline('right');
+                    break;
+                case ' ':
+                    e.preventDefault();
+                    activateTimeSplice();
+                    break;
+            }
+        });
+
+        // Initialize game
+        init();
+    </script>
+</body>
+</html>

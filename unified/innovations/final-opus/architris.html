@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Architris - Structural Engineering Tetris</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Courier New', monospace;
+        }
+
+        .game-container {
+            display: flex;
+            gap: 30px;
+            align-items: flex-start;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        canvas {
+            border: 3px solid #333;
+            background: linear-gradient(180deg, #87CEEB 0%, #f0f0f0 100%);
+            image-rendering: pixelated;
+        }
+
+        .info-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            color: #333;
+        }
+
+        .structure-info {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 15px;
+            border-radius: 10px;
+            color: white;
+        }
+
+        .materials-panel {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .material-card {
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        .material-name {
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .material-props {
+            font-size: 10px;
+            margin-top: 5px;
+        }
+
+        .stats {
+            background: #f0f4f8;
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        .stat-item {
+            margin: 8px 0;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .controls {
+            background: #e1e8ed;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 14px;
+        }
+
+        .title {
+            font-size: 28px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            text-align: center;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: #7f8c8d;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .stress-meter {
+            margin: 10px 0;
+        }
+
+        .stress-bar {
+            width: 100%;
+            height: 20px;
+            background: #ddd;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .stress-fill {
+            height: 100%;
+            transition: width 0.3s ease, background 0.3s ease;
+            background: #4CAF50;
+        }
+
+        .stress-label {
+            text-align: center;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        .warning {
+            color: #e74c3c;
+            font-weight: bold;
+            text-align: center;
+            margin: 10px 0;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .physics-toggle {
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 24px;
+            background: #ccc;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .toggle-switch.active {
+            background: #4CAF50;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: left 0.3s;
+        }
+
+        .toggle-switch.active .toggle-slider {
+            left: 28px;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="info-panel">
+            <div>
+                <div class="title">ARCHITRIS</div>
+                <div class="subtitle">Build with Physics & Materials</div>
+            </div>
+
+            <div class="structure-info">
+                <h3>🏗️ Structural Analysis</h3>
+
+                <div class="stress-meter">
+                    <div>Structural Stress:</div>
+                    <div class="stress-bar">
+                        <div class="stress-fill" id="stressBar"></div>
+                    </div>
+                    <div class="stress-label" id="stressLabel">0% - Safe</div>
+                </div>
+
+                <div id="warningDiv" class="warning" style="display: none;">
+                    ⚠️ STRUCTURAL INSTABILITY!
+                </div>
+
+                <div class="materials-panel">
+                    <div class="material-card" style="border: 2px solid #8B4513;">
+                        <div class="material-name">Wood</div>
+                        <div class="material-props">Light, Flexible<br>Stress: 25%</div>
+                    </div>
+                    <div class="material-card" style="border: 2px solid #696969;">
+                        <div class="material-name">Concrete</div>
+                        <div class="material-props">Heavy, Strong<br>Stress: 10%</div>
+                    </div>
+                    <div class="material-card" style="border: 2px solid #C0C0C0;">
+                        <div class="material-name">Steel</div>
+                        <div class="material-props">Strong, Rigid<br>Stress: 5%</div>
+                    </div>
+                    <div class="material-card" style="border: 2px solid #87CEEB;">
+                        <div class="material-name">Glass</div>
+                        <div class="material-props">Fragile, Light<br>Stress: 40%</div>
+                    </div>
+                </div>
+
+                <div class="physics-toggle">
+                    <span>Physics Mode:</span>
+                    <div class="toggle-switch" id="physicsToggle">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stats">
+                <h3>📊 Engineering Stats</h3>
+                <div class="stat-item">
+                    <span>Max Height:</span>
+                    <span id="maxHeight">0</span>
+                </div>
+                <div class="stat-item">
+                    <span>Stability Rating:</span>
+                    <span id="stability">100%</span>
+                </div>
+                <div class="stat-item">
+                    <span>Load Distribution:</span>
+                    <span id="loadDist">Even</span>
+                </div>
+                <div class="stat-item">
+                    <span>Materials Used:</span>
+                    <span id="materialsUsed">0</span>
+                </div>
+                <div class="stat-item">
+                    <span>Score:</span>
+                    <span id="score">0</span>
+                </div>
+            </div>
+
+            <div class="controls">
+                <h3>🎮 Controls</h3>
+                <div>← → : Move</div>
+                <div>↓ : Soft Drop</div>
+                <div>↑ : Rotate</div>
+                <div>Space : Hard Drop</div>
+                <div>Q/E : Change Material</div>
+                <div>F : Toggle Physics</div>
+                <div>P : Pause</div>
+                <div><br><strong>Engineering Tips:</strong></div>
+                <div>• Heavy materials at bottom</div>
+                <div>• Balance load distribution</div>
+                <div>• Watch stress indicators</div>
+                <div>• Use steel for support!</div>
+            </div>
+        </div>
+
+        <canvas id="gameCanvas"></canvas>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Game constants
+        const BLOCK_SIZE = 30;
+        const COLS = 10;
+        const ROWS = 20;
+        canvas.width = COLS * BLOCK_SIZE;
+        canvas.height = ROWS * BLOCK_SIZE;
+
+        // Materials with properties
+        const MATERIALS = {
+            WOOD: {
+                color: '#8B4513',
+                weight: 1,
+                strength: 3,
+                flexibility: 0.8,
+                stressMultiplier: 1.25
+            },
+            CONCRETE: {
+                color: '#696969',
+                weight: 3,
+                strength: 8,
+                flexibility: 0.2,
+                stressMultiplier: 1.1
+            },
+            STEEL: {
+                color: '#C0C0C0',
+                weight: 2.5,
+                strength: 10,
+                flexibility: 0.4,
+                stressMultiplier: 1.05
+            },
+            GLASS: {
+                color: '#87CEEB',
+                weight: 0.8,
+                strength: 2,
+                flexibility: 0.1,
+                stressMultiplier: 1.4
+            }
+        };
+
+        const MATERIAL_TYPES = Object.keys(MATERIALS);
+
+        // Tetromino shapes
+        const SHAPES = [
+            [[1,1,1,1]], // I - Beam
+            [[1,1,1],[0,1,0]], // T - Support
+            [[1,1,0],[0,1,1]], // Z - Diagonal
+            [[0,1,1],[1,1,0]], // S - Diagonal
+            [[1,1],[1,1]], // O - Block
+            [[1,1,1],[1,0,0]], // L - Corner
+            [[1,1,1],[0,0,1]] // J - Corner
+        ];
+
+        // Game state
+        let board = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+        let currentPiece = null;
+        let gameRunning = true;
+        let score = 0;
+        let dropCounter = 0;
+        let lastTime = 0;
+        let isPaused = false;
+        let physicsEnabled = false;
+        let currentMaterialIndex = 0;
+
+        // Engineering metrics
+        let structuralData = {
+            maxHeight: 0,
+            stability: 100,
+            totalStress: 0,
+            loadDistribution: 'Even',
+            materialsUsed: 0,
+            stressPoints: []
+        };
+
+        class Piece {
+            constructor() {
+                this.shape = SHAPES[Math.floor(Math.random() * SHAPES.length)];
+                this.x = Math.floor(COLS / 2) - Math.floor(this.shape[0].length / 2);
+                this.y = 0;
+                this.materialType = MATERIAL_TYPES[currentMaterialIndex];
+                this.material = MATERIALS[this.materialType];
+            }
+
+            rotate() {
+                const rotated = this.shape[0].map((_, i) =>
+                    this.shape.map(row => row[i]).reverse()
+                );
+
+                const prevShape = this.shape;
+                this.shape = rotated;
+
+                if (this.collides()) {
+                    this.shape = prevShape;
+                }
+            }
+
+            changeMaterial(direction) {
+                currentMaterialIndex = (currentMaterialIndex + direction + MATERIAL_TYPES.length) % MATERIAL_TYPES.length;
+                this.materialType = MATERIAL_TYPES[currentMaterialIndex];
+                this.material = MATERIALS[this.materialType];
+            }
+
+            collides() {
+                for (let y = 0; y < this.shape.length; y++) {
+                    for (let x = 0; x < this.shape[y].length; x++) {
+                        if (this.shape[y][x]) {
+                            const boardX = this.x + x;
+                            const boardY = this.y + y;
+
+                            if (boardX < 0 || boardX >= COLS || boardY >= ROWS) {
+                                return true;
+                            }
+
+                            if (boardY >= 0 && board[boardY][boardX]) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+                return false;
+            }
+
+            lock() {
+                for (let y = 0; y < this.shape.length; y++) {
+                    for (let x = 0; x < this.shape[y].length; x++) {
+                        if (this.shape[y][x]) {
+                            const boardY = this.y + y;
+                            const boardX = this.x + x;
+                            if (boardY >= 0) {
+                                board[boardY][boardX] = {
+                                    material: this.material,
+                                    type: this.materialType,
+                                    stress: 0
+                                };
+                            }
+                        }
+                    }
+                }
+
+                structuralData.materialsUsed++;
+                calculateStructuralIntegrity();
+
+                if (physicsEnabled) {
+                    applyPhysics();
+                }
+            }
+        }
+
+        function calculateStructuralIntegrity() {
+            structuralData.stressPoints = [];
+            structuralData.totalStress = 0;
+            let totalWeight = 0;
+            let centerOfMass = 0;
+            let blockCount = 0;
+
+            // Calculate stress from top to bottom
+            for (let y = 0; y < ROWS; y++) {
+                for (let x = 0; x < COLS; x++) {
+                    if (board[y][x]) {
+                        blockCount++;
+                        let weightAbove = 0;
+
+                        // Calculate weight above this block
+                        for (let checkY = 0; checkY < y; checkY++) {
+                            if (board[checkY][x]) {
+                                weightAbove += board[checkY][x].material.weight;
+                            }
+                        }
+
+                        // Calculate stress based on material and weight
+                        const stress = (weightAbove * board[y][x].material.stressMultiplier) /
+                                     board[y][x].material.strength;
+
+                        board[y][x].stress = stress;
+                        structuralData.totalStress += stress;
+
+                        if (stress > 0.8) {
+                            structuralData.stressPoints.push({x, y, stress});
+                        }
+
+                        // Track center of mass
+                        centerOfMass += x * board[y][x].material.weight;
+                        totalWeight += board[y][x].material.weight;
+
+                        // Update max height
+                        if (ROWS - y > structuralData.maxHeight) {
+                            structuralData.maxHeight = ROWS - y;
+                        }
+                    }
+                }
+            }
+
+            // Calculate stability based on center of mass
+            if (totalWeight > 0) {
+                centerOfMass /= totalWeight;
+                const deviation = Math.abs(centerOfMass - COLS / 2) / (COLS / 2);
+                structuralData.stability = Math.max(0, 100 - deviation * 50);
+
+                // Determine load distribution
+                if (deviation < 0.1) {
+                    structuralData.loadDistribution = 'Even';
+                } else if (deviation < 0.3) {
+                    structuralData.loadDistribution = 'Slightly Uneven';
+                } else if (deviation < 0.5) {
+                    structuralData.loadDistribution = 'Uneven';
+                } else {
+                    structuralData.loadDistribution = 'Dangerous!';
+                }
+            }
+
+            // Calculate average stress
+            const avgStress = blockCount > 0 ? structuralData.totalStress / blockCount : 0;
+
+            updateStructuralDisplay(avgStress);
+        }
+
+        function applyPhysics() {
+            let changed = false;
+
+            // Check for unsupported blocks
+            for (let y = ROWS - 2; y >= 0; y--) {
+                for (let x = 0; x < COLS; x++) {
+                    if (board[y][x] && !board[y + 1][x]) {
+                        // Check if block has any support
+                        let hasSupport = false;
+
+                        // Check adjacent blocks for support
+                        if (x > 0 && board[y][x - 1] && board[y + 1][x - 1]) {
+                            if (board[y][x - 1].material.strength >= 5) {
+                                hasSupport = true;
+                            }
+                        }
+                        if (x < COLS - 1 && board[y][x + 1] && board[y + 1][x + 1]) {
+                            if (board[y][x + 1].material.strength >= 5) {
+                                hasSupport = true;
+                            }
+                        }
+
+                        // Apply gravity if no support
+                        if (!hasSupport) {
+                            board[y + 1][x] = board[y][x];
+                            board[y][x] = null;
+                            changed = true;
+                        }
+                    }
+
+                    // Check for overstressed blocks
+                    if (board[y][x] && board[y][x].stress > 1) {
+                        // Material failure - block breaks
+                        if (board[y][x].type === 'GLASS' ||
+                            (board[y][x].type === 'WOOD' && board[y][x].stress > 1.5)) {
+                            board[y][x] = null;
+                            changed = true;
+                            score -= 50; // Penalty for structural failure
+                        }
+                    }
+                }
+            }
+
+            if (changed) {
+                setTimeout(() => {
+                    applyPhysics(); // Continue applying physics until stable
+                }, 100);
+            }
+        }
+
+        function updateStructuralDisplay(avgStress) {
+            document.getElementById('maxHeight').textContent = structuralData.maxHeight;
+            document.getElementById('stability').textContent = Math.floor(structuralData.stability) + '%';
+            document.getElementById('loadDist').textContent = structuralData.loadDistribution;
+            document.getElementById('materialsUsed').textContent = structuralData.materialsUsed;
+
+            // Update stress bar
+            const stressBar = document.getElementById('stressBar');
+            const stressLabel = document.getElementById('stressLabel');
+            const warningDiv = document.getElementById('warningDiv');
+
+            const stressPercent = Math.min(100, avgStress * 100);
+            stressBar.style.width = stressPercent + '%';
+
+            if (stressPercent < 30) {
+                stressBar.style.background = '#4CAF50';
+                stressLabel.textContent = Math.floor(stressPercent) + '% - Safe';
+                warningDiv.style.display = 'none';
+            } else if (stressPercent < 60) {
+                stressBar.style.background = '#FFC107';
+                stressLabel.textContent = Math.floor(stressPercent) + '% - Moderate';
+                warningDiv.style.display = 'none';
+            } else if (stressPercent < 80) {
+                stressBar.style.background = '#FF9800';
+                stressLabel.textContent = Math.floor(stressPercent) + '% - High';
+                warningDiv.style.display = 'none';
+            } else {
+                stressBar.style.background = '#e74c3c';
+                stressLabel.textContent = Math.floor(stressPercent) + '% - Critical!';
+                warningDiv.style.display = 'block';
+            }
+        }
+
+        function clearLines() {
+            let linesCleared = 0;
+
+            for (let y = ROWS - 1; y >= 0; y--) {
+                if (board[y].every(cell => cell !== null)) {
+                    // Bonus for clearing lines with strong materials
+                    let strengthBonus = 0;
+                    for (let x = 0; x < COLS; x++) {
+                        strengthBonus += board[y][x].material.strength;
+                    }
+
+                    board.splice(y, 1);
+                    board.unshift(Array(COLS).fill(null));
+                    linesCleared++;
+                    score += 100 * linesCleared + strengthBonus * 10;
+                    y++;
+                }
+            }
+
+            if (linesCleared > 0) {
+                calculateStructuralIntegrity();
+                if (physicsEnabled) {
+                    setTimeout(() => applyPhysics(), 100);
+                }
+            }
+        }
+
+        function draw() {
+            // Clear canvas with sky gradient
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#87CEEB');
+            gradient.addColorStop(1, '#f0f0f0');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw grid (blueprint style)
+            ctx.strokeStyle = 'rgba(0, 0, 139, 0.1)';
+            ctx.lineWidth = 1;
+            for (let x = 0; x <= COLS; x++) {
+                ctx.beginPath();
+                ctx.moveTo(x * BLOCK_SIZE, 0);
+                ctx.lineTo(x * BLOCK_SIZE, canvas.height);
+                ctx.stroke();
+            }
+            for (let y = 0; y <= ROWS; y++) {
+                ctx.beginPath();
+                ctx.moveTo(0, y * BLOCK_SIZE);
+                ctx.lineTo(canvas.width, y * BLOCK_SIZE);
+                ctx.stroke();
+            }
+
+            // Draw board
+            for (let y = 0; y < ROWS; y++) {
+                for (let x = 0; x < COLS; x++) {
+                    if (board[y][x]) {
+                        drawBlock(x, y, board[y][x]);
+                    }
+                }
+            }
+
+            // Draw stress indicators
+            ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)';
+            ctx.lineWidth = 3;
+            for (let point of structuralData.stressPoints) {
+                const intensity = Math.min(point.stress, 1);
+                ctx.strokeStyle = `rgba(255, ${255 - intensity * 255}, 0, ${intensity * 0.7})`;
+                ctx.strokeRect(
+                    point.x * BLOCK_SIZE + 2,
+                    point.y * BLOCK_SIZE + 2,
+                    BLOCK_SIZE - 4,
+                    BLOCK_SIZE - 4
+                );
+            }
+
+            // Draw current piece
+            if (currentPiece && !isPaused) {
+                for (let y = 0; y < currentPiece.shape.length; y++) {
+                    for (let x = 0; x < currentPiece.shape[y].length; x++) {
+                        if (currentPiece.shape[y][x]) {
+                            drawBlock(
+                                currentPiece.x + x,
+                                currentPiece.y + y,
+                                { material: currentPiece.material, type: currentPiece.materialType, stress: 0 }
+                            );
+                        }
+                    }
+                }
+
+                // Draw ghost piece
+                let ghostY = currentPiece.y;
+                while (!wouldCollide(currentPiece, 0, 1)) {
+                    currentPiece.y++;
+                }
+                let finalY = currentPiece.y;
+                currentPiece.y = ghostY;
+
+                ctx.globalAlpha = 0.3;
+                for (let y = 0; y < currentPiece.shape.length; y++) {
+                    for (let x = 0; x < currentPiece.shape[y].length; x++) {
+                        if (currentPiece.shape[y][x]) {
+                            drawBlock(
+                                currentPiece.x + x,
+                                finalY + y,
+                                { material: currentPiece.material, type: currentPiece.materialType, stress: 0 }
+                            );
+                        }
+                    }
+                }
+                ctx.globalAlpha = 1;
+            }
+
+            // Draw pause overlay
+            if (isPaused) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = 'white';
+                ctx.font = '30px Courier New';
+                ctx.textAlign = 'center';
+                ctx.fillText('PAUSED', canvas.width / 2, canvas.height / 2);
+                ctx.font = '16px Courier New';
+                ctx.fillText('Press P to continue', canvas.width / 2, canvas.height / 2 + 30);
+            }
+
+            // Draw game over
+            if (!gameRunning) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = 'white';
+                ctx.font = '30px Courier New';
+                ctx.textAlign = 'center';
+                ctx.fillText('STRUCTURE COLLAPSED', canvas.width / 2, canvas.height / 2);
+                ctx.font = '16px Courier New';
+                ctx.fillText('Press R to rebuild', canvas.width / 2, canvas.height / 2 + 30);
+            }
+        }
+
+        function drawBlock(x, y, blockData) {
+            const material = blockData.material;
+            const stress = blockData.stress || 0;
+
+            // Main block
+            ctx.fillStyle = material.color;
+            ctx.fillRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+
+            // Texture based on material
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
+            ctx.lineWidth = 1;
+
+            if (blockData.type === 'WOOD') {
+                // Wood grain
+                for (let i = 0; i < 3; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(x * BLOCK_SIZE, y * BLOCK_SIZE + i * 10);
+                    ctx.lineTo((x + 1) * BLOCK_SIZE, y * BLOCK_SIZE + i * 10 + 5);
+                    ctx.stroke();
+                }
+            } else if (blockData.type === 'CONCRETE') {
+                // Concrete texture
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+                ctx.fillRect(x * BLOCK_SIZE + 5, y * BLOCK_SIZE + 5, 5, 5);
+                ctx.fillRect(x * BLOCK_SIZE + 15, y * BLOCK_SIZE + 15, 5, 5);
+            } else if (blockData.type === 'STEEL') {
+                // Steel rivets
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                ctx.beginPath();
+                ctx.arc(x * BLOCK_SIZE + 5, y * BLOCK_SIZE + 5, 2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(x * BLOCK_SIZE + 25, y * BLOCK_SIZE + 25, 2, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (blockData.type === 'GLASS') {
+                // Glass shine
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+                ctx.fillRect(x * BLOCK_SIZE + 2, y * BLOCK_SIZE + 2, BLOCK_SIZE - 15, 3);
+            }
+
+            // Stress cracks
+            if (stress > 0.5) {
+                ctx.strokeStyle = `rgba(255, 0, 0, ${stress})`;
+                ctx.lineWidth = stress * 2;
+                ctx.beginPath();
+                ctx.moveTo(x * BLOCK_SIZE + 5, y * BLOCK_SIZE + 5);
+                ctx.lineTo(x * BLOCK_SIZE + 10, y * BLOCK_SIZE + 15);
+                ctx.moveTo(x * BLOCK_SIZE + 20, y * BLOCK_SIZE + 10);
+                ctx.lineTo(x * BLOCK_SIZE + 25, y * BLOCK_SIZE + 20);
+                ctx.stroke();
+            }
+
+            // Border
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(x * BLOCK_SIZE + 0.5, y * BLOCK_SIZE + 0.5, BLOCK_SIZE - 1, BLOCK_SIZE - 1);
+        }
+
+        function wouldCollide(piece, dx, dy) {
+            for (let y = 0; y < piece.shape.length; y++) {
+                for (let x = 0; x < piece.shape[y].length; x++) {
+                    if (piece.shape[y][x]) {
+                        const newX = piece.x + x + dx;
+                        const newY = piece.y + y + dy;
+
+                        if (newX < 0 || newX >= COLS || newY >= ROWS) {
+                            return true;
+                        }
+
+                        if (newY >= 0 && board[newY][newX]) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        function gameLoop(time = 0) {
+            if (!gameRunning) {
+                requestAnimationFrame(gameLoop);
+                return;
+            }
+
+            const deltaTime = time - lastTime;
+            lastTime = time;
+
+            if (!isPaused) {
+                dropCounter += deltaTime;
+
+                if (dropCounter > 500) {
+                    if (currentPiece) {
+                        if (!wouldCollide(currentPiece, 0, 1)) {
+                            currentPiece.y++;
+                        } else {
+                            currentPiece.lock();
+                            clearLines();
+                            currentPiece = new Piece();
+
+                            if (currentPiece.collides()) {
+                                gameRunning = false;
+                            }
+                        }
+                    } else {
+                        currentPiece = new Piece();
+                    }
+                    dropCounter = 0;
+                }
+            }
+
+            draw();
+            document.getElementById('score').textContent = score;
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Physics toggle
+        document.getElementById('physicsToggle').addEventListener('click', () => {
+            physicsEnabled = !physicsEnabled;
+            document.getElementById('physicsToggle').classList.toggle('active', physicsEnabled);
+
+            if (physicsEnabled) {
+                applyPhysics();
+            }
+        });
+
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            if (!gameRunning && e.key.toLowerCase() === 'r') {
+                // Reset game
+                board = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+                score = 0;
+                structuralData = {
+                    maxHeight: 0,
+                    stability: 100,
+                    totalStress: 0,
+                    loadDistribution: 'Even',
+                    materialsUsed: 0,
+                    stressPoints: []
+                };
+                currentPiece = new Piece();
+                gameRunning = true;
+                updateStructuralDisplay(0);
+                return;
+            }
+
+            if (!gameRunning || !currentPiece) return;
+
+            if (e.key.toLowerCase() === 'p') {
+                isPaused = !isPaused;
+                return;
+            }
+
+            if (e.key.toLowerCase() === 'f') {
+                physicsEnabled = !physicsEnabled;
+                document.getElementById('physicsToggle').classList.toggle('active', physicsEnabled);
+                if (physicsEnabled) {
+                    applyPhysics();
+                }
+                return;
+            }
+
+            if (isPaused) return;
+
+            switch(e.key.toLowerCase()) {
+                case 'arrowleft':
+                    if (!wouldCollide(currentPiece, -1, 0)) {
+                        currentPiece.x--;
+                    }
+                    break;
+                case 'arrowright':
+                    if (!wouldCollide(currentPiece, 1, 0)) {
+                        currentPiece.x++;
+                    }
+                    break;
+                case 'arrowdown':
+                    if (!wouldCollide(currentPiece, 0, 1)) {
+                        currentPiece.y++;
+                        score++;
+                    }
+                    break;
+                case 'arrowup':
+                    currentPiece.rotate();
+                    break;
+                case 'q':
+                    currentPiece.changeMaterial(-1);
+                    break;
+                case 'e':
+                    currentPiece.changeMaterial(1);
+                    break;
+                case ' ':
+                    while (!wouldCollide(currentPiece, 0, 1)) {
+                        currentPiece.y++;
+                        score += 2;
+                    }
+                    currentPiece.lock();
+                    clearLines();
+                    currentPiece = new Piece();
+                    if (currentPiece.collides()) {
+                        gameRunning = false;
+                    }
+                    dropCounter = 0;
+                    break;
+            }
+        });
+
+        // Start game
+        currentPiece = new Piece();
+        updateStructuralDisplay(0);
+        gameLoop();
+    </script>
+</body>
+</html>

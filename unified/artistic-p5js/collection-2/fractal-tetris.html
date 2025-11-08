@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fractal Tetris - p5.js Variation</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #134e5e 0%, #71b280 100%);
+            font-family: 'Arial', sans-serif;
+        }
+        #canvas-container {
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        h1 {
+            margin: 0 0 10px 0;
+            font-size: 2em;
+        }
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            background: rgba(0,0,0,0.5);
+            padding: 15px 25px;
+            border-radius: 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="info">
+        <h1>🔺 Fractal Tetris</h1>
+        <p>Score: <span id="score">0</span></p>
+        <p>Lines: <span id="lines">0</span></p>
+        <p>Level: <span id="level">1</span></p>
+    </div>
+    <div class="controls">
+        <strong>Controls:</strong> Arrow Keys to move/rotate | Space to drop | P to pause
+    </div>
+    <script>
+        const COLS = 10;
+        const ROWS = 20;
+        const BLOCK_SIZE = 30;
+
+        let grid = [];
+        let currentPiece;
+        let gameOver = false;
+        let paused = false;
+        let score = 0;
+        let lines = 0;
+        let level = 1;
+        let dropCounter = 0;
+        let dropInterval = 1000;
+        let lastTime = 0;
+
+        const SHAPES = [
+            [[1,1,1,1]], // I
+            [[1,1],[1,1]], // O
+            [[0,1,0],[1,1,1]], // T
+            [[1,0,0],[1,1,1]], // L
+            [[0,0,1],[1,1,1]], // J
+            [[0,1,1],[1,1,0]], // S
+            [[1,1,0],[0,1,1]]  // Z
+        ];
+
+        const COLORS = [
+            [46, 204, 113],   // Emerald
+            [52, 152, 219],   // Blue
+            [155, 89, 182],   // Purple
+            [241, 196, 15],   // Yellow
+            [230, 126, 34],   // Orange
+            [231, 76, 60],    // Red
+            [26, 188, 156]    // Turquoise
+        ];
+
+        function drawFractalTree(x, y, size, depth, angle, hue) {
+            if (depth === 0 || size < 2) return;
+
+            push();
+            translate(x, y);
+            rotate(angle);
+
+            stroke(hue[0], hue[1], hue[2], 200);
+            strokeWeight(depth);
+            line(0, 0, 0, -size);
+
+            translate(0, -size);
+            drawFractalTree(0, 0, size * 0.67, depth - 1, -PI / 6, hue);
+            drawFractalTree(0, 0, size * 0.67, depth - 1, PI / 6, hue);
+
+            pop();
+        }
+
+        function drawSierpinskiTriangle(x, y, size, depth, col) {
+            if (depth === 0) {
+                fill(col[0], col[1], col[2], 150);
+                noStroke();
+                triangle(x, y, x + size, y, x + size/2, y - size);
+                return;
+            }
+
+            const newSize = size / 2;
+            drawSierpinskiTriangle(x, y, newSize, depth - 1, col);
+            drawSierpinskiTriangle(x + newSize, y, newSize, depth - 1, col);
+            drawSierpinskiTriangle(x + newSize/2, y - newSize, newSize, depth - 1, col);
+        }
+
+        function drawMandelbrotBlock(x, y, size, col) {
+            push();
+            for (let px = 0; px < size; px += 2) {
+                for (let py = 0; py < size; py += 2) {
+                    let a = map(px, 0, size, -0.5, 0.5);
+                    let b = map(py, 0, size, -0.5, 0.5);
+
+                    let ca = a;
+                    let cb = b;
+
+                    let n = 0;
+                    let maxIterations = 20;
+
+                    while (n < maxIterations) {
+                        let aa = a * a - b * b;
+                        let bb = 2 * a * b;
+
+                        a = aa + ca;
+                        b = bb + cb;
+
+                        if (a * a + b * b > 4) break;
+                        n++;
+                    }
+
+                    let bright = map(n, 0, maxIterations, 0, 255);
+                    stroke(col[0], col[1], col[2], bright);
+                    point(x + px, y + py);
+                }
+            }
+            pop();
+        }
+
+        class Piece {
+            constructor() {
+                this.shape = random(SHAPES);
+                this.x = Math.floor(COLS / 2) - Math.floor(this.shape[0].length / 2);
+                this.y = 0;
+                this.col = random(COLORS);
+                this.fractalType = floor(random(3));
+            }
+
+            draw() {
+                push();
+
+                for (let row = 0; row < this.shape.length; row++) {
+                    for (let col = 0; col < this.shape[row].length; col++) {
+                        if (this.shape[row][col]) {
+                            let px = (this.x + col) * BLOCK_SIZE;
+                            let py = (this.y + row) * BLOCK_SIZE;
+
+                            // Draw border
+                            stroke(this.col[0], this.col[1], this.col[2]);
+                            strokeWeight(2);
+                            noFill();
+                            rect(px, py, BLOCK_SIZE, BLOCK_SIZE);
+
+                            // Draw fractal pattern
+                            if (this.fractalType === 0) {
+                                drawFractalTree(
+                                    px + BLOCK_SIZE/2,
+                                    py + BLOCK_SIZE,
+                                    BLOCK_SIZE/2,
+                                    3,
+                                    0,
+                                    this.col
+                                );
+                            } else if (this.fractalType === 1) {
+                                drawSierpinskiTriangle(
+                                    px + 2,
+                                    py + BLOCK_SIZE - 2,
+                                    BLOCK_SIZE - 4,
+                                    3,
+                                    this.col
+                                );
+                            } else {
+                                drawMandelbrotBlock(px, py, BLOCK_SIZE, this.col);
+                            }
+                        }
+                    }
+                }
+                pop();
+            }
+
+            move(dx, dy) {
+                this.x += dx;
+                this.y += dy;
+                if (this.collision()) {
+                    this.x -= dx;
+                    this.y -= dy;
+                    return false;
+                }
+                return true;
+            }
+
+            rotate() {
+                const newShape = this.shape[0].map((_, i) =>
+                    this.shape.map(row => row[i]).reverse()
+                );
+                const oldShape = this.shape;
+                this.shape = newShape;
+                if (this.collision()) {
+                    this.shape = oldShape;
+                }
+            }
+
+            collision() {
+                for (let row = 0; row < this.shape.length; row++) {
+                    for (let col = 0; col < this.shape[row].length; col++) {
+                        if (this.shape[row][col]) {
+                            let newX = this.x + col;
+                            let newY = this.y + row;
+                            if (newX < 0 || newX >= COLS || newY >= ROWS) {
+                                return true;
+                            }
+                            if (newY >= 0 && grid[newY][newX]) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+                return false;
+            }
+
+            lock() {
+                for (let row = 0; row < this.shape.length; row++) {
+                    for (let col = 0; col < this.shape[row].length; col++) {
+                        if (this.shape[row][col]) {
+                            let newY = this.y + row;
+                            let newX = this.x + col;
+                            if (newY >= 0) {
+                                grid[newY][newX] = {
+                                    col: this.col,
+                                    fractalType: this.fractalType
+                                };
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        function setup() {
+            let canvas = createCanvas(COLS * BLOCK_SIZE, ROWS * BLOCK_SIZE);
+            canvas.parent('canvas-container');
+
+            for (let i = 0; i < ROWS; i++) {
+                grid[i] = Array(COLS).fill(0);
+            }
+
+            currentPiece = new Piece();
+            frameRate(60);
+        }
+
+        function draw() {
+            if (!gameOver && !paused) {
+                let now = millis();
+                let deltaTime = now - lastTime;
+                lastTime = now;
+
+                dropCounter += deltaTime;
+                if (dropCounter > dropInterval) {
+                    if (!currentPiece.move(0, 1)) {
+                        currentPiece.lock();
+                        clearLines();
+                        currentPiece = new Piece();
+                        if (currentPiece.collision()) {
+                            gameOver = true;
+                        }
+                    }
+                    dropCounter = 0;
+                }
+            }
+
+            // Draw background with fractal patterns
+            background(20, 40, 50);
+            drawFractalBackground();
+
+            // Draw grid
+            for (let row = 0; row < ROWS; row++) {
+                for (let col = 0; col < COLS; col++) {
+                    let px = col * BLOCK_SIZE;
+                    let py = row * BLOCK_SIZE;
+
+                    if (grid[row][col]) {
+                        let cell = grid[row][col];
+
+                        // Draw border
+                        stroke(cell.col[0], cell.col[1], cell.col[2]);
+                        strokeWeight(2);
+                        noFill();
+                        rect(px, py, BLOCK_SIZE, BLOCK_SIZE);
+
+                        // Draw fractal
+                        if (cell.fractalType === 0) {
+                            drawFractalTree(
+                                px + BLOCK_SIZE/2,
+                                py + BLOCK_SIZE,
+                                BLOCK_SIZE/2,
+                                3,
+                                0,
+                                cell.col
+                            );
+                        } else if (cell.fractalType === 1) {
+                            drawSierpinskiTriangle(
+                                px + 2,
+                                py + BLOCK_SIZE - 2,
+                                BLOCK_SIZE - 4,
+                                3,
+                                cell.col
+                            );
+                        } else {
+                            drawMandelbrotBlock(px, py, BLOCK_SIZE, cell.col);
+                        }
+                    } else {
+                        stroke(100, 150, 130, 50);
+                        strokeWeight(1);
+                        noFill();
+                        rect(px, py, BLOCK_SIZE, BLOCK_SIZE);
+                    }
+                }
+            }
+
+            // Draw current piece
+            if (!gameOver && currentPiece) {
+                currentPiece.draw();
+            }
+
+            // Game over overlay
+            if (gameOver) {
+                fill(0, 0, 0, 200);
+                rect(0, height/2 - 50, width, 100);
+                fill(255);
+                textAlign(CENTER, CENTER);
+                textSize(32);
+                text('GAME OVER', width/2, height/2 - 20);
+                textSize(16);
+                text('Press R to restart', width/2, height/2 + 20);
+            }
+
+            if (paused) {
+                fill(0, 0, 0, 150);
+                rect(0, height/2 - 40, width, 80);
+                fill(255);
+                textAlign(CENTER, CENTER);
+                textSize(32);
+                text('PAUSED', width/2, height/2);
+            }
+        }
+
+        function drawFractalBackground() {
+            push();
+            stroke(46, 204, 113, 30);
+            strokeWeight(1);
+            noFill();
+
+            for (let i = 0; i < 3; i++) {
+                let size = 50 + i * 30;
+                drawSierpinskiTriangle(
+                    -20 + i * 40,
+                    height - 20,
+                    size,
+                    2,
+                    [46, 204, 113]
+                );
+            }
+            pop();
+        }
+
+        function clearLines() {
+            let linesCleared = 0;
+            for (let row = ROWS - 1; row >= 0; row--) {
+                if (grid[row].every(cell => cell !== 0)) {
+                    grid.splice(row, 1);
+                    grid.unshift(Array(COLS).fill(0));
+                    linesCleared++;
+                    row++;
+                }
+            }
+            if (linesCleared > 0) {
+                lines += linesCleared;
+                score += linesCleared * linesCleared * 100 * level;
+                level = Math.floor(lines / 10) + 1;
+                dropInterval = Math.max(100, 1000 - (level - 1) * 100);
+
+                document.getElementById('score').textContent = score;
+                document.getElementById('lines').textContent = lines;
+                document.getElementById('level').textContent = level;
+            }
+        }
+
+        function keyPressed() {
+            if (gameOver && key === 'r') {
+                resetGame();
+                return;
+            }
+
+            if (key === 'p' || key === 'P') {
+                paused = !paused;
+                return;
+            }
+
+            if (paused || gameOver) return;
+
+            if (keyCode === LEFT_ARROW) {
+                currentPiece.move(-1, 0);
+            } else if (keyCode === RIGHT_ARROW) {
+                currentPiece.move(1, 0);
+            } else if (keyCode === DOWN_ARROW) {
+                if (currentPiece.move(0, 1)) {
+                    score += 1;
+                    document.getElementById('score').textContent = score;
+                }
+            } else if (keyCode === UP_ARROW) {
+                currentPiece.rotate();
+            } else if (key === ' ') {
+                while (currentPiece.move(0, 1)) {
+                    score += 2;
+                }
+                document.getElementById('score').textContent = score;
+            }
+        }
+
+        function resetGame() {
+            grid = [];
+            for (let i = 0; i < ROWS; i++) {
+                grid[i] = Array(COLS).fill(0);
+            }
+            currentPiece = new Piece();
+            gameOver = false;
+            paused = false;
+            score = 0;
+            lines = 0;
+            level = 1;
+            dropCounter = 0;
+            dropInterval = 1000;
+
+            document.getElementById('score').textContent = score;
+            document.getElementById('lines').textContent = lines;
+            document.getElementById('level').textContent = level;
+        }
+    </script>
+</body>
+</html>

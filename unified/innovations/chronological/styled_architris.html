@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARCHITRIS - Structural Engineering Tetris</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #2C3E50 0%, #4CA1AF 50%, #C4E0E5 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #2C3E50;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1100px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 3.5em;
+            margin-bottom: 10px;
+            color: #34495E;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            font-weight: 900;
+        }
+
+        .subtitle {
+            text-align: center;
+            font-size: 1.2em;
+            margin-bottom: 20px;
+            color: #2C3E50;
+            font-weight: 600;
+        }
+
+        .game-layout {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .game-board {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            border: 4px solid #34495E;
+        }
+
+        canvas {
+            display: block;
+            border: 4px solid #2C3E50;
+            border-radius: 8px;
+            background: #ECF0F1;
+        }
+
+        .engineering-panel {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            border: 4px solid #34495E;
+            max-width: 320px;
+        }
+
+        .material-legend {
+            background: #34495E;
+            color: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .legend-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-align: center;
+            font-size: 1.1em;
+        }
+
+        .material-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+        }
+
+        .material-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            margin-right: 10px;
+            border: 2px solid rgba(255,255,255,0.5);
+        }
+
+        .stability-meter {
+            background: #ECF0F1;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 2px solid #BDC3C7;
+        }
+
+        .stability-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-align: center;
+            color: #2C3E50;
+        }
+
+        .stability-bar {
+            width: 100%;
+            height: 30px;
+            background: #BDC3C7;
+            border-radius: 15px;
+            overflow: hidden;
+            border: 2px solid #95A5A6;
+        }
+
+        .stability-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #E74C3C, #F39C12, #F1C40F, #2ECC71);
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+        }
+
+        .stress-visualization {
+            background: #ECF0F1;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 2px solid #BDC3C7;
+        }
+
+        .stress-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-align: center;
+            color: #2C3E50;
+        }
+
+        .stress-legend {
+            display: flex;
+            justify-content: space-around;
+            font-size: 0.9em;
+        }
+
+        .stress-item {
+            text-align: center;
+        }
+
+        .stress-color {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            margin: 0 auto 5px;
+            border: 2px solid #2C3E50;
+        }
+
+        .challenge-mode {
+            background: linear-gradient(135deg, #3498DB, #2980B9);
+            color: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .challenge-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .challenge-text {
+            text-align: center;
+            font-size: 0.9em;
+            line-height: 1.6;
+        }
+
+        .stats {
+            background: #ECF0F1;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 2px solid #BDC3C7;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            color: #2C3E50;
+        }
+
+        .stat-label {
+            font-weight: 600;
+        }
+
+        .stat-value {
+            font-weight: bold;
+            color: #3498DB;
+        }
+
+        .button {
+            background: linear-gradient(135deg, #3498DB, #2980B9);
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            font-size: 1em;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.4);
+            font-weight: bold;
+        }
+
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(41, 128, 185, 0.6);
+        }
+
+        .button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .controls {
+            text-align: center;
+            margin-top: 15px;
+        }
+
+        .collapse-warning {
+            background: #E74C3C;
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            text-align: center;
+            font-weight: bold;
+            display: none;
+        }
+
+        .collapse-warning.show {
+            display: block;
+            animation: shake 0.5s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        .blueprint-grid {
+            background-image:
+                repeating-linear-gradient(0deg, rgba(52, 152, 219, 0.1) 0px, rgba(52, 152, 219, 0.1) 1px, transparent 1px, transparent 20px),
+                repeating-linear-gradient(90deg, rgba(52, 152, 219, 0.1) 0px, rgba(52, 152, 219, 0.1) 1px, transparent 1px, transparent 20px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏗️ ARCHITRIS 🏗️</h1>
+        <div class="subtitle">Structural Engineering Tetris - Build With Physics!</div>
+
+        <div class="game-layout">
+            <div class="game-board">
+                <canvas id="canvas" width="240" height="480" class="blueprint-grid"></canvas>
+                <div class="controls">
+                    <button class="button" id="startBtn" onclick="startGame()">START BUILDING</button>
+                    <button class="button" id="pauseBtn" onclick="togglePause()" disabled>PAUSE</button>
+                    <button class="button" onclick="triggerEvent('earthquake')">TEST: Earthquake</button>
+                </div>
+            </div>
+
+            <div class="engineering-panel">
+                <div class="material-legend">
+                    <div class="legend-title">📋 Building Materials</div>
+                    <div class="material-item">
+                        <div class="material-color" style="background: #95A5A6"></div>
+                        <div>I-Beam: Steel (Strong)</div>
+                    </div>
+                    <div class="material-item">
+                        <div class="material-color" style="background: #7F8C8D"></div>
+                        <div>Foundation: Stable Base</div>
+                    </div>
+                    <div class="material-item">
+                        <div class="material-color" style="background: #E67E22"></div>
+                        <div>T-Beam: Load-Bearing</div>
+                    </div>
+                    <div class="material-item">
+                        <div class="material-color" style="background: #D35400"></div>
+                        <div>S/Z-Joint: Weak Points</div>
+                    </div>
+                    <div class="material-item">
+                        <div class="material-color" style="background: #3498DB"></div>
+                        <div>J/L-Beam: Cantilevers</div>
+                    </div>
+                </div>
+
+                <div class="collapse-warning" id="collapseWarning">⚠️ STRUCTURE UNSTABLE!</div>
+
+                <div class="challenge-mode">
+                    <div class="challenge-title">🎯 Current Challenge</div>
+                    <div class="challenge-text" id="challenge">
+                        Build a stable structure!
+                    </div>
+                </div>
+
+                <div class="stability-meter">
+                    <div class="stability-title">⚖️ Structural Stability</div>
+                    <div class="stability-bar">
+                        <div class="stability-fill" id="stabilityFill" style="width: 100%;">100%</div>
+                    </div>
+                </div>
+
+                <div class="stress-visualization">
+                    <div class="stress-title">🔧 Stress Levels</div>
+                    <div class="stress-legend">
+                        <div class="stress-item">
+                            <div class="stress-color" style="background: #2ECC71;"></div>
+                            <div>Safe</div>
+                        </div>
+                        <div class="stress-item">
+                            <div class="stress-color" style="background: #F1C40F;"></div>
+                            <div>Moderate</div>
+                        </div>
+                        <div class="stress-item">
+                            <div class="stress-color" style="background: #E74C3C;"></div>
+                            <div>Critical</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stats">
+                    <div class="stat-row">
+                        <span class="stat-label">Score:</span>
+                        <span class="stat-value" id="score">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Height:</span>
+                        <span class="stat-value" id="height">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Pieces Used:</span>
+                        <span class="stat-value" id="pieces">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Collapses:</span>
+                        <span class="stat-value" id="collapses">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const COLS = 12;
+        const ROWS = 24;
+        const BLOCK_SIZE = 20;
+
+        const MATERIALS = [
+            { name: 'Steel Beam', strength: 10, color: '#95A5A6', weight: 4 },      // I
+            { name: 'Foundation', strength: 8, color: '#7F8C8D', weight: 8 },       // O
+            { name: 'Load-Bearing', strength: 7, color: '#E67E22', weight: 5 },     // T
+            { name: 'Weak Joint S', strength: 3, color: '#D35400', weight: 2 },     // S
+            { name: 'Weak Joint Z', strength: 3, color: '#C0392B', weight: 2 },     // Z
+            { name: 'Cantilever J', strength: 5, color: '#3498DB', weight: 3 },     // J
+            { name: 'Cantilever L', strength: 5, color: '#2980B9', weight: 3 }      // L
+        ];
+
+        const SHAPES = [
+            [[1,1,1,1]], // I
+            [[1,1],[1,1]], // O
+            [[0,1,0],[1,1,1]], // T
+            [[0,1,1],[1,1,0]], // S
+            [[1,1,0],[0,1,1]], // Z
+            [[1,0,0],[1,1,1]], // J
+            [[0,0,1],[1,1,1]]  // L
+        ];
+
+        let gameState = {
+            score: 0,
+            height: 0,
+            piecesUsed: 0,
+            collapses: 0,
+            running: false,
+            paused: false,
+            board: Array.from({ length: ROWS }, () => Array(COLS).fill(null)),
+            currentPiece: null,
+            currentX: 0,
+            currentY: 0,
+            stability: 100,
+            challengeMode: 'build'
+        };
+
+        let ctx, lastTime = 0, dropCounter = 0, stressCheckCounter = 0;
+
+        function init() {
+            ctx = document.getElementById('canvas').getContext('2d');
+        }
+
+        function createPiece() {
+            const matIndex = Math.floor(Math.random() * MATERIALS.length);
+            const mat = MATERIALS[matIndex];
+            return {
+                shape: JSON.parse(JSON.stringify(SHAPES[matIndex])),
+                color: mat.color,
+                matIndex: matIndex,
+                strength: mat.strength,
+                weight: mat.weight
+            };
+        }
+
+        function startGame() {
+            gameState.running = true;
+            gameState.currentPiece = createPiece();
+            gameState.currentX = Math.floor(COLS / 2) - 1;
+            gameState.currentY = 0;
+
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('pauseBtn').disabled = false;
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function togglePause() {
+            gameState.paused = !gameState.paused;
+            document.getElementById('pauseBtn').textContent = gameState.paused ? 'RESUME' : 'PAUSE';
+            if (!gameState.paused) requestAnimationFrame(gameLoop);
+        }
+
+        function gameLoop(time = 0) {
+            if (!gameState.running || gameState.paused) return;
+
+            const deltaTime = time - lastTime;
+            lastTime = time;
+            dropCounter += deltaTime;
+            stressCheckCounter += deltaTime;
+
+            if (dropCounter > 600) {
+                if (!movePiece(0, 1)) {
+                    lockPiece();
+                    checkStructuralIntegrity();
+                    clearLines();
+
+                    gameState.currentPiece = createPiece();
+                    gameState.currentX = Math.floor(COLS / 2) - 1;
+                    gameState.currentY = 0;
+
+                    if (collision(gameState.currentPiece, gameState.currentX, gameState.currentY)) {
+                        gameOver();
+                        return;
+                    }
+                }
+                dropCounter = 0;
+            }
+
+            // Periodic stress checks
+            if (stressCheckCounter > 2000) {
+                checkStress();
+                updateHeight();
+                stressCheckCounter = 0;
+            }
+
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function movePiece(dx, dy) {
+            const newX = gameState.currentX + dx;
+            const newY = gameState.currentY + dy;
+
+            if (!collision(gameState.currentPiece, newX, newY)) {
+                gameState.currentX = newX;
+                gameState.currentY = newY;
+                return true;
+            }
+            return false;
+        }
+
+        function rotatePiece() {
+            const piece = gameState.currentPiece;
+            const rotated = piece.shape[0].map((_, i) =>
+                piece.shape.map(row => row[i]).reverse()
+            );
+
+            const original = piece.shape;
+            piece.shape = rotated;
+
+            if (collision(piece, gameState.currentX, gameState.currentY)) {
+                piece.shape = original;
+            }
+        }
+
+        function collision(piece, x, y) {
+            for (let row = 0; row < piece.shape.length; row++) {
+                for (let col = 0; col < piece.shape[row].length; col++) {
+                    if (piece.shape[row][col]) {
+                        const newY = y + row;
+                        const newX = x + col;
+                        if (newY >= ROWS || newX < 0 || newX >= COLS ||
+                            (newY >= 0 && gameState.board[newY][newX])) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        function lockPiece() {
+            gameState.currentPiece.shape.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value) {
+                        const boardY = gameState.currentY + y;
+                        const boardX = gameState.currentX + x;
+                        if (boardY >= 0) {
+                            gameState.board[boardY][boardX] = {
+                                color: gameState.currentPiece.color,
+                                matIndex: gameState.currentPiece.matIndex,
+                                strength: gameState.currentPiece.strength,
+                                weight: gameState.currentPiece.weight,
+                                stress: 0
+                            };
+                        }
+                    }
+                });
+            });
+            gameState.piecesUsed++;
+            document.getElementById('pieces').textContent = gameState.piecesUsed;
+        }
+
+        function checkStructuralIntegrity() {
+            // Check center of gravity and support
+            let totalMass = 0;
+            let massX = 0;
+            let supported = true;
+
+            for (let y = 0; y < ROWS; y++) {
+                for (let x = 0; x < COLS; x++) {
+                    const cell = gameState.board[y][x];
+                    if (cell) {
+                        totalMass += cell.weight;
+                        massX += x * cell.weight;
+
+                        // Check if block has support below
+                        if (y < ROWS - 1 && !gameState.board[y + 1][x]) {
+                            supported = false;
+                        }
+                    }
+                }
+            }
+
+            const centerOfGravity = totalMass > 0 ? massX / totalMass : COLS / 2;
+            const balance = Math.abs(centerOfGravity - COLS / 2);
+
+            // Calculate stability
+            const balanceScore = Math.max(0, 100 - balance * 10);
+            const supportScore = supported ? 100 : 50;
+            gameState.stability = (balanceScore + supportScore) / 2;
+
+            if (gameState.stability < 30) {
+                showCollapseWarning();
+            }
+
+            updateStabilityDisplay();
+        }
+
+        function checkStress() {
+            // Calculate stress on each block based on weight above
+            for (let y = ROWS - 1; y >= 0; y--) {
+                for (let x = 0; x < COLS; x++) {
+                    const cell = gameState.board[y][x];
+                    if (!cell) continue;
+
+                    let weightAbove = 0;
+                    for (let yAbove = 0; yAbove < y; yAbove++) {
+                        if (gameState.board[yAbove][x]) {
+                            weightAbove += gameState.board[yAbove][x].weight;
+                        }
+                    }
+
+                    cell.stress = weightAbove / cell.strength;
+
+                    // Collapse if stress too high
+                    if (cell.stress > 3) {
+                        gameState.board[y][x] = null;
+                        gameState.collapses++;
+                        gameState.stability = Math.max(0, gameState.stability - 10);
+                        showCollapseWarning();
+                    }
+                }
+            }
+        }
+
+        function showCollapseWarning() {
+            const warning = document.getElementById('collapseWarning');
+            warning.classList.add('show');
+            setTimeout(() => warning.classList.remove('show'), 2000);
+        }
+
+        function updateStabilityDisplay() {
+            const fill = document.getElementById('stabilityFill');
+            fill.style.width = gameState.stability + '%';
+            fill.textContent = Math.round(gameState.stability) + '%';
+        }
+
+        function updateHeight() {
+            let maxHeight = 0;
+            for (let y = 0; y < ROWS; y++) {
+                if (gameState.board[y].some(cell => cell !== null)) {
+                    maxHeight = ROWS - y;
+                    break;
+                }
+            }
+            gameState.height = maxHeight;
+            document.getElementById('height').textContent = maxHeight;
+        }
+
+        function clearLines() {
+            let linesCleared = 0;
+
+            for (let row = ROWS - 1; row >= 0; row--) {
+                if (gameState.board[row].every(cell => cell !== null)) {
+                    gameState.board.splice(row, 1);
+                    gameState.board.unshift(Array(COLS).fill(null));
+                    linesCleared++;
+                    row++;
+                }
+            }
+
+            if (linesCleared > 0) {
+                const efficiencyBonus = Math.floor((gameState.stability / 10) * linesCleared);
+                gameState.score += (linesCleared * 100) + efficiencyBonus;
+                updateUI();
+            }
+        }
+
+        function triggerEvent(event) {
+            if (event === 'earthquake') {
+                // Shake and test stability
+                for (let y = 0; y < ROWS; y++) {
+                    for (let x = 0; x < COLS; x++) {
+                        const cell = gameState.board[y][x];
+                        if (cell && Math.random() < (1 - gameState.stability / 100) * 0.3) {
+                            gameState.board[y][x] = null;
+                        }
+                    }
+                }
+                gameState.stability = Math.max(20, gameState.stability - 20);
+                showCollapseWarning();
+            }
+        }
+
+        function updateUI() {
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('collapses').textContent = gameState.collapses;
+        }
+
+        function render() {
+            ctx.fillStyle = '#ECF0F1';
+            ctx.fillRect(0, 0, COLS * BLOCK_SIZE, ROWS * BLOCK_SIZE);
+
+            // Draw board with stress colors
+            gameState.board.forEach((row, y) => {
+                row.forEach((cell, x) => {
+                    if (cell) {
+                        // Base color
+                        ctx.fillStyle = cell.color;
+                        ctx.fillRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE - 1, BLOCK_SIZE - 1);
+
+                        // Stress overlay
+                        if (cell.stress > 2) {
+                            ctx.fillStyle = 'rgba(231, 76, 60, 0.5)'; // Red
+                        } else if (cell.stress > 1) {
+                            ctx.fillStyle = 'rgba(241, 196, 15, 0.5)'; // Yellow
+                        } else {
+                            ctx.fillStyle = 'rgba(46, 204, 113, 0.3)'; // Green
+                        }
+                        ctx.fillRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE - 1, BLOCK_SIZE - 1);
+
+                        // Border
+                        ctx.strokeStyle = '#2C3E50';
+                        ctx.lineWidth = 1;
+                        ctx.strokeRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE - 1, BLOCK_SIZE - 1);
+                    }
+                });
+            });
+
+            // Draw current piece
+            if (gameState.currentPiece) {
+                ctx.fillStyle = gameState.currentPiece.color;
+                ctx.globalAlpha = 0.8;
+                gameState.currentPiece.shape.forEach((row, y) => {
+                    row.forEach((value, x) => {
+                        if (value) {
+                            ctx.fillRect(
+                                (gameState.currentX + x) * BLOCK_SIZE,
+                                (gameState.currentY + y) * BLOCK_SIZE,
+                                BLOCK_SIZE - 1,
+                                BLOCK_SIZE - 1
+                            );
+                            ctx.strokeStyle = '#2C3E50';
+                            ctx.strokeRect(
+                                (gameState.currentX + x) * BLOCK_SIZE,
+                                (gameState.currentY + y) * BLOCK_SIZE,
+                                BLOCK_SIZE - 1,
+                                BLOCK_SIZE - 1
+                            );
+                        }
+                    });
+                });
+                ctx.globalAlpha = 1;
+            }
+        }
+
+        function gameOver() {
+            gameState.running = false;
+
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.fillRect(0, 0, COLS * BLOCK_SIZE, ROWS * BLOCK_SIZE);
+            ctx.fillStyle = '#E74C3C';
+            ctx.font = 'bold 24px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('STRUCTURE COLLAPSED', COLS * BLOCK_SIZE / 2, ROWS * BLOCK_SIZE / 2);
+            ctx.fillStyle = '#3498DB';
+            ctx.font = '16px Arial';
+            ctx.fillText(`Max Height: ${gameState.height}`, COLS * BLOCK_SIZE / 2, ROWS * BLOCK_SIZE / 2 + 30);
+            ctx.fillText(`Score: ${gameState.score}`, COLS * BLOCK_SIZE / 2, ROWS * BLOCK_SIZE / 2 + 50);
+
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('pauseBtn').disabled = true;
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (!gameState.running || gameState.paused) return;
+
+            switch(e.key) {
+                case 'ArrowLeft':
+                    movePiece(-1, 0);
+                    break;
+                case 'ArrowRight':
+                    movePiece(1, 0);
+                    break;
+                case 'ArrowDown':
+                    movePiece(0, 1);
+                    break;
+                case 'ArrowUp':
+                    rotatePiece();
+                    break;
+            }
+            render();
+        });
+
+        window.onload = init;
+    </script>
+</body>
+</html>

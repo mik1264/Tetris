@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DIPLOMTETRIS - Negotiation-Based Tetris</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #cb2d3e 0%, #ef473a 100%);
+            overflow-x: auto;
+        }
+
+        .game-container {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 95vw;
+        }
+
+        h1 {
+            color: #c0392b;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .subtitle {
+            color: #7f8c8d;
+            margin-bottom: 20px;
+            font-style: italic;
+        }
+
+        .game-area {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            align-items: flex-start;
+            flex-wrap: wrap;
+        }
+
+        .boards-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .player-board {
+            text-align: center;
+        }
+
+        .player-name {
+            font-weight: bold;
+            padding: 8px;
+            border-radius: 8px;
+            margin-bottom: 5px;
+            color: white;
+        }
+
+        .player-you { background: #2ecc71; }
+        .player-ai1 { background: #3498db; }
+        .player-ai2 { background: #9b59b6; }
+        .player-ai3 { background: #e67e22; }
+
+        canvas {
+            border: 3px solid #333;
+            background: #000;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .player-score {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        .side-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            min-width: 300px;
+            max-width: 350px;
+        }
+
+        .piece-queue {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 15px;
+            border-radius: 10px;
+            color: white;
+            border: 2px solid #333;
+        }
+
+        .piece-queue h3 {
+            margin-bottom: 10px;
+        }
+
+        .queue-pieces {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .queue-piece {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 2em;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .queue-piece:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+        }
+
+        .auction-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #c0392b;
+        }
+
+        .auction-box h3 {
+            color: #c0392b;
+            margin-bottom: 10px;
+        }
+
+        .bid-controls {
+            display: flex;
+            gap: 10px;
+            margin: 10px 0;
+        }
+
+        .bid-btn {
+            flex: 1;
+            padding: 10px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        .bid-btn:hover:not(:disabled) {
+            background: #2980b9;
+            transform: scale(1.05);
+        }
+
+        .bid-btn:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+
+        .trade-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #c0392b;
+        }
+
+        .trade-box h3 {
+            color: #c0392b;
+            margin-bottom: 10px;
+        }
+
+        .trade-offer {
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 8px 0;
+            font-size: 0.9em;
+            border: 2px solid #ecf0f1;
+        }
+
+        .trade-buttons {
+            display: flex;
+            gap: 5px;
+            margin-top: 8px;
+        }
+
+        .trade-buttons button {
+            flex: 1;
+            padding: 8px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.85em;
+        }
+
+        .accept-btn {
+            background: #2ecc71;
+            color: white;
+        }
+
+        .reject-btn {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .reputation-box {
+            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+            padding: 15px;
+            border-radius: 10px;
+            color: white;
+            border: 2px solid #333;
+        }
+
+        .reputation-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            font-size: 0.9em;
+        }
+
+        .trust-score {
+            font-weight: bold;
+            padding: 2px 8px;
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .controls {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #333;
+            text-align: left;
+            font-size: 0.85em;
+        }
+
+        .controls h3 {
+            color: #c0392b;
+            margin-bottom: 10px;
+        }
+
+        button.main-btn {
+            margin-top: 20px;
+            padding: 12px 30px;
+            font-size: 1.1em;
+            font-weight: bold;
+            background: #c0392b;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        button.main-btn:hover {
+            background: #a93226;
+            transform: translateY(-2px);
+        }
+
+        .game-over {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            color: white;
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            display: none;
+            z-index: 1000;
+            max-width: 500px;
+        }
+
+        .game-over.show {
+            display: block;
+        }
+
+        .game-over h2 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            color: #e74c3c;
+        }
+
+        .leaderboard {
+            text-align: left;
+            margin: 20px 0;
+        }
+
+        .leaderboard-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px;
+            margin: 5px 0;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+        }
+
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            font-size: 0.9em;
+            display: none;
+            z-index: 999;
+            max-width: 300px;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .notification.show {
+            display: block;
+        }
+
+        @keyframes slideIn {
+            from {
+                right: -350px;
+                opacity: 0;
+            }
+            to {
+                right: 20px;
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🤝 DIPLOMTETRIS</h1>
+        <p class="subtitle">Negotiation-Based Tetris: Trade, ally, and betray!</p>
+
+        <div class="game-area">
+            <div class="boards-container">
+                <div class="player-board">
+                    <div class="player-name player-you">YOU</div>
+                    <canvas id="board0" width="150" height="300"></canvas>
+                    <div class="player-score" id="score0">0</div>
+                </div>
+                <div class="player-board">
+                    <div class="player-name player-ai1">AI: DIPLOMAT</div>
+                    <canvas id="board1" width="150" height="300"></canvas>
+                    <div class="player-score" id="score1">0</div>
+                </div>
+                <div class="player-board">
+                    <div class="player-name player-ai2">AI: TRADER</div>
+                    <canvas id="board2" width="150" height="300"></canvas>
+                    <div class="player-score" id="score2">0</div>
+                </div>
+                <div class="player-board">
+                    <div class="player-name player-ai3">AI: AGGRESSOR</div>
+                    <canvas id="board3" width="150" height="300"></canvas>
+                    <div class="player-score" id="score3">0</div>
+                </div>
+            </div>
+
+            <div class="side-panel">
+                <div class="piece-queue">
+                    <h3>🎲 Shared Piece Queue</h3>
+                    <div class="queue-pieces" id="queuePieces"></div>
+                    <p style="font-size: 0.85em; margin-top: 10px;">
+                        Click piece to bid for it!
+                    </p>
+                </div>
+
+                <div class="auction-box">
+                    <h3>💰 Your Resources</h3>
+                    <div style="font-size: 1.3em; font-weight: bold; margin: 10px 0;">
+                        Points: <span id="playerPoints">100</span>
+                    </div>
+                    <div style="font-size: 0.9em; color: #555;">
+                        Current Bid: <span id="currentBid">-</span>
+                    </div>
+                </div>
+
+                <div class="trade-box">
+                    <h3>📋 Trade Offers</h3>
+                    <div id="tradeOffers">
+                        <p style="color: #7f8c8d; font-size: 0.9em;">
+                            No active trade offers
+                        </p>
+                    </div>
+                </div>
+
+                <div class="reputation-box">
+                    <h3>⭐ Reputation</h3>
+                    <div id="reputationList"></div>
+                </div>
+
+                <div class="controls">
+                    <h3>Controls</h3>
+                    <p><strong>←/→</strong> Move</p>
+                    <p><strong>↓</strong> Soft Drop</p>
+                    <p><strong>↑</strong> Rotate</p>
+                    <p><strong>Space</strong> Hard Drop</p>
+                    <p><strong>Click Piece</strong> Bid 20 pts</p>
+                </div>
+            </div>
+        </div>
+
+        <button class="main-btn" id="startBtn">Start Diplomatic Game</button>
+    </div>
+
+    <div class="notification" id="notification"></div>
+
+    <div class="game-over" id="gameOver">
+        <h2>GAME ENDED</h2>
+        <div class="leaderboard" id="leaderboard"></div>
+        <button class="main-btn" id="restartBtn">New Game</button>
+    </div>
+
+    <script>
+        const COLS = 5;
+        const ROWS = 15;
+        const BLOCK_SIZE = 20;
+        const NUM_PLAYERS = 4;
+
+        const SHAPES = {
+            'I': [[1, 1, 1, 1]],
+            'O': [[1, 1], [1, 1]],
+            'T': [[0, 1, 0], [1, 1, 1]],
+            'S': [[0, 1, 1], [1, 1, 0]],
+            'Z': [[1, 1, 0], [0, 1, 1]],
+            'J': [[1, 0, 0], [1, 1, 1]],
+            'L': [[0, 0, 1], [1, 1, 1]]
+        };
+
+        const COLORS = {
+            'I': '#00f0f0',
+            'O': '#f0f000',
+            'T': '#a000f0',
+            'S': '#00f000',
+            'Z': '#f00000',
+            'J': '#0000f0',
+            'L': '#f0a000'
+        };
+
+        const PIECE_NAMES = {
+            'I': '⬜', 'O': '🟨', 'T': '🟪',
+            'S': '🟩', 'Z': '🟥', 'J': '🟦', 'L': '🟧'
+        };
+
+        const AI_NAMES = ['YOU', 'DIPLOMAT', 'TRADER', 'AGGRESSOR'];
+
+        let players = [];
+        let pieceQueue = [];
+        let gameRunning = false;
+        let isPaused = false;
+        let dropCounter = 0;
+        let dropInterval = 2000;
+        let lastTime = 0;
+        let gameLoop = null;
+        let playerPoints = [100, 100, 100, 100];
+        let trustScores = [100, 100, 100, 100];
+        let currentBidding = null;
+        let tradeOffers = [];
+
+        function initPlayers() {
+            players = [];
+            for (let i = 0; i < NUM_PLAYERS; i++) {
+                const canvas = document.getElementById('board' + i);
+                players.push({
+                    id: i,
+                    name: AI_NAMES[i],
+                    board: Array.from({ length: ROWS }, () => Array(COLS).fill(null)),
+                    piece: null,
+                    score: 0,
+                    canvas: canvas,
+                    ctx: canvas.getContext('2d'),
+                    isAI: i > 0
+                });
+            }
+        }
+
+        function createPiece() {
+            const pieces = Object.keys(SHAPES);
+            const type = pieces[Math.floor(Math.random() * pieces.length)];
+            return {
+                shape: SHAPES[type],
+                color: COLORS[type],
+                x: Math.floor(COLS / 2) - Math.floor(SHAPES[type][0].length / 2),
+                y: 0,
+                type: type
+            };
+        }
+
+        function generateQueue() {
+            pieceQueue = [];
+            for (let i = 0; i < 5; i++) {
+                const pieces = Object.keys(SHAPES);
+                const type = pieces[Math.floor(Math.random() * pieces.length)];
+                pieceQueue.push(type);
+            }
+            updateQueueDisplay();
+        }
+
+        function updateQueueDisplay() {
+            const container = document.getElementById('queuePieces');
+            container.innerHTML = '';
+
+            pieceQueue.forEach((type, index) => {
+                const piece = document.createElement('div');
+                piece.className = 'queue-piece';
+                piece.textContent = PIECE_NAMES[type];
+                piece.title = type + '-piece';
+                piece.onclick = () => bidOnPiece(index);
+                container.appendChild(piece);
+            });
+        }
+
+        function bidOnPiece(index) {
+            if (!gameRunning || playerPoints[0] < 20) return;
+
+            const type = pieceQueue[index];
+            playerPoints[0] -= 20;
+
+            // AI bidding simulation
+            let highestBid = 20;
+            let winner = 0;
+
+            for (let i = 1; i < NUM_PLAYERS; i++) {
+                if (playerPoints[i] >= 25 && Math.random() < 0.4) {
+                    const aiBid = 25 + Math.floor(Math.random() * 30);
+                    if (aiBid > highestBid && playerPoints[i] >= aiBid) {
+                        highestBid = aiBid;
+                        winner = i;
+                        playerPoints[i] -= aiBid;
+                    }
+                }
+            }
+
+            if (winner === 0) {
+                givePlayerPiece(0, type);
+                showNotification(`Won ${type}-piece for 20 points!`);
+            } else {
+                givePlayerPiece(winner, type);
+                showNotification(`${AI_NAMES[winner]} won ${type}-piece for ${highestBid} points`);
+            }
+
+            pieceQueue.splice(index, 1);
+            if (pieceQueue.length < 3) {
+                const pieces = Object.keys(SHAPES);
+                const newType = pieces[Math.floor(Math.random() * pieces.length)];
+                pieceQueue.push(newType);
+            }
+
+            updateQueueDisplay();
+            updateUI();
+
+            // Random trade offers from AI
+            if (Math.random() < 0.3) {
+                generateTradeOffer();
+            }
+        }
+
+        function givePlayerPiece(playerId, type) {
+            if (!players[playerId].piece) {
+                players[playerId].piece = {
+                    shape: SHAPES[type],
+                    color: COLORS[type],
+                    x: Math.floor(COLS / 2) - Math.floor(SHAPES[type][0].length / 2),
+                    y: 0,
+                    type: type
+                };
+            }
+        }
+
+        function generateTradeOffer() {
+            const from = 1 + Math.floor(Math.random() * 3);
+            const offer = {
+                from: from,
+                fromName: AI_NAMES[from],
+                offering: 'Next I-piece',
+                asking: Math.floor(50 + Math.random() * 50),
+                id: Date.now()
+            };
+
+            tradeOffers.push(offer);
+            displayTradeOffers();
+        }
+
+        function displayTradeOffers() {
+            const container = document.getElementById('tradeOffers');
+            if (tradeOffers.length === 0) {
+                container.innerHTML = '<p style="color: #7f8c8d; font-size: 0.9em;">No active trade offers</p>';
+                return;
+            }
+
+            container.innerHTML = '';
+            tradeOffers.forEach(offer => {
+                const div = document.createElement('div');
+                div.className = 'trade-offer';
+                div.innerHTML = `
+                    <strong>${offer.fromName}:</strong><br>
+                    Offers: ${offer.offering}<br>
+                    Wants: ${offer.asking} points
+                    <div class="trade-buttons">
+                        <button class="accept-btn" onclick="acceptTrade(${offer.id})">Accept</button>
+                        <button class="reject-btn" onclick="rejectTrade(${offer.id})">Reject</button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        window.acceptTrade = function(offerId) {
+            const offer = tradeOffers.find(o => o.id === offerId);
+            if (!offer || playerPoints[0] < offer.asking) return;
+
+            playerPoints[0] -= offer.asking;
+            playerPoints[offer.from] += offer.asking;
+            trustScores[offer.from] += 10;
+
+            showNotification(`Trade accepted with ${offer.fromName}!`);
+            tradeOffers = tradeOffers.filter(o => o.id !== offerId);
+            displayTradeOffers();
+            updateUI();
+        };
+
+        window.rejectTrade = function(offerId) {
+            const offer = tradeOffers.find(o => o.id === offerId);
+            if (!offer) return;
+
+            trustScores[offer.from] -= 5;
+            showNotification(`Trade rejected`);
+            tradeOffers = tradeOffers.filter(o => o.id !== offerId);
+            displayTradeOffers();
+            updateUI();
+        };
+
+        function updateReputationDisplay() {
+            const container = document.getElementById('reputationList');
+            container.innerHTML = '';
+
+            for (let i = 1; i < NUM_PLAYERS; i++) {
+                const div = document.createElement('div');
+                div.className = 'reputation-item';
+                div.innerHTML = `
+                    <span>${AI_NAMES[i]}</span>
+                    <span class="trust-score">${trustScores[i]}</span>
+                `;
+                container.appendChild(div);
+            }
+        }
+
+        function drawBlock(ctx, x, y, color) {
+            ctx.fillStyle = color;
+            ctx.fillRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+        }
+
+        function drawBoard(player) {
+            player.ctx.fillStyle = '#000';
+            player.ctx.fillRect(0, 0, player.canvas.width, player.canvas.height);
+
+            for (let row = 0; row < ROWS; row++) {
+                for (let col = 0; col < COLS; col++) {
+                    if (player.board[row][col]) {
+                        drawBlock(player.ctx, col, row, player.board[row][col]);
+                    }
+                }
+            }
+
+            if (player.piece) {
+                player.piece.shape.forEach((row, y) => {
+                    row.forEach((value, x) => {
+                        if (value) {
+                            drawBlock(player.ctx, player.piece.x + x, player.piece.y + y, player.piece.color);
+                        }
+                    });
+                });
+            }
+        }
+
+        function checkCollision(player, piece, offsetX = 0, offsetY = 0) {
+            for (let y = 0; y < piece.shape.length; y++) {
+                for (let x = 0; x < piece.shape[y].length; x++) {
+                    if (piece.shape[y][x]) {
+                        const newX = piece.x + x + offsetX;
+                        const newY = piece.y + y + offsetY;
+
+                        if (newX < 0 || newX >= COLS || newY >= ROWS) return true;
+                        if (newY >= 0 && player.board[newY][newX]) return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        function mergePiece(player) {
+            player.piece.shape.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value) {
+                        const boardY = player.piece.y + y;
+                        const boardX = player.piece.x + x;
+                        if (boardY >= 0) {
+                            player.board[boardY][boardX] = player.piece.color;
+                        }
+                    }
+                });
+            });
+        }
+
+        function clearLines(player) {
+            let linesCleared = 0;
+
+            for (let row = ROWS - 1; row >= 0; row--) {
+                if (player.board[row].every(cell => cell !== null)) {
+                    player.board.splice(row, 1);
+                    player.board.unshift(Array(COLS).fill(null));
+                    linesCleared++;
+                    row++;
+                }
+            }
+
+            if (linesCleared > 0) {
+                player.score += [0, 40, 100, 300, 1200][linesCleared];
+                playerPoints[player.id] += linesCleared * 10;
+                updateUI();
+            }
+        }
+
+        function rotate(piece) {
+            const newShape = piece.shape[0].map((_, i) =>
+                piece.shape.map(row => row[i]).reverse()
+            );
+            return { ...piece, shape: newShape };
+        }
+
+        function movePlayer(player, direction) {
+            if (!player.piece) return;
+
+            if (direction === 'left' && !checkCollision(player, player.piece, -1, 0)) {
+                player.piece.x--;
+            } else if (direction === 'right' && !checkCollision(player, player.piece, 1, 0)) {
+                player.piece.x++;
+            } else if (direction === 'down') {
+                if (!checkCollision(player, player.piece, 0, 1)) {
+                    player.piece.y++;
+                } else {
+                    mergePiece(player);
+                    clearLines(player);
+                    player.piece = null;
+                }
+            }
+        }
+
+        function aiMove(player) {
+            if (!player.piece) return;
+
+            // Simple AI: random moves
+            const moves = ['left', 'right', 'down', 'down'];
+            const move = moves[Math.floor(Math.random() * moves.length)];
+
+            if (Math.random() < 0.2) {
+                const rotated = rotate(player.piece);
+                if (!checkCollision(player, rotated)) {
+                    player.piece = rotated;
+                }
+            }
+
+            movePlayer(player, move);
+        }
+
+        function showNotification(message) {
+            const notif = document.getElementById('notification');
+            notif.textContent = message;
+            notif.classList.add('show');
+            setTimeout(() => notif.classList.remove('show'), 3000);
+        }
+
+        function updateUI() {
+            players.forEach(player => {
+                document.getElementById('score' + player.id).textContent = player.score;
+            });
+            document.getElementById('playerPoints').textContent = playerPoints[0];
+            updateReputationDisplay();
+        }
+
+        function gameOver() {
+            gameRunning = false;
+            cancelAnimationFrame(gameLoop);
+
+            const leaderboard = players.map(p => ({ name: p.name, score: p.score }))
+                .sort((a, b) => b.score - a.score);
+
+            const container = document.getElementById('leaderboard');
+            container.innerHTML = '<h3 style="margin-bottom: 15px;">Final Rankings</h3>';
+            leaderboard.forEach((entry, index) => {
+                const div = document.createElement('div');
+                div.className = 'leaderboard-item';
+                div.innerHTML = `
+                    <span>#${index + 1} ${entry.name}</span>
+                    <strong>${entry.score}</strong>
+                `;
+                container.appendChild(div);
+            });
+
+            document.getElementById('gameOver').classList.add('show');
+        }
+
+        function update(time = 0) {
+            if (!gameRunning || isPaused) return;
+
+            const deltaTime = time - lastTime;
+            lastTime = time;
+            dropCounter += deltaTime;
+
+            if (dropCounter > dropInterval) {
+                players.forEach(player => {
+                    if (player.piece) {
+                        if (player.isAI) {
+                            aiMove(player);
+                        }
+                    }
+                });
+                dropCounter = 0;
+            }
+
+            players.forEach(player => {
+                drawBoard(player);
+            });
+
+            gameLoop = requestAnimationFrame(update);
+        }
+
+        function startGame() {
+            initPlayers();
+            playerPoints = [100, 100, 100, 100];
+            trustScores = [100, 100, 100, 100];
+            tradeOffers = [];
+            generateQueue();
+            gameRunning = true;
+            isPaused = false;
+            dropCounter = 0;
+
+            updateUI();
+            displayTradeOffers();
+
+            document.getElementById('gameOver').classList.remove('show');
+            document.getElementById('startBtn').textContent = 'Restart Game';
+
+            lastTime = 0;
+            update();
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (!gameRunning || !players[0].piece) return;
+
+            switch(e.key) {
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    movePlayer(players[0], 'left');
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    movePlayer(players[0], 'right');
+                    break;
+                case 'ArrowDown':
+                    e.preventDefault();
+                    movePlayer(players[0], 'down');
+                    break;
+                case 'ArrowUp':
+                    e.preventDefault();
+                    const rotated = rotate(players[0].piece);
+                    if (!checkCollision(players[0], rotated)) {
+                        players[0].piece = rotated;
+                    }
+                    break;
+                case ' ':
+                    e.preventDefault();
+                    while (players[0].piece && !checkCollision(players[0], players[0].piece, 0, 1)) {
+                        players[0].piece.y++;
+                    }
+                    if (players[0].piece) {
+                        mergePiece(players[0]);
+                        clearLines(players[0]);
+                        players[0].piece = null;
+                    }
+                    break;
+                case 'p':
+                case 'P':
+                    e.preventDefault();
+                    isPaused = !isPaused;
+                    if (!isPaused) {
+                        lastTime = performance.now();
+                        update(lastTime);
+                    }
+                    break;
+            }
+        });
+
+        document.getElementById('startBtn').addEventListener('click', startGame);
+        document.getElementById('restartBtn').addEventListener('click', startGame);
+
+        initPlayers();
+        players.forEach(player => drawBoard(player));
+    </script>
+</body>
+</html>

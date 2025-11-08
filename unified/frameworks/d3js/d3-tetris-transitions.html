@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D3.js Tetris - Smooth Transitions</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 900px;
+        }
+
+        h1 {
+            text-align: center;
+            background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+            font-size: 2.8em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #ff6a00;
+            margin-bottom: 20px;
+            font-size: 1.2em;
+            font-style: italic;
+        }
+
+        .game-area {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        #game-board {
+            border: 4px solid transparent;
+            border-radius: 15px;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .side-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .panel-section {
+            background: linear-gradient(135deg, #fff5f5 0%, #ffe6e6 100%);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .panel-section:hover {
+            transform: translateY(-5px);
+        }
+
+        .panel-section h3 {
+            background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+
+        .stat {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            font-size: 1.1em;
+        }
+
+        .stat-value {
+            font-weight: bold;
+            background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        #next-piece, #combo-display {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border-radius: 10px;
+        }
+
+        .combo-text {
+            text-align: center;
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #ff6a00;
+            margin: 10px 0;
+        }
+
+        button {
+            background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%);
+            color: white;
+            border: none;
+            padding: 15px 35px;
+            font-size: 1.2em;
+            border-radius: 30px;
+            cursor: pointer;
+            margin: 10px auto;
+            display: block;
+            box-shadow: 0 5px 20px rgba(238, 9, 121, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 8px 25px rgba(238, 9, 121, 0.6);
+        }
+
+        .controls {
+            background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-top: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .controls h3 {
+            margin-bottom: 10px;
+            color: white;
+        }
+
+        .game-over {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 50px;
+            border-radius: 25px;
+            box-shadow: 0 25px 70px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            z-index: 1000;
+        }
+
+        .game-over.show {
+            display: block;
+            animation: popIn 0.5s ease;
+        }
+
+        @keyframes popIn {
+            0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        }
+
+        .block {
+            transition: all 0.3s ease;
+        }
+
+        .ghost-block {
+            opacity: 0.3;
+            stroke-dasharray: 4;
+        }
+
+        .clear-animation {
+            animation: clearPulse 0.5s ease;
+        }
+
+        @keyframes clearPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; transform: scale(1.1); }
+        }
+
+        .particle {
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>✨ D3.js Tetris - Transitions</h1>
+        <p class="subtitle">Showcasing Smooth D3 Animations & Effects</p>
+
+        <div class="game-area">
+            <svg id="game-board" width="300" height="600"></svg>
+
+            <div class="side-panel">
+                <div class="panel-section">
+                    <h3>📊 Game Stats</h3>
+                    <div class="stat">
+                        <span>Score:</span>
+                        <span class="stat-value" id="score">0</span>
+                    </div>
+                    <div class="stat">
+                        <span>Level:</span>
+                        <span class="stat-value" id="level">1</span>
+                    </div>
+                    <div class="stat">
+                        <span>Lines:</span>
+                        <span class="stat-value" id="lines">0</span>
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <h3>🎯 Combo Meter</h3>
+                    <svg id="combo-display" width="220" height="40"></svg>
+                    <div class="combo-text" id="combo-text">0x</div>
+                </div>
+
+                <div class="panel-section">
+                    <h3>Next Piece</h3>
+                    <svg id="next-piece" width="220" height="120"></svg>
+                </div>
+
+                <button id="start-btn">Start Game</button>
+            </div>
+        </div>
+
+        <div class="controls">
+            <h3>🎮 Controls</h3>
+            <p><strong>←/→</strong> Move | <strong>↑</strong> Rotate | <strong>↓</strong> Soft Drop | <strong>Space</strong> Hard Drop | <strong>P</strong> Pause</p>
+        </div>
+    </div>
+
+    <div class="game-over" id="game-over">
+        <h2 style="background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 3em;">Game Over!</h2>
+        <p style="font-size: 1.5em; margin: 20px 0;">Final Score: <span id="final-score">0</span></p>
+        <p style="font-size: 1.2em;">Max Combo: <span id="final-combo">0</span>x</p>
+        <button onclick="location.reload()">Play Again</button>
+    </div>
+
+    <script>
+        const BOARD_WIDTH = 10;
+        const BOARD_HEIGHT = 20;
+        const BLOCK_SIZE = 30;
+        const COLORS = {
+            I: '#00f0f0', O: '#f0f000', T: '#a000f0',
+            S: '#00f000', Z: '#f00000', J: '#0000f0', L: '#f0a000'
+        };
+        const SHAPES = {
+            I: [[1,1,1,1]], O: [[1,1],[1,1]], T: [[0,1,0],[1,1,1]],
+            S: [[0,1,1],[1,1,0]], Z: [[1,1,0],[0,1,1]],
+            J: [[1,0,0],[1,1,1]], L: [[0,0,1],[1,1,1]]
+        };
+
+        let gameState = {
+            board: Array(BOARD_HEIGHT).fill().map(() => Array(BOARD_WIDTH).fill(null)),
+            currentPiece: null,
+            nextPiece: null,
+            position: { x: 0, y: 0 },
+            score: 0,
+            lines: 0,
+            level: 1,
+            combo: 0,
+            maxCombo: 0,
+            gameOver: false,
+            paused: false,
+            gameLoop: null
+        };
+
+        const boardSvg = d3.select('#game-board');
+        const nextPieceSvg = d3.select('#next-piece');
+        const comboSvg = d3.select('#combo-display');
+
+        function initBoard() {
+            boardSvg.selectAll('*').remove();
+
+            // Add decorative gradient background
+            const defs = boardSvg.append('defs');
+            const gradient = defs.append('radialGradient')
+                .attr('id', 'board-gradient')
+                .attr('cx', '50%')
+                .attr('cy', '50%');
+
+            gradient.append('stop')
+                .attr('offset', '0%')
+                .attr('stop-color', '#1a1a2e');
+
+            gradient.append('stop')
+                .attr('offset', '100%')
+                .attr('stop-color', '#0f0f1a');
+
+            boardSvg.append('rect')
+                .attr('width', BOARD_WIDTH * BLOCK_SIZE)
+                .attr('height', BOARD_HEIGHT * BLOCK_SIZE)
+                .attr('fill', 'url(#board-gradient)');
+
+            for (let y = 0; y < BOARD_HEIGHT; y++) {
+                for (let x = 0; x < BOARD_WIDTH; x++) {
+                    boardSvg.append('rect')
+                        .attr('x', x * BLOCK_SIZE)
+                        .attr('y', y * BLOCK_SIZE)
+                        .attr('width', BLOCK_SIZE)
+                        .attr('height', BLOCK_SIZE)
+                        .attr('fill', 'none')
+                        .attr('stroke', '#2a2a4e')
+                        .attr('stroke-width', 0.5)
+                        .attr('opacity', 0.3);
+                }
+            }
+        }
+
+        function createPiece() {
+            const pieces = Object.keys(SHAPES);
+            const type = pieces[Math.floor(Math.random() * pieces.length)];
+            return { type, shape: SHAPES[type], color: COLORS[type] };
+        }
+
+        function drawBoard() {
+            boardSvg.selectAll('.board-block').remove();
+
+            for (let y = 0; y < BOARD_HEIGHT; y++) {
+                for (let x = 0; x < BOARD_WIDTH; x++) {
+                    const cell = gameState.board[y][x];
+                    if (cell) {
+                        boardSvg.append('rect')
+                            .attr('class', 'board-block')
+                            .attr('data-x', x)
+                            .attr('data-y', y)
+                            .attr('x', x * BLOCK_SIZE)
+                            .attr('y', -BLOCK_SIZE)
+                            .attr('width', BLOCK_SIZE)
+                            .attr('height', BLOCK_SIZE)
+                            .attr('fill', cell)
+                            .attr('stroke', 'rgba(255,255,255,0.4)')
+                            .attr('stroke-width', 2)
+                            .attr('rx', 4)
+                            .transition()
+                            .duration(300)
+                            .ease(d3.easeBounce)
+                            .attr('y', y * BLOCK_SIZE);
+                    }
+                }
+            }
+        }
+
+        function drawGhostPiece() {
+            if (!gameState.currentPiece) return;
+
+            boardSvg.selectAll('.ghost-block').remove();
+
+            let ghostY = gameState.position.y;
+            while (!checkCollision(gameState.currentPiece, { x: gameState.position.x, y: ghostY + 1 })) {
+                ghostY++;
+            }
+
+            const { shape, color } = gameState.currentPiece;
+            const { x } = gameState.position;
+
+            shape.forEach((row, dy) => {
+                row.forEach((cell, dx) => {
+                    if (cell) {
+                        boardSvg.append('rect')
+                            .attr('class', 'ghost-block')
+                            .attr('x', (x + dx) * BLOCK_SIZE)
+                            .attr('y', (ghostY + dy) * BLOCK_SIZE)
+                            .attr('width', BLOCK_SIZE)
+                            .attr('height', BLOCK_SIZE)
+                            .attr('fill', 'none')
+                            .attr('stroke', color)
+                            .attr('stroke-width', 2)
+                            .attr('rx', 4)
+                            .attr('opacity', 0.4);
+                    }
+                });
+            });
+        }
+
+        function drawCurrentPiece() {
+            if (!gameState.currentPiece) return;
+
+            boardSvg.selectAll('.current-block').remove();
+
+            const { shape, color } = gameState.currentPiece;
+            const { x, y } = gameState.position;
+
+            shape.forEach((row, dy) => {
+                row.forEach((cell, dx) => {
+                    if (cell) {
+                        const block = boardSvg.append('rect')
+                            .attr('class', 'current-block')
+                            .attr('x', (x + dx) * BLOCK_SIZE)
+                            .attr('y', (y + dy) * BLOCK_SIZE)
+                            .attr('width', BLOCK_SIZE)
+                            .attr('height', BLOCK_SIZE)
+                            .attr('fill', color)
+                            .attr('stroke', 'rgba(255,255,255,0.6)')
+                            .attr('stroke-width', 2)
+                            .attr('rx', 4)
+                            .attr('opacity', 0);
+
+                        block.transition()
+                            .duration(200)
+                            .attr('opacity', 1);
+
+                        // Add glow effect
+                        block.append('animate')
+                            .attr('attributeName', 'stroke-width')
+                            .attr('values', '2;3;2')
+                            .attr('dur', '1s')
+                            .attr('repeatCount', 'indefinite');
+                    }
+                });
+            });
+        }
+
+        function drawNextPiece() {
+            nextPieceSvg.selectAll('*').remove();
+
+            if (!gameState.nextPiece) return;
+
+            const { shape, color } = gameState.nextPiece;
+            const offsetX = (220 - shape[0].length * BLOCK_SIZE) / 2;
+            const offsetY = (120 - shape.length * BLOCK_SIZE) / 2;
+
+            shape.forEach((row, y) => {
+                row.forEach((cell, x) => {
+                    if (cell) {
+                        nextPieceSvg.append('rect')
+                            .attr('x', -BLOCK_SIZE)
+                            .attr('y', offsetY + y * BLOCK_SIZE)
+                            .attr('width', BLOCK_SIZE)
+                            .attr('height', BLOCK_SIZE)
+                            .attr('fill', color)
+                            .attr('stroke', 'rgba(255,255,255,0.5)')
+                            .attr('stroke-width', 2)
+                            .attr('rx', 4)
+                            .transition()
+                            .duration(500)
+                            .ease(d3.easeElastic)
+                            .attr('x', offsetX + x * BLOCK_SIZE);
+                    }
+                });
+            });
+        }
+
+        function updateComboDisplay() {
+            comboSvg.selectAll('*').remove();
+
+            const maxWidth = 220;
+            const comboPercent = Math.min(gameState.combo / 10, 1);
+
+            // Background bar
+            comboSvg.append('rect')
+                .attr('x', 0)
+                .attr('y', 10)
+                .attr('width', maxWidth)
+                .attr('height', 20)
+                .attr('fill', '#333')
+                .attr('rx', 10);
+
+            // Combo bar with gradient
+            const gradient = comboSvg.append('defs')
+                .append('linearGradient')
+                .attr('id', 'combo-gradient');
+
+            gradient.append('stop')
+                .attr('offset', '0%')
+                .attr('stop-color', '#ee0979');
+
+            gradient.append('stop')
+                .attr('offset', '100%')
+                .attr('stop-color', '#ff6a00');
+
+            comboSvg.append('rect')
+                .attr('x', 0)
+                .attr('y', 10)
+                .attr('width', 0)
+                .attr('height', 20)
+                .attr('fill', 'url(#combo-gradient)')
+                .attr('rx', 10)
+                .transition()
+                .duration(500)
+                .ease(d3.easeElasticOut)
+                .attr('width', maxWidth * comboPercent);
+
+            d3.select('#combo-text')
+                .transition()
+                .duration(300)
+                .style('transform', 'scale(1.3)')
+                .transition()
+                .duration(300)
+                .style('transform', 'scale(1)')
+                .text(gameState.combo + 'x');
+        }
+
+        function createClearAnimation(lineY) {
+            for (let x = 0; x < BOARD_WIDTH; x++) {
+                const particle = boardSvg.append('circle')
+                    .attr('class', 'particle')
+                    .attr('cx', x * BLOCK_SIZE + BLOCK_SIZE / 2)
+                    .attr('cy', lineY * BLOCK_SIZE + BLOCK_SIZE / 2)
+                    .attr('r', BLOCK_SIZE / 2)
+                    .attr('fill', '#ff6a00')
+                    .attr('opacity', 1);
+
+                particle.transition()
+                    .duration(1000)
+                    .ease(d3.easeCubicOut)
+                    .attr('cy', lineY * BLOCK_SIZE - 100)
+                    .attr('r', 0)
+                    .attr('opacity', 0)
+                    .remove();
+            }
+        }
+
+        function checkCollision(piece, pos) {
+            const { shape } = piece;
+            const { x, y } = pos;
+            for (let dy = 0; dy < shape.length; dy++) {
+                for (let dx = 0; dx < shape[dy].length; dx++) {
+                    if (shape[dy][dx]) {
+                        const newX = x + dx, newY = y + dy;
+                        if (newX < 0 || newX >= BOARD_WIDTH || newY >= BOARD_HEIGHT) return true;
+                        if (newY >= 0 && gameState.board[newY][newX]) return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        function rotatePiece(piece) {
+            const rotated = piece.shape[0].map((_, i) =>
+                piece.shape.map(row => row[i]).reverse()
+            );
+            return { ...piece, shape: rotated };
+        }
+
+        function lockPiece() {
+            const { shape, color } = gameState.currentPiece;
+            const { x, y } = gameState.position;
+            shape.forEach((row, dy) => {
+                row.forEach((cell, dx) => {
+                    if (cell && y + dy >= 0) {
+                        gameState.board[y + dy][x + dx] = color;
+                    }
+                });
+            });
+            clearLines();
+            spawnPiece();
+        }
+
+        function clearLines() {
+            let linesCleared = 0;
+            const clearedLines = [];
+
+            for (let y = BOARD_HEIGHT - 1; y >= 0; y--) {
+                if (gameState.board[y].every(cell => cell !== null)) {
+                    clearedLines.push(y);
+                    createClearAnimation(y);
+                    gameState.board.splice(y, 1);
+                    gameState.board.unshift(Array(BOARD_WIDTH).fill(null));
+                    linesCleared++;
+                    y++;
+                }
+            }
+
+            if (linesCleared > 0) {
+                gameState.combo++;
+                gameState.maxCombo = Math.max(gameState.maxCombo, gameState.combo);
+                gameState.lines += linesCleared;
+                gameState.score += [0, 100, 300, 500, 800][linesCleared] * gameState.level * gameState.combo;
+                gameState.level = Math.floor(gameState.lines / 10) + 1;
+                updateStats();
+                updateComboDisplay();
+            } else {
+                gameState.combo = 0;
+                updateComboDisplay();
+            }
+        }
+
+        function spawnPiece() {
+            gameState.currentPiece = gameState.nextPiece || createPiece();
+            gameState.nextPiece = createPiece();
+            gameState.position = {
+                x: Math.floor(BOARD_WIDTH / 2) - Math.floor(gameState.currentPiece.shape[0].length / 2),
+                y: 0
+            };
+            if (checkCollision(gameState.currentPiece, gameState.position)) endGame();
+            drawNextPiece();
+        }
+
+        function movePiece(dx, dy) {
+            const newPos = { x: gameState.position.x + dx, y: gameState.position.y + dy };
+            if (!checkCollision(gameState.currentPiece, newPos)) {
+                gameState.position = newPos;
+                drawGhostPiece();
+                drawCurrentPiece();
+                return true;
+            }
+            return false;
+        }
+
+        function rotate() {
+            const rotated = rotatePiece(gameState.currentPiece);
+            if (!checkCollision(rotated, gameState.position)) {
+                gameState.currentPiece = rotated;
+                drawGhostPiece();
+                drawCurrentPiece();
+            }
+        }
+
+        function hardDrop() {
+            while (movePiece(0, 1)) {}
+            lockPiece();
+            gameState.score += 20;
+            updateStats();
+        }
+
+        function gameLoop() {
+            if (gameState.paused || gameState.gameOver) return;
+            if (!movePiece(0, 1)) lockPiece();
+            drawBoard();
+            drawGhostPiece();
+            drawCurrentPiece();
+        }
+
+        function updateStats() {
+            d3.select('#score').transition().duration(300).textTween(function() {
+                const i = d3.interpolate(+this.textContent, gameState.score);
+                return t => Math.round(i(t));
+            });
+            d3.select('#level').text(gameState.level);
+            d3.select('#lines').text(gameState.lines);
+        }
+
+        function endGame() {
+            gameState.gameOver = true;
+            clearInterval(gameState.gameLoop);
+            d3.select('#final-score').text(gameState.score);
+            d3.select('#final-combo').text(gameState.maxCombo);
+            d3.select('#game-over').classed('show', true);
+        }
+
+        function startGame() {
+            gameState = {
+                board: Array(BOARD_HEIGHT).fill().map(() => Array(BOARD_WIDTH).fill(null)),
+                currentPiece: null, nextPiece: null,
+                position: { x: 0, y: 0 },
+                score: 0, lines: 0, level: 1,
+                combo: 0, maxCombo: 0,
+                gameOver: false, paused: false, gameLoop: null
+            };
+
+            initBoard();
+            spawnPiece();
+            drawBoard();
+            drawGhostPiece();
+            drawCurrentPiece();
+            updateStats();
+            updateComboDisplay();
+
+            const speed = Math.max(100, 1000 - (gameState.level - 1) * 100);
+            gameState.gameLoop = setInterval(gameLoop, speed);
+            d3.select('#start-btn').text('Restart Game');
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (gameState.gameOver) return;
+            switch(e.key) {
+                case 'ArrowLeft': e.preventDefault(); movePiece(-1, 0); break;
+                case 'ArrowRight': e.preventDefault(); movePiece(1, 0); break;
+                case 'ArrowDown': e.preventDefault(); if (movePiece(0, 1)) { gameState.score++; updateStats(); } break;
+                case 'ArrowUp': e.preventDefault(); rotate(); break;
+                case ' ': e.preventDefault(); hardDrop(); break;
+                case 'p': case 'P': e.preventDefault(); gameState.paused = !gameState.paused; break;
+            }
+        });
+
+        d3.select('#start-btn').on('click', () => {
+            if (gameState.gameLoop) clearInterval(gameState.gameLoop);
+            d3.select('#game-over').classed('show', false);
+            startGame();
+        });
+
+        initBoard();
+        updateComboDisplay();
+    </script>
+</body>
+</html>

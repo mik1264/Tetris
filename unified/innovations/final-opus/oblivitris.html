@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oblivitris - Memory-Based Invisible Tetris</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #fff;
+        }
+
+        .game-container {
+            text-align: center;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        h1 {
+            color: #64b5f6;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .subtitle {
+            color: #90caf9;
+            font-style: italic;
+            margin-bottom: 20px;
+        }
+
+        .game-area {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        canvas {
+            border: 3px solid #64b5f6;
+            background: #0a0a0a;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+        }
+
+        .side-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            min-width: 250px;
+        }
+
+        .info-box {
+            background: rgba(30, 60, 114, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #64b5f6;
+        }
+
+        .info-box h3 {
+            color: #90caf9;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .score, .level, .memory-time {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #fff;
+        }
+
+        .sonar-meter {
+            background: rgba(100, 181, 246, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #64b5f6;
+        }
+
+        .sonar-pulse {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            background: radial-gradient(circle, #64b5f6, transparent);
+            border-radius: 50%;
+            margin: 5px;
+            opacity: 0.3;
+            transition: all 0.3s;
+        }
+
+        .sonar-pulse.active {
+            opacity: 1;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.5; }
+        }
+
+        .memory-indicator {
+            margin-top: 10px;
+            padding: 10px;
+            background: rgba(255, 193, 7, 0.2);
+            border-radius: 8px;
+            border: 2px solid #ffc107;
+        }
+
+        .memory-bar {
+            width: 100%;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .memory-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #64b5f6, #1976d2);
+            transition: width 0.3s;
+        }
+
+        .controls {
+            background: rgba(30, 60, 114, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #64b5f6;
+            text-align: left;
+            font-size: 0.85em;
+        }
+
+        .controls h3 {
+            color: #90caf9;
+            margin-bottom: 10px;
+        }
+
+        .controls p {
+            margin: 5px 0;
+            color: #b3e5fc;
+        }
+
+        .controls .highlight {
+            color: #ffc107;
+            font-weight: bold;
+        }
+
+        button {
+            margin-top: 20px;
+            padding: 12px 30px;
+            font-size: 1.1em;
+            font-weight: bold;
+            background: linear-gradient(135deg, #64b5f6, #1976d2);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 10px rgba(100, 181, 246, 0.3);
+            font-family: 'Courier New', monospace;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(100, 181, 246, 0.4);
+        }
+
+        .intro-screen {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .intro-screen.hidden {
+            display: none;
+        }
+
+        .quote {
+            background: rgba(100, 181, 246, 0.1);
+            border-left: 4px solid #64b5f6;
+            padding: 20px;
+            margin: 20px 0;
+            font-style: italic;
+            border-radius: 5px;
+        }
+
+        .game-over {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            color: white;
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            display: none;
+            z-index: 1000;
+            border: 3px solid #64b5f6;
+        }
+
+        .game-over.show {
+            display: block;
+        }
+
+        .game-over h2 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            color: #ff6b6b;
+        }
+
+        .game-over p {
+            font-size: 1.2em;
+            margin-bottom: 15px;
+        }
+
+        .achievement {
+            background: rgba(255, 193, 7, 0.2);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border: 2px solid #ffc107;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <!-- Intro Screen -->
+        <div class="intro-screen" id="introScreen">
+            <h1>🧠 Oblivitris</h1>
+            <p class="subtitle">Memory-Based Invisible Tetris</p>
+
+            <div class="quote">
+                "The true art of memory is the art of attention."
+                <br><br>
+                — Samuel Johnson
+            </div>
+
+            <div style="text-align: left; margin: 20px 0; line-height: 1.8;">
+                <h3 style="color: #90caf9; margin-bottom: 10px;">The Ultimate Memory Challenge:</h3>
+                <p>Welcome to Oblivitris, where placed pieces <strong>gradually fade from visibility</strong>.</p>
+                <br>
+                <p><strong>The Fade Mechanism:</strong></p>
+                <ul style="margin-left: 20px; margin-top: 10px;">
+                    <li>Pieces are fully visible for 3 seconds after placement</li>
+                    <li>Then fade to 50% opacity over the next 3 seconds</li>
+                    <li>After 10 seconds, they disappear completely</li>
+                    <li>You must remember where everything is!</li>
+                </ul>
+                <br>
+                <p><strong>Your Tools:</strong></p>
+                <ul style="margin-left: 20px; margin-top: 10px;">
+                    <li><span style="color: #ffc107;">Sonar Pulse (Q key):</span> Briefly reveals all hidden blocks (3 uses per game)</li>
+                    <li><span style="color: #ffc107;">Ghost Memory:</span> Your last 5 placed pieces show as faint outlines</li>
+                    <li><span style="color: #ffc107;">Memory Bonus:</span> Extra points for clearing invisible lines</li>
+                </ul>
+            </div>
+
+            <div class="quote">
+                <strong>Difficulty Progression:</strong> The longer you survive, the faster pieces fade. Train your spatial memory and become an Oblivitris master!
+            </div>
+
+            <button onclick="startGame()">Begin Memory Challenge</button>
+        </div>
+
+        <!-- Main Game -->
+        <div id="mainGame" style="display: none;">
+            <h1>🧠 Oblivitris</h1>
+            <p class="subtitle">Remember what you cannot see</p>
+
+            <div class="game-area">
+                <canvas id="tetris" width="300" height="600"></canvas>
+
+                <div class="side-panel">
+                    <div class="info-box">
+                        <h3>Score</h3>
+                        <div class="score" id="score">0</div>
+                    </div>
+
+                    <div class="info-box">
+                        <h3>Memory Level</h3>
+                        <div class="level" id="level">1</div>
+                    </div>
+
+                    <div class="info-box">
+                        <h3>Fade Speed</h3>
+                        <div class="memory-time" id="fadeSpeed">10s</div>
+                        <div class="memory-bar">
+                            <div class="memory-fill" id="memoryFill" style="width: 100%"></div>
+                        </div>
+                    </div>
+
+                    <div class="sonar-meter">
+                        <h3 style="color: #90caf9; margin-bottom: 10px;">Sonar Pulses</h3>
+                        <div id="sonarPulses">
+                            <span class="sonar-pulse active"></span>
+                            <span class="sonar-pulse active"></span>
+                            <span class="sonar-pulse active"></span>
+                        </div>
+                        <p style="margin-top: 10px; font-size: 0.9em;">Press Q to reveal</p>
+                    </div>
+
+                    <div class="memory-indicator">
+                        <h3 style="color: #ffc107; margin-bottom: 5px;">Memory Mode</h3>
+                        <p id="memoryStatus" style="font-size: 0.9em;">Remembering...</p>
+                    </div>
+
+                    <div class="controls">
+                        <h3>Controls</h3>
+                        <p><strong>←/→</strong> Move</p>
+                        <p><strong>↓</strong> Soft Drop</p>
+                        <p><strong>↑</strong> Rotate</p>
+                        <p><strong>Space</strong> Hard Drop</p>
+                        <p class="highlight">Q - Sonar Pulse</p>
+                        <p><strong>P</strong> Pause</p>
+                    </div>
+                </div>
+            </div>
+
+            <button id="startBtn">Start Game</button>
+        </div>
+    </div>
+
+    <div class="game-over" id="gameOver">
+        <h2>Memory Failed</h2>
+        <p>Final Score: <span id="finalScore">0</span></p>
+        <p>Memory Level Reached: <span id="finalLevel">1</span></p>
+
+        <div class="achievement" id="achievement">
+            <h3 id="achievementTitle">Memory Novice</h3>
+            <p id="achievementText">You're beginning to see with your mind's eye!</p>
+        </div>
+
+        <button onclick="location.reload()">Try Again</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('tetris');
+        const ctx = canvas.getContext('2d');
+
+        const COLS = 10;
+        const ROWS = 20;
+        const BLOCK_SIZE = 30;
+
+        // Tetromino shapes
+        const SHAPES = {
+            'I': [[1, 1, 1, 1]],
+            'O': [[1, 1], [1, 1]],
+            'T': [[0, 1, 0], [1, 1, 1]],
+            'S': [[0, 1, 1], [1, 1, 0]],
+            'Z': [[1, 1, 0], [0, 1, 1]],
+            'J': [[1, 0, 0], [1, 1, 1]],
+            'L': [[0, 0, 1], [1, 1, 1]]
+        };
+
+        const COLORS = {
+            'I': '#00f0f0',
+            'O': '#f0f000',
+            'T': '#a000f0',
+            'S': '#00f000',
+            'Z': '#f00000',
+            'J': '#0000f0',
+            'L': '#f0a000'
+        };
+
+        let board = [];
+        let boardTimestamps = []; // Track when each block was placed
+        let currentPiece = null;
+        let score = 0;
+        let level = 1;
+        let lines = 0;
+        let gameLoop = null;
+        let dropCounter = 0;
+        let dropInterval = 1000;
+        let lastTime = 0;
+        let isPaused = false;
+        let gameRunning = false;
+        let sonarPulses = 3;
+        let sonarActive = false;
+        let sonarEndTime = 0;
+        let fadeTime = 10000; // 10 seconds initial fade time
+        let lastFivePieces = []; // Track last 5 placed pieces for ghost memory
+
+        function startGame() {
+            document.getElementById('introScreen').classList.add('hidden');
+            document.getElementById('mainGame').style.display = 'block';
+        }
+
+        function createBoard() {
+            board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+            boardTimestamps = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+        }
+
+        function drawBlock(x, y, color, opacity = 1) {
+            ctx.globalAlpha = opacity;
+            ctx.fillStyle = color;
+            ctx.fillRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+            ctx.strokeStyle = opacity > 0.3 ? '#000' : 'rgba(0,0,0,0.3)';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+            ctx.globalAlpha = 1;
+        }
+
+        function drawBoard() {
+            ctx.fillStyle = '#0a0a0a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const currentTime = Date.now();
+
+            for (let row = 0; row < ROWS; row++) {
+                for (let col = 0; col < COLS; col++) {
+                    if (board[row][col]) {
+                        const timePlaced = boardTimestamps[row][col];
+                        const timeElapsed = currentTime - timePlaced;
+
+                        let opacity = 1;
+
+                        if (sonarActive && currentTime < sonarEndTime) {
+                            // During sonar pulse, show everything
+                            opacity = 1;
+                        } else {
+                            // Normal fade logic
+                            if (timeElapsed < 3000) {
+                                // Fully visible for 3 seconds
+                                opacity = 1;
+                            } else if (timeElapsed < 6000) {
+                                // Fade to 50% over next 3 seconds
+                                opacity = 1 - (timeElapsed - 3000) / 3000 * 0.5;
+                            } else if (timeElapsed < fadeTime) {
+                                // Fade to invisible
+                                opacity = 0.5 - (timeElapsed - 6000) / (fadeTime - 6000) * 0.5;
+                            } else {
+                                // Completely invisible
+                                opacity = 0;
+                            }
+                        }
+
+                        // Ghost memory - show last 5 pieces as faint outlines
+                        const isGhostMemory = lastFivePieces.some(piece =>
+                            piece.cells.some(cell => cell.row === row && cell.col === col)
+                        );
+                        if (isGhostMemory && opacity < 0.1) {
+                            opacity = 0.1; // Faint ghost outline
+                        }
+
+                        if (opacity > 0) {
+                            drawBlock(col, row, board[row][col], opacity);
+                        }
+                    }
+                }
+            }
+
+            // Draw grid lines faintly
+            ctx.strokeStyle = 'rgba(100, 181, 246, 0.1)';
+            ctx.lineWidth = 1;
+            for (let i = 1; i < COLS; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i * BLOCK_SIZE, 0);
+                ctx.lineTo(i * BLOCK_SIZE, canvas.height);
+                ctx.stroke();
+            }
+            for (let i = 1; i < ROWS; i++) {
+                ctx.beginPath();
+                ctx.moveTo(0, i * BLOCK_SIZE);
+                ctx.lineTo(canvas.width, i * BLOCK_SIZE);
+                ctx.stroke();
+            }
+        }
+
+        function createPiece() {
+            const pieces = Object.keys(SHAPES);
+            const type = pieces[Math.floor(Math.random() * pieces.length)];
+            return {
+                shape: SHAPES[type],
+                color: COLORS[type],
+                x: Math.floor(COLS / 2) - Math.floor(SHAPES[type][0].length / 2),
+                y: 0,
+                type: type
+            };
+        }
+
+        function drawPiece(piece) {
+            piece.shape.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value) {
+                        drawBlock(piece.x + x, piece.y + y, piece.color);
+                    }
+                });
+            });
+        }
+
+        function checkCollision(piece, offsetX = 0, offsetY = 0) {
+            for (let y = 0; y < piece.shape.length; y++) {
+                for (let x = 0; x < piece.shape[y].length; x++) {
+                    if (piece.shape[y][x]) {
+                        const newX = piece.x + x + offsetX;
+                        const newY = piece.y + y + offsetY;
+
+                        if (newX < 0 || newX >= COLS || newY >= ROWS) {
+                            return true;
+                        }
+
+                        if (newY >= 0 && board[newY][newX]) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        function mergePiece() {
+            const currentTime = Date.now();
+            const pieceCells = [];
+
+            currentPiece.shape.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value) {
+                        const boardY = currentPiece.y + y;
+                        const boardX = currentPiece.x + x;
+                        if (boardY >= 0) {
+                            board[boardY][boardX] = currentPiece.color;
+                            boardTimestamps[boardY][boardX] = currentTime;
+                            pieceCells.push({ row: boardY, col: boardX });
+                        }
+                    }
+                });
+            });
+
+            // Add to last five pieces for ghost memory
+            lastFivePieces.unshift({ cells: pieceCells, time: currentTime });
+            if (lastFivePieces.length > 5) {
+                lastFivePieces.pop();
+            }
+        }
+
+        function clearLines() {
+            let linesCleared = 0;
+            const currentTime = Date.now();
+            let invisibleLinesCleared = 0;
+
+            for (let row = ROWS - 1; row >= 0; row--) {
+                if (board[row].every(cell => cell !== 0)) {
+                    // Check if this was an invisible line
+                    const wasInvisible = boardTimestamps[row].some(timestamp =>
+                        currentTime - timestamp > fadeTime
+                    );
+
+                    if (wasInvisible) {
+                        invisibleLinesCleared++;
+                    }
+
+                    board.splice(row, 1);
+                    board.unshift(Array(COLS).fill(0));
+                    boardTimestamps.splice(row, 1);
+                    boardTimestamps.unshift(Array(COLS).fill(0));
+                    linesCleared++;
+                    row++;
+                }
+            }
+
+            if (linesCleared > 0) {
+                lines += linesCleared;
+
+                // Bonus points for clearing invisible lines
+                const baseScore = [0, 40, 100, 300, 1200][linesCleared];
+                const memoryBonus = invisibleLinesCleared * 100;
+                score += baseScore * level + memoryBonus;
+
+                // Increase difficulty
+                level = Math.floor(lines / 10) + 1;
+                fadeTime = Math.max(3000, 10000 - (level - 1) * 500); // Faster fading at higher levels
+                dropInterval = Math.max(100, 1000 - (level - 1) * 100);
+
+                updateScore();
+                updateMemoryDisplay();
+            }
+        }
+
+        function rotate(piece) {
+            const newShape = piece.shape[0].map((_, i) =>
+                piece.shape.map(row => row[i]).reverse()
+            );
+
+            const rotated = { ...piece, shape: newShape };
+
+            if (!checkCollision(rotated)) {
+                return rotated;
+            }
+
+            // Wall kick
+            for (let offset of [1, -1, 2, -2]) {
+                rotated.x = piece.x + offset;
+                if (!checkCollision(rotated)) {
+                    return rotated;
+                }
+            }
+
+            return piece;
+        }
+
+        function move(direction) {
+            if (!currentPiece || isPaused) return;
+
+            if (direction === 'left' && !checkCollision(currentPiece, -1, 0)) {
+                currentPiece.x--;
+            } else if (direction === 'right' && !checkCollision(currentPiece, 1, 0)) {
+                currentPiece.x++;
+            } else if (direction === 'down') {
+                if (!checkCollision(currentPiece, 0, 1)) {
+                    currentPiece.y++;
+                    score += 1;
+                    updateScore();
+                } else {
+                    placePiece();
+                }
+            }
+        }
+
+        function hardDrop() {
+            if (!currentPiece || isPaused) return;
+
+            while (!checkCollision(currentPiece, 0, 1)) {
+                currentPiece.y++;
+                score += 2;
+            }
+            updateScore();
+            placePiece();
+        }
+
+        function placePiece() {
+            mergePiece();
+            clearLines();
+            currentPiece = createPiece();
+
+            if (checkCollision(currentPiece)) {
+                gameOver();
+            }
+        }
+
+        function useSonarPulse() {
+            if (sonarPulses > 0 && !sonarActive) {
+                sonarPulses--;
+                sonarActive = true;
+                sonarEndTime = Date.now() + 1500; // Show for 1.5 seconds
+
+                // Update UI
+                const pulseElements = document.querySelectorAll('.sonar-pulse');
+                pulseElements.forEach((el, index) => {
+                    if (index >= sonarPulses) {
+                        el.classList.remove('active');
+                    }
+                });
+
+                // Bonus points for using sonar wisely
+                if (lines > 0 && sonarPulses === 0) {
+                    score += 500; // Archaeologist bonus for not using all pulses
+                    updateScore();
+                }
+
+                setTimeout(() => {
+                    sonarActive = false;
+                }, 1500);
+            }
+        }
+
+        function updateScore() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('level').textContent = level;
+        }
+
+        function updateMemoryDisplay() {
+            const fadeSeconds = (fadeTime / 1000).toFixed(1);
+            document.getElementById('fadeSpeed').textContent = fadeSeconds + 's';
+
+            const memoryPercent = Math.max(30, 100 - (level - 1) * 10);
+            document.getElementById('memoryFill').style.width = memoryPercent + '%';
+
+            const memoryMessages = [
+                'Perfect Memory',
+                'Strong Recall',
+                'Remembering...',
+                'Memory Strain',
+                'Fading Fast',
+                'Mind Palace Crumbling'
+            ];
+            const messageIndex = Math.min(Math.floor((level - 1) / 2), memoryMessages.length - 1);
+            document.getElementById('memoryStatus').textContent = memoryMessages[messageIndex];
+        }
+
+        function gameOver() {
+            gameRunning = false;
+            cancelAnimationFrame(gameLoop);
+
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('finalLevel').textContent = level;
+
+            // Achievements based on performance
+            let title = 'Memory Novice';
+            let text = "You're beginning to see with your mind's eye!";
+
+            if (level >= 10) {
+                title = 'Memory Master';
+                text = 'You have achieved perfect spatial-temporal recall!';
+            } else if (level >= 7) {
+                title = 'Mind Palace Architect';
+                text = 'Your memory palace is nearly complete!';
+            } else if (level >= 5) {
+                title = 'Mental Cartographer';
+                text = 'You can map the invisible world!';
+            } else if (level >= 3) {
+                title = 'Memory Apprentice';
+                text = 'Your recall abilities are growing stronger!';
+            }
+
+            if (sonarPulses === 3) {
+                title += ' (Purist)';
+                text += ' And you did it without sonar!';
+            }
+
+            document.getElementById('achievementTitle').textContent = title;
+            document.getElementById('achievementText').textContent = text;
+            document.getElementById('gameOver').classList.add('show');
+        }
+
+        function update(time = 0) {
+            if (!gameRunning || isPaused) return;
+
+            const deltaTime = time - lastTime;
+            lastTime = time;
+            dropCounter += deltaTime;
+
+            if (dropCounter > dropInterval) {
+                move('down');
+                dropCounter = 0;
+            }
+
+            drawBoard();
+            if (currentPiece) {
+                drawPiece(currentPiece);
+            }
+
+            gameLoop = requestAnimationFrame(update);
+        }
+
+        function toggleGame() {
+            if (!gameRunning) {
+                createBoard();
+                score = 0;
+                level = 1;
+                lines = 0;
+                dropCounter = 0;
+                dropInterval = 1000;
+                fadeTime = 10000;
+                isPaused = false;
+                gameRunning = true;
+                sonarPulses = 3;
+                lastFivePieces = [];
+
+                updateScore();
+                updateMemoryDisplay();
+                currentPiece = createPiece();
+
+                document.getElementById('gameOver').classList.remove('show');
+                document.getElementById('startBtn').textContent = 'Restart Game';
+
+                // Reset sonar pulses UI
+                document.querySelectorAll('.sonar-pulse').forEach(el => {
+                    el.classList.add('active');
+                });
+
+                lastTime = 0;
+                update();
+            } else {
+                location.reload();
+            }
+        }
+
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            if (!gameRunning) return;
+
+            switch(e.key.toLowerCase()) {
+                case 'arrowleft':
+                    e.preventDefault();
+                    move('left');
+                    break;
+                case 'arrowright':
+                    e.preventDefault();
+                    move('right');
+                    break;
+                case 'arrowdown':
+                    e.preventDefault();
+                    move('down');
+                    break;
+                case 'arrowup':
+                    e.preventDefault();
+                    if (currentPiece && !isPaused) {
+                        currentPiece = rotate(currentPiece);
+                    }
+                    break;
+                case ' ':
+                    e.preventDefault();
+                    hardDrop();
+                    break;
+                case 'q':
+                    e.preventDefault();
+                    useSonarPulse();
+                    break;
+                case 'p':
+                    e.preventDefault();
+                    isPaused = !isPaused;
+                    if (!isPaused) {
+                        lastTime = performance.now();
+                        update(lastTime);
+                    }
+                    break;
+            }
+        });
+
+        document.getElementById('startBtn').onclick = toggleGame;
+
+        // Initial draw
+        createBoard();
+        drawBoard();
+    </script>
+</body>
+</html>

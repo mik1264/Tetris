@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Language Games: A Wittgensteinian Adventure</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Georgia', serif;
+            background: linear-gradient(135deg, #2d3436 0%, #000000 100%);
+            color: #dfe6e9;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            color: #74b9ff;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .subtitle {
+            text-align: center;
+            font-style: italic;
+            margin-bottom: 30px;
+            color: #b2bec3;
+            font-size: 1.1em;
+        }
+
+        .intro-screen, .game-screen, .victory-screen {
+            display: none;
+        }
+
+        .intro-screen.active, .game-screen.active, .victory-screen.active {
+            display: block;
+        }
+
+        .philosophy-quote {
+            background: rgba(116, 185, 255, 0.1);
+            border-left: 4px solid #74b9ff;
+            padding: 20px;
+            margin: 20px 0;
+            font-style: italic;
+            border-radius: 5px;
+        }
+
+        .world-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .world-card {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 20px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+            text-align: center;
+        }
+
+        .world-card:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.12);
+            border-color: #74b9ff;
+        }
+
+        .world-card.completed {
+            border-color: #00b894;
+            background: rgba(0, 184, 148, 0.1);
+        }
+
+        .world-card h3 {
+            color: #74b9ff;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+
+        .world-card p {
+            font-size: 0.9em;
+            color: #b2bec3;
+        }
+
+        .game-area {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 30px;
+            border-radius: 12px;
+            margin: 20px 0;
+        }
+
+        .scenario {
+            margin-bottom: 30px;
+        }
+
+        .scenario-image {
+            width: 100%;
+            height: 200px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            font-size: 3em;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .scenario-description {
+            font-size: 1.1em;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .word-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .word-button {
+            padding: 15px 20px;
+            background: rgba(116, 185, 255, 0.2);
+            border: 2px solid #74b9ff;
+            border-radius: 8px;
+            color: #fff;
+            cursor: pointer;
+            font-size: 1em;
+            transition: all 0.3s;
+            font-family: 'Georgia', serif;
+        }
+
+        .word-button:hover {
+            background: rgba(116, 185, 255, 0.4);
+            transform: scale(1.05);
+        }
+
+        .word-button.correct {
+            background: rgba(0, 184, 148, 0.3);
+            border-color: #00b894;
+            animation: pulse 0.5s;
+        }
+
+        .word-button.incorrect {
+            background: rgba(255, 107, 107, 0.3);
+            border-color: #ff6b6b;
+            animation: shake 0.5s;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        .feedback {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 1em;
+            display: none;
+        }
+
+        .feedback.show {
+            display: block;
+        }
+
+        .feedback.success {
+            background: rgba(0, 184, 148, 0.2);
+            border: 1px solid #00b894;
+            color: #55efc4;
+        }
+
+        .feedback.error {
+            background: rgba(255, 107, 107, 0.2);
+            border: 1px solid #ff6b6b;
+            color: #ff7675;
+        }
+
+        .score-panel {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+        }
+
+        .score-item {
+            text-align: center;
+        }
+
+        .score-item .label {
+            font-size: 0.9em;
+            color: #b2bec3;
+            margin-bottom: 5px;
+        }
+
+        .score-item .value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #74b9ff;
+        }
+
+        button {
+            padding: 15px 40px;
+            font-size: 1.1em;
+            background: #74b9ff;
+            color: #2d3436;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            margin: 10px;
+        }
+
+        button:hover {
+            background: #0984e3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(116, 185, 255, 0.4);
+        }
+
+        .button-container {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .explanation {
+            background: rgba(116, 185, 255, 0.1);
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            line-height: 1.6;
+        }
+
+        .explanation h4 {
+            color: #74b9ff;
+            margin-bottom: 10px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #74b9ff, #00b894);
+            transition: width 0.5s;
+            border-radius: 5px;
+        }
+
+        .world-title {
+            font-size: 2em;
+            color: #74b9ff;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .hint {
+            background: rgba(253, 203, 110, 0.1);
+            border-left: 4px solid #fdcb6e;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+            font-size: 0.95em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Intro Screen -->
+        <div class="intro-screen active">
+            <h1>Language Games</h1>
+            <p class="subtitle">A Wittgensteinian Adventure in Meaning and Context</p>
+
+            <div class="philosophy-quote">
+                "The meaning of a word is its use in the language."
+                <br><br>
+                <strong>— Ludwig Wittgenstein, Philosophical Investigations</strong>
+            </div>
+
+            <div style="margin: 30px 0; line-height: 1.8;">
+                <p>Welcome to an interactive exploration of Ludwig Wittgenstein's revolutionary idea: <strong>language games</strong>.</p>
+                <br>
+                <p>In this adventure, you'll discover that words don't have fixed, eternal meanings. Instead, meaning emerges from <em>how we use</em> language in different contexts—different "forms of life."</p>
+                <br>
+                <p>You'll journey through four distinct worlds, each representing a unique language game with its own rules and conventions. The same words may function differently in each world, revealing that understanding language means understanding the social practices in which it's embedded.</p>
+            </div>
+
+            <div class="hint">
+                <strong>Philosophical Insight:</strong> Just as the word "game" itself has no single essence (chess, tennis, and ring-around-the-rosy share only "family resemblances"), language itself is not one thing but many overlapping practices.
+            </div>
+
+            <div class="button-container">
+                <button onclick="startAdventure()">Begin Your Journey</button>
+            </div>
+        </div>
+
+        <!-- World Selection Screen -->
+        <div class="game-screen">
+            <h1>Language Games</h1>
+            <div class="score-panel">
+                <div class="score-item">
+                    <div class="label">Worlds Completed</div>
+                    <div class="value" id="worldsCompleted">0/4</div>
+                </div>
+                <div class="score-item">
+                    <div class="label">Total Score</div>
+                    <div class="value" id="totalScore">0</div>
+                </div>
+                <div class="score-item">
+                    <div class="label">Understanding</div>
+                    <div class="value" id="understanding">Novice</div>
+                </div>
+            </div>
+
+            <h2 style="text-align: center; margin: 20px 0; color: #b2bec3;">Choose Your Language Game</h2>
+
+            <div class="world-selector">
+                <div class="world-card" onclick="enterWorld('builder')" id="world-builder">
+                    <h3>🏗️ Builder's World</h3>
+                    <p>Commands and actions. Meaning through doing.</p>
+                    <p style="margin-top: 10px; font-size: 0.8em; color: #74b9ff;">Beginner</p>
+                </div>
+
+                <div class="world-card" onclick="enterWorld('market')" id="world-market">
+                    <h3>🏪 Market World</h3>
+                    <p>Context shifts meaning. Same words, different games.</p>
+                    <p style="margin-top: 10px; font-size: 0.8em; color: #74b9ff;">Intermediate</p>
+                </div>
+
+                <div class="world-card" onclick="enterWorld('poet')" id="world-poet">
+                    <h3>📜 Poet's World</h3>
+                    <p>Metaphor and creativity. Language beyond the literal.</p>
+                    <p style="margin-top: 10px; font-size: 0.8em; color: #74b9ff;">Advanced</p>
+                </div>
+
+                <div class="world-card" onclick="enterWorld('scientist')" id="world-scientist">
+                    <h3>🔬 Scientist's World</h3>
+                    <p>Precision and definition. Technical language games.</p>
+                    <p style="margin-top: 10px; font-size: 0.8em; color: #74b9ff;">Expert</p>
+                </div>
+            </div>
+
+            <div class="button-container">
+                <button onclick="showVictory()" style="background: #00b894;" id="finalButton" disabled>Complete Journey</button>
+            </div>
+        </div>
+
+        <!-- Individual World Play Area -->
+        <div id="worldPlay" style="display: none;">
+            <button onclick="returnToWorlds()" style="margin-bottom: 20px;">← Back to Worlds</button>
+
+            <h2 class="world-title" id="currentWorldTitle"></h2>
+
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+            </div>
+
+            <div class="game-area">
+                <div class="scenario">
+                    <div class="scenario-image" id="scenarioImage"></div>
+                    <div class="scenario-description" id="scenarioDescription"></div>
+
+                    <div class="word-options" id="wordOptions"></div>
+
+                    <div class="feedback" id="feedback"></div>
+                </div>
+            </div>
+
+            <div class="explanation" id="explanation" style="display: none;"></div>
+
+            <div class="button-container">
+                <button onclick="nextScenario()" id="nextButton" style="display: none;">Next Scenario →</button>
+            </div>
+        </div>
+
+        <!-- Victory Screen -->
+        <div class="victory-screen">
+            <h1>🎓 Philosophical Journey Complete!</h1>
+
+            <div class="philosophy-quote">
+                "What we do is to bring words back from their metaphysical to their everyday use."
+                <br><br>
+                <strong>— Ludwig Wittgenstein</strong>
+            </div>
+
+            <div style="margin: 30px 0; line-height: 1.8; text-align: center;">
+                <p style="font-size: 1.3em; margin-bottom: 20px;">Congratulations! You've experienced the essence of Wittgenstein's philosophy.</p>
+
+                <div class="score-panel">
+                    <div class="score-item">
+                        <div class="label">Final Score</div>
+                        <div class="value" id="finalScore">0</div>
+                    </div>
+                    <div class="score-item">
+                        <div class="label">Philosophical Rank</div>
+                        <div class="value" id="philosophicalRank">Wittgenstein Scholar</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="explanation">
+                <h4>What You've Learned:</h4>
+                <p><strong>1. Meaning is Use:</strong> Words don't have inherent meanings separate from how we use them in practice.</p>
+                <br>
+                <p><strong>2. Context Matters:</strong> The same word functions differently in different "language games" or forms of life.</p>
+                <br>
+                <p><strong>3. Rules are Social:</strong> Language follows implicit conventions agreed upon by participants, not universal laws.</p>
+                <br>
+                <p><strong>4. Family Resemblance:</strong> Language practices overlap and interconnect without sharing a single common essence.</p>
+                <br>
+                <p><strong>5. Philosophy as Therapy:</strong> Many confusions arise from misunderstanding the contextual use of language.</p>
+            </div>
+
+            <div class="button-container">
+                <button onclick="location.reload()">Play Again</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Game state
+        let gameState = {
+            totalScore: 0,
+            worldsCompleted: new Set(),
+            currentWorld: null,
+            currentScenario: 0,
+            worldScores: {}
+        };
+
+        // World definitions with scenarios
+        const worlds = {
+            builder: {
+                title: "🏗️ Builder's World",
+                description: "In this world, based on Wittgenstein's famous example, words are commands that prompt actions. You're working with a builder who needs materials. Success means giving the right command for the situation.",
+                scenarios: [
+                    {
+                        image: "🧱🧱🧱",
+                        description: "The builder points to the foundation and needs rectangular building materials to create the base wall.",
+                        options: ["Block", "Slab", "Pillar", "Beam"],
+                        correct: "Block",
+                        explanation: "In the builder's language game, 'Block' means 'bring me rectangular blocks.' The word's meaning is its use—it prompts a specific action. This isn't about definitions, but about learned responses within a shared practice."
+                    },
+                    {
+                        image: "📏━━━",
+                        description: "The builder gestures upward and needs a vertical support to hold up the roof structure.",
+                        options: ["Block", "Slab", "Pillar", "Beam"],
+                        correct: "Pillar",
+                        explanation: "Here, 'Pillar' functions as a command for vertical supports. Notice how context (the builder's gesture, the building stage) helps determine which word-tool to use. Meaning emerges from the situation."
+                    },
+                    {
+                        image: "⬜⬜⬜",
+                        description: "The builder is working on the floor and needs large, flat pieces to cover the ground.",
+                        options: ["Block", "Slab", "Pillar", "Beam"],
+                        correct: "Slab",
+                        explanation: "'Slab' in this language game means 'bring flat pieces for the floor.' You've learned this not through a dictionary, but through participating in the building practice—just as a child learns language by doing."
+                    }
+                ],
+                lessonTitle: "Lesson: Meaning Through Action",
+                lessonText: "You've experienced Wittgenstein's insight that primitive language games show us the foundations of meaning. Words are tools, and their meaning is how they're used in shared activities. The builder's assistant learns 'slab' not by memorizing a definition, but by successfully participating in the building practice."
+            },
+            market: {
+                title: "🏪 Market World",
+                description: "The same words can play different roles depending on context. In the marketplace, you'll see how 'bank,' 'apple,' and other words shift meaning based on the language game being played.",
+                scenarios: [
+                    {
+                        image: "🏦💰",
+                        description: "A customer asks: 'Where can I deposit my money safely and earn interest?'",
+                        options: ["River Bank", "Financial Bank", "Memory Bank", "Blood Bank"],
+                        correct: "Financial Bank",
+                        explanation: "The context (money, deposit, interest) determines that 'bank' here means a financial institution. The same word has different meanings in different language games—this is why definitions alone can't capture meaning."
+                    },
+                    {
+                        image: "🍎📱",
+                        description: "An investor says: 'I want to buy shares in the company that makes iPhones.'",
+                        options: ["Fruit Apple", "Apple Stock", "Apple Pie", "Apple Tree"],
+                        correct: "Apple Stock",
+                        explanation: "In the language game of investing, 'Apple' refers to company shares, not fruit. Context and the form of life (investing) determine meaning. Words are not labels for objects—they function differently in different practices."
+                    },
+                    {
+                        image: "🌊🏞️",
+                        description: "A hiker asks: 'Where can I sit by the water and have a picnic?'",
+                        options: ["River Bank", "Financial Bank", "Memory Bank", "Data Bank"],
+                        correct: "River Bank",
+                        explanation: "Here, the outdoor recreational context makes 'bank' mean the side of a river. Same word, completely different language game. Wittgenstein shows us that words don't have one essential meaning—they have uses in various forms of life."
+                    }
+                ],
+                lessonTitle: "Lesson: Context Creates Meaning",
+                lessonText: "You've seen how the same word plays different roles in different language games. There's no single 'true' meaning of 'bank' or 'apple'—instead, we must look at how these words function in specific contexts and social practices. Philosophy's job is to untangle confusions that arise when we forget this."
+            },
+            poet: {
+                title: "📜 Poet's World",
+                description: "Poetry shows language at its most creative. Here, words are used metaphorically, evoking feelings and images beyond literal meaning. This demonstrates that language games can be playful, artistic, and open-ended.",
+                scenarios: [
+                    {
+                        image: "🌙✨🌃",
+                        description: "The poet writes: 'The night wrapped the city in its velvet arms.' What is 'night' doing here?",
+                        options: ["Literal darkness", "Death/ending", "Comfort/protection", "Time measurement"],
+                        correct: "Comfort/protection",
+                        explanation: "In poetic language, 'night' is personified as embracing and comforting (velvet arms). This is a different language game from scientific descriptions. The poet uses words to evoke feeling, not to precisely denote objects. Both uses are valid—they're just different games."
+                    },
+                    {
+                        image: "💔🌊😢",
+                        description: "A poet describes grief: 'Her tears were an ocean.' How does 'ocean' function here?",
+                        options: ["Large body of water", "Overwhelming emotion", "Salty liquid", "Navigation route"],
+                        correct: "Overwhelming emotion",
+                        explanation: "This is metaphorical language—a language game where words create vivid comparisons. 'Ocean' isn't literally about water but about the vastness and depth of grief. Poetic language games have different rules from everyday descriptive language."
+                    },
+                    {
+                        image: "🕊️☮️🌅",
+                        description: "In a peace poem: 'The dove sang of hope's return.' What is the dove representing?",
+                        options: ["A bird species", "Peace/reconciliation", "A pet", "Morning activity"],
+                        correct: "Peace/reconciliation",
+                        explanation: "In the symbolic language game of poetry, the dove carries cultural meaning beyond its biological identity. This shows how language games draw on shared cultural practices and history. Understanding requires participating in the cultural form of life."
+                    }
+                ],
+                lessonTitle: "Lesson: Creative Language Games",
+                lessonText: "Poetry demonstrates that language games can be creative and metaphorical, not just literal or descriptive. The 'rules' are more flexible, but there are still conventions (cultural symbols, metaphorical patterns) that make communication possible. This shows the diversity and richness of language use."
+            },
+            scientist: {
+                title: "🔬 Scientist's World",
+                description: "Scientific language aims for precision and universal agreement. Terms are carefully defined, and the language game has strict rules. Yet even here, meaning comes from use within the scientific community's practices.",
+                scenarios: [
+                    {
+                        image: "⚛️🔬",
+                        description: "A chemist says: 'The solution has a pH of 3.' What does 'solution' mean here?",
+                        options: ["Answer to a problem", "Liquid mixture", "Resolution", "Dissolving action"],
+                        correct: "Liquid mixture",
+                        explanation: "In chemistry's language game, 'solution' has a precise technical meaning: a homogeneous mixture. This differs from everyday use ('solution to a problem'). Scientific language games create specialized vocabularies, but these still gain meaning through the practices of the scientific community."
+                    },
+                    {
+                        image: "🧬🔍",
+                        description: "A biologist notes: 'This organism shows significant adaptation to its environment.' What is 'adaptation'?",
+                        options: ["Changing behavior", "Evolutionary fitness", "Adjusting attitude", "Making changes"],
+                        correct: "Evolutionary fitness",
+                        explanation: "In evolutionary biology, 'adaptation' refers to inherited traits that increase survival and reproduction. The word has a precise meaning within this language game, defined by the theory and practices of evolutionary science. Context determines which game we're playing."
+                    },
+                    {
+                        image: "⚡🔋",
+                        description: "A physicist explains: 'The circuit has high resistance.' What does 'resistance' mean?",
+                        options: ["Political opposition", "Electrical impedance", "Physical strength", "Refusal to accept"],
+                        correct: "Electrical impedance",
+                        explanation: "In the language game of electrical engineering, 'resistance' has a quantifiable, technical meaning (opposition to current flow, measured in ohms). Scientific precision doesn't contradict Wittgenstein's insight—even technical meanings are rooted in the practices and methods of the scientific community."
+                    }
+                ],
+                lessonTitle: "Lesson: Precision Within Practice",
+                lessonText: "Scientific language demonstrates that even highly precise, technical terms gain their meaning from use within a specific community and practice. The 'rules' are more explicit here, but they still depend on shared training, instruments, and methods. Every language game—from poetry to physics—is embedded in a form of life."
+            }
+        };
+
+        function startAdventure() {
+            document.querySelector('.intro-screen').classList.remove('active');
+            document.querySelector('.game-screen').classList.add('active');
+        }
+
+        function enterWorld(worldKey) {
+            gameState.currentWorld = worldKey;
+            gameState.currentScenario = 0;
+
+            document.querySelector('.game-screen').style.display = 'none';
+            document.getElementById('worldPlay').style.display = 'block';
+
+            const world = worlds[worldKey];
+            document.getElementById('currentWorldTitle').textContent = world.title;
+
+            loadScenario();
+        }
+
+        function loadScenario() {
+            const world = worlds[gameState.currentWorld];
+            const scenario = world.scenarios[gameState.currentScenario];
+
+            // Update progress
+            const progress = ((gameState.currentScenario) / world.scenarios.length) * 100;
+            document.getElementById('progressFill').style.width = progress + '%';
+
+            // Load scenario content
+            document.getElementById('scenarioImage').textContent = scenario.image;
+            document.getElementById('scenarioDescription').textContent = scenario.description;
+
+            // Create word options
+            const optionsContainer = document.getElementById('wordOptions');
+            optionsContainer.innerHTML = '';
+
+            scenario.options.forEach(option => {
+                const button = document.createElement('button');
+                button.className = 'word-button';
+                button.textContent = option;
+                button.onclick = () => selectWord(option, scenario.correct, scenario.explanation);
+                optionsContainer.appendChild(button);
+            });
+
+            // Hide feedback and next button
+            document.getElementById('feedback').classList.remove('show');
+            document.getElementById('nextButton').style.display = 'none';
+            document.getElementById('explanation').style.display = 'none';
+        }
+
+        function selectWord(selected, correct, explanation) {
+            const buttons = document.querySelectorAll('.word-button');
+            const feedback = document.getElementById('feedback');
+
+            // Disable all buttons
+            buttons.forEach(btn => {
+                btn.onclick = null;
+                if (btn.textContent === correct) {
+                    btn.classList.add('correct');
+                } else if (btn.textContent === selected) {
+                    btn.classList.add('incorrect');
+                }
+            });
+
+            // Show feedback
+            if (selected === correct) {
+                feedback.className = 'feedback success show';
+                feedback.innerHTML = '<strong>Excellent!</strong> You understood the language game. ' + explanation;
+                gameState.totalScore += 100;
+                updateScore();
+            } else {
+                feedback.className = 'feedback error show';
+                feedback.innerHTML = '<strong>Not quite.</strong> In this language game, the correct choice was "' + correct + '". ' + explanation;
+                gameState.totalScore += 25; // Partial credit for trying
+                updateScore();
+            }
+
+            // Show explanation
+            document.getElementById('explanation').innerHTML = '<h4>Wittgenstein\'s Insight:</h4><p>' + explanation + '</p>';
+            document.getElementById('explanation').style.display = 'block';
+
+            // Show next button
+            document.getElementById('nextButton').style.display = 'inline-block';
+        }
+
+        function nextScenario() {
+            const world = worlds[gameState.currentWorld];
+            gameState.currentScenario++;
+
+            if (gameState.currentScenario < world.scenarios.length) {
+                loadScenario();
+            } else {
+                completeWorld();
+            }
+        }
+
+        function completeWorld() {
+            gameState.worldsCompleted.add(gameState.currentWorld);
+
+            // Mark world as completed
+            document.getElementById('world-' + gameState.currentWorld).classList.add('completed');
+
+            // Show world completion message
+            const world = worlds[gameState.currentWorld];
+            document.getElementById('explanation').innerHTML =
+                '<h4>' + world.lessonTitle + '</h4><p>' + world.lessonText + '</p>' +
+                '<p style="margin-top: 20px; text-align: center; font-size: 1.2em; color: #00b894;"><strong>World Complete! +500 points</strong></p>';
+
+            gameState.totalScore += 500;
+            updateScore();
+
+            document.getElementById('nextButton').textContent = 'Return to Worlds';
+            document.getElementById('nextButton').onclick = returnToWorlds;
+        }
+
+        function returnToWorlds() {
+            document.getElementById('worldPlay').style.display = 'none';
+            document.querySelector('.game-screen').style.display = 'block';
+
+            updateScore();
+
+            // Enable final button if all worlds complete
+            if (gameState.worldsCompleted.size === 4) {
+                document.getElementById('finalButton').disabled = false;
+            }
+        }
+
+        function updateScore() {
+            document.getElementById('totalScore').textContent = gameState.totalScore;
+            document.getElementById('worldsCompleted').textContent = gameState.worldsCompleted.size + '/4';
+
+            // Update understanding level
+            let understanding = 'Novice';
+            if (gameState.totalScore > 2000) understanding = 'Philosopher';
+            else if (gameState.totalScore > 1500) understanding = 'Scholar';
+            else if (gameState.totalScore > 1000) understanding = 'Student';
+            else if (gameState.totalScore > 500) understanding = 'Apprentice';
+
+            document.getElementById('understanding').textContent = understanding;
+        }
+
+        function showVictory() {
+            document.querySelector('.game-screen').style.display = 'none';
+            document.querySelector('.victory-screen').classList.add('active');
+
+            document.getElementById('finalScore').textContent = gameState.totalScore;
+
+            let rank = 'Wittgenstein Novice';
+            if (gameState.totalScore >= 3200) rank = 'Wittgenstein Master';
+            else if (gameState.totalScore >= 2800) rank = 'Language Game Expert';
+            else if (gameState.totalScore >= 2400) rank = 'Philosophical Investigator';
+            else if (gameState.totalScore >= 2000) rank = 'Meaning Explorer';
+
+            document.getElementById('philosophicalRank').textContent = rank;
+        }
+    </script>
+</body>
+</html>

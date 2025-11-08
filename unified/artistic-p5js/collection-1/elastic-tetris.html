@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elastic Tetris - Bouncing Physics</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+    <style>
+        body {
+            margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh;
+            background: linear-gradient(135deg, #2e0854 0%, #5b0a91 50%, #a61dff 100%);
+            font-family: 'Courier New', monospace; color: white;
+        }
+        #info-panel {
+            position: absolute; top: 20px; right: 20px; background: rgba(0, 0, 0, 0.8); padding: 20px;
+            border-radius: 10px; border: 2px solid #ff6ec7; max-width: 300px;
+        }
+        h1 { margin: 0 0 10px 0; font-size: 24px; color: #ff6ec7; text-shadow: 0 0 10px #ff6ec7; }
+        .stat { margin: 8px 0; font-size: 16px; }
+        .label { color: #ffb3e6; }
+        .value { color: #00ffaa; font-weight: bold; }
+        .instructions { margin-top: 15px; font-size: 12px; color: #cccccc; border-top: 1px solid #ff6ec7; padding-top: 10px; }
+    </style>
+</head>
+<body>
+    <div id="info-panel">
+        <h1>🎈 ELASTIC TETRIS</h1>
+        <div class="stat"><span class="label">Score:</span> <span class="value" id="score">0</span></div>
+        <div class="stat"><span class="label">Lines:</span> <span class="value" id="lines">0</span></div>
+        <div class="stat"><span class="label">Level:</span> <span class="value" id="level">1</span></div>
+        <div class="stat"><span class="label">Bounces:</span> <span class="value" id="bounces">0</span></div>
+        <div class="instructions">
+            <strong>Controls:</strong><br>
+            ← → Move | ↑ Rotate<br>
+            ↓ Soft Drop | Space: Drop<br><br>
+            🎈 Pieces bounce on impact!<br>
+            🎯 Land softly for bonus points<br>
+            ⚡ Chain bounces for combos
+        </div>
+    </div>
+
+    <script>
+        const COLS = 10, ROWS = 20, BLOCK_SIZE = 30;
+        const GRAVITY = 0.3, BOUNCE_DAMPING = 0.7, MIN_BOUNCE = 2;
+
+        const SHAPES = [[[1,1,1,1]], [[1,1],[1,1]], [[0,1,0],[1,1,1]], [[1,1,0],[0,1,1]], [[0,1,1],[1,1,0]], [[1,0,0],[1,1,1]], [[0,0,1],[1,1,1]]];
+        const COLORS = [[0,255,255], [255,255,0], [200,100,255], [0,255,100], [255,100,100], [100,150,255], [255,180,100]];
+
+        let board = [], currentPiece = null, currentRotation = 0;
+        let currentX = 0, currentY = 0, velocityY = 0, gameOver = false;
+        let score = 0, linesCleared = 0, level = 1, bounceCount = 0, totalBounces = 0;
+        let isBouncing = false, bouncePhase = 0;
+
+        function setup() {
+            createCanvas(COLS * BLOCK_SIZE + 200, ROWS * BLOCK_SIZE + 100);
+            for (let y = 0; y < ROWS; y++) board[y] = Array(COLS).fill(null);
+            spawnPiece();
+        }
+
+        function draw() {
+            background(46, 8, 84);
+
+            // Grid
+            stroke(100, 50, 150); strokeWeight(1);
+            for (let x = 0; x <= COLS; x++) line(x * BLOCK_SIZE, 0, x * BLOCK_SIZE, ROWS * BLOCK_SIZE);
+            for (let y = 0; y <= ROWS; y++) line(0, y * BLOCK_SIZE, COLS * BLOCK_SIZE, y * BLOCK_SIZE);
+
+            // Board with elastic effect
+            for (let y = 0; y < ROWS; y++) {
+                for (let x = 0; x < COLS; x++) {
+                    if (board[y][x] !== null) {
+                        push();
+                        let squish = isBouncing ? sin(bouncePhase + y * 0.5) * 3 : 0;
+                        translate(x * BLOCK_SIZE + BLOCK_SIZE/2, y * BLOCK_SIZE + BLOCK_SIZE/2);
+                        scale(1 + squish * 0.05, 1 - squish * 0.05);
+                        translate(-BLOCK_SIZE/2, -BLOCK_SIZE/2);
+                        drawBlock(0, 0, board[y][x]);
+                        pop();
+                    }
+                }
+            }
+
+            if (currentPiece !== null && !gameOver) {
+                updatePhysics();
+                drawCurrentPiece();
+            }
+
+            if (isBouncing) {
+                bouncePhase += 0.3;
+                if (bouncePhase > PI * 2) {
+                    isBouncing = false;
+                    bouncePhase = 0;
+                }
+            }
+
+            if (gameOver) drawGameOver();
+        }
+
+        function drawBlock(x, y, colorIndex) {
+            let col = COLORS[colorIndex];
+            fill(col[0], col[1], col[2]);
+            stroke(255, 255, 255, 200); strokeWeight(2);
+            rect(x + 2, y + 2, BLOCK_SIZE - 4, BLOCK_SIZE - 4, 5);
+
+            // Shine effect
+            noStroke();
+            fill(255, 255, 255, 80);
+            ellipse(x + BLOCK_SIZE * 0.3, y + BLOCK_SIZE * 0.3, BLOCK_SIZE * 0.3, BLOCK_SIZE * 0.3);
+        }
+
+        function drawCurrentPiece() {
+            let shape = getRotatedShape(currentPiece, currentRotation);
+            push();
+
+            // Squash and stretch based on velocity
+            let stretchFactor = map(abs(velocityY), 0, 5, 1, 1.3);
+            let squashFactor = 1 / stretchFactor;
+
+            for (let y = 0; y < shape.length; y++) {
+                for (let x = 0; x < shape[y].length; x++) {
+                    if (shape[y][x]) {
+                        push();
+                        let centerX = (currentX + x) * BLOCK_SIZE + BLOCK_SIZE/2;
+                        let centerY = currentY + y * BLOCK_SIZE + BLOCK_SIZE/2;
+
+                        translate(centerX, centerY);
+                        scale(squashFactor, stretchFactor);
+                        translate(-BLOCK_SIZE/2, -BLOCK_SIZE/2);
+
+                        drawBlock(0, 0, currentPiece);
+                        pop();
+                    }
+                }
+            }
+
+            pop();
+        }
+
+        function updatePhysics() {
+            velocityY += GRAVITY;
+            currentY += velocityY;
+
+            // Check collision
+            let shape = getRotatedShape(currentPiece, currentRotation);
+            let maxY = currentY;
+
+            for (let sy = 0; sy < shape.length; sy++) {
+                for (let sx = 0; sx < shape[sy].length; sx++) {
+                    if (shape[sy][sx]) {
+                        let checkY = Math.floor(currentY / BLOCK_SIZE) + sy;
+                        let checkX = currentX + sx;
+
+                        if (checkY >= ROWS || (checkY >= 0 && board[checkY][checkX] !== null)) {
+                            // Collision! Bounce!
+                            if (abs(velocityY) > MIN_BOUNCE) {
+                                velocityY = -velocityY * BOUNCE_DAMPING;
+                                currentY = maxY;
+                                bounceCount++;
+                                totalBounces++;
+                                updateStats();
+
+                                // Visual feedback
+                                isBouncing = true;
+                                bouncePhase = 0;
+                            } else {
+                                // Come to rest
+                                velocityY = 0;
+                                currentY = Math.floor(currentY / BLOCK_SIZE) * BLOCK_SIZE;
+
+                                // Bonus for soft landing
+                                if (bounceCount > 3) {
+                                    score += bounceCount * 10;
+                                }
+
+                                placePiece();
+                                bounceCount = 0;
+                            }
+                            return;
+                        }
+                    }
+                }
+            }
+
+            currentY = Math.max(0, Math.min(currentY, (ROWS - 2) * BLOCK_SIZE));
+        }
+
+        function getRotatedShape(pieceIndex, rotation) {
+            let shape = SHAPES[pieceIndex];
+            for (let r = 0; r < rotation; r++) shape = rotateMatrix(shape);
+            return shape;
+        }
+
+        function rotateMatrix(m) {
+            let result = [];
+            for (let i = 0; i < m[0].length; i++) {
+                result[i] = [];
+                for (let j = 0; j < m.length; j++) result[i][j] = m[m.length - 1 - j][i];
+            }
+            return result;
+        }
+
+        function spawnPiece() {
+            currentPiece = Math.floor(Math.random() * SHAPES.length);
+            currentRotation = 0;
+            currentX = Math.floor(COLS / 2) - 1;
+            currentY = 0;
+            velocityY = 0;
+            bounceCount = 0;
+
+            let gridY = Math.floor(currentY / BLOCK_SIZE);
+            if (gridY >= 0 && !canPlaceAt(currentX, gridY, currentRotation)) {
+                gameOver = true;
+            }
+        }
+
+        function placePiece() {
+            let shape = getRotatedShape(currentPiece, currentRotation);
+            let gridY = Math.floor(currentY / BLOCK_SIZE);
+
+            for (let y = 0; y < shape.length; y++) {
+                for (let x = 0; x < shape[y].length; x++) {
+                    if (shape[y][x]) {
+                        let boardY = gridY + y;
+                        if (boardY >= 0 && boardY < ROWS) {
+                            board[boardY][currentX + x] = currentPiece;
+                        }
+                    }
+                }
+            }
+
+            clearLines();
+            spawnPiece();
+        }
+
+        function canPlaceAt(x, gridY, rotation) {
+            let shape = getRotatedShape(currentPiece, rotation);
+            for (let sy = 0; sy < shape.length; sy++) {
+                for (let sx = 0; sx < shape[sy].length; sx++) {
+                    if (shape[sy][sx]) {
+                        let newX = x + sx, newY = gridY + sy;
+                        if (newX < 0 || newX >= COLS || newY >= ROWS) return false;
+                        if (newY >= 0 && board[newY][newX] !== null) return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        function clearLines() {
+            let cleared = 0;
+            for (let y = ROWS - 1; y >= 0; y--) {
+                if (board[y].every(cell => cell !== null)) {
+                    board.splice(y, 1);
+                    board.unshift(Array(COLS).fill(null));
+                    cleared++; y++;
+                    isBouncing = true;
+                    bouncePhase = 0;
+                }
+            }
+            if (cleared > 0) {
+                linesCleared += cleared;
+                score += cleared * 100 * level;
+                level = Math.floor(linesCleared / 10) + 1;
+                updateStats();
+            }
+        }
+
+        function updateStats() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('lines').textContent = linesCleared;
+            document.getElementById('level').textContent = level;
+            document.getElementById('bounces').textContent = totalBounces;
+        }
+
+        function keyPressed() {
+            if (gameOver) { if (key === 'r') resetGame(); return; }
+
+            let gridY = Math.floor(currentY / BLOCK_SIZE);
+
+            if (keyCode === LEFT_ARROW) {
+                if (canPlaceAt(currentX - 1, gridY, currentRotation)) currentX--;
+            } else if (keyCode === RIGHT_ARROW) {
+                if (canPlaceAt(currentX + 1, gridY, currentRotation)) currentX++;
+            } else if (keyCode === DOWN_ARROW) {
+                velocityY += 1;
+            } else if (keyCode === UP_ARROW) {
+                if (canPlaceAt(currentX, gridY, (currentRotation + 1) % 4)) {
+                    currentRotation = (currentRotation + 1) % 4;
+                }
+            } else if (key === ' ') {
+                velocityY = 10; // Drop fast
+            }
+        }
+
+        function drawGameOver() {
+            fill(0, 0, 0, 200);
+            rect(0, 0, COLS * BLOCK_SIZE, ROWS * BLOCK_SIZE);
+            fill(255, 110, 199); textSize(48); textAlign(CENTER, CENTER);
+            text('GAME OVER', COLS * BLOCK_SIZE / 2, ROWS * BLOCK_SIZE / 2 - 50);
+            fill(255); textSize(24);
+            text('Score: ' + score, COLS * BLOCK_SIZE / 2, ROWS * BLOCK_SIZE / 2);
+            text('Bounces: ' + totalBounces, COLS * BLOCK_SIZE / 2, ROWS * BLOCK_SIZE / 2 + 30);
+            textSize(16);
+            text('Press R to restart', COLS * BLOCK_SIZE / 2, ROWS * BLOCK_SIZE / 2 + 80);
+        }
+
+        function resetGame() {
+            board = [];
+            for (let y = 0; y < ROWS; y++) board[y] = Array(COLS).fill(null);
+            score = 0; linesCleared = 0; level = 1; totalBounces = 0;
+            gameOver = false; updateStats(); spawnPiece();
+        }
+    </script>
+</body>
+</html>

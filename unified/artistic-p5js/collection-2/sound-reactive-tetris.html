@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sound Reactive Tetris - p5.js Variation</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/addons/p5.sound.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #434343 0%, #000000 100%);
+            font-family: 'Arial', sans-serif;
+        }
+        #canvas-container {
+            box-shadow: 0 20px 60px rgba(255,0,255,0.3);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        h1 {
+            margin: 0 0 10px 0;
+            font-size: 2em;
+        }
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            background: rgba(0,0,0,0.5);
+            padding: 15px 25px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .audio-notice {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            background: rgba(0,0,0,0.8);
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="info">
+        <h1>🎵 Sound Reactive Tetris</h1>
+        <p>Score: <span id="score">0</span></p>
+        <p>Lines: <span id="lines">0</span></p>
+        <p>Level: <span id="level">1</span></p>
+    </div>
+    <div class="controls">
+        <strong>Controls:</strong> Arrow Keys to move/rotate | Space to drop | P to pause | Click to enable audio
+    </div>
+    <script>
+        const COLS = 10;
+        const ROWS = 20;
+        const BLOCK_SIZE = 30;
+
+        let grid = [];
+        let currentPiece;
+        let gameOver = false;
+        let paused = false;
+        let score = 0;
+        let lines = 0;
+        let level = 1;
+        let dropCounter = 0;
+        let dropInterval = 1000;
+        let lastTime = 0;
+
+        // Audio reactive variables
+        let mic;
+        let amplitude;
+        let audioLevel = 0;
+        let audioStarted = false;
+        let frequencySpectrum = [];
+
+        const SHAPES = [
+            [[1,1,1,1]], // I
+            [[1,1],[1,1]], // O
+            [[0,1,0],[1,1,1]], // T
+            [[1,0,0],[1,1,1]], // L
+            [[0,0,1],[1,1,1]], // J
+            [[0,1,1],[1,1,0]], // S
+            [[1,1,0],[0,1,1]]  // Z
+        ];
+
+        const COLORS = [
+            [255, 0, 255],    // Magenta
+            [0, 255, 255],    // Cyan
+            [255, 255, 0],    // Yellow
+            [255, 0, 0],      // Red
+            [0, 255, 0],      // Green
+            [0, 0, 255],      // Blue
+            [255, 128, 0]     // Orange
+        ];
+
+        class Piece {
+            constructor() {
+                this.shape = random(SHAPES);
+                this.x = Math.floor(COLS / 2) - Math.floor(this.shape[0].length / 2);
+                this.y = 0;
+                this.col = random(COLORS);
+            }
+
+            draw() {
+                push();
+
+                for (let row = 0; row < this.shape.length; row++) {
+                    for (let col = 0; col < this.shape[row].length; col++) {
+                        if (this.shape[row][col]) {
+                            let px = (this.x + col) * BLOCK_SIZE;
+                            let py = (this.y + row) * BLOCK_SIZE;
+
+                            // Audio reactive size
+                            let sizeBoost = audioLevel * 10;
+
+                            push();
+                            translate(px + BLOCK_SIZE/2, py + BLOCK_SIZE/2);
+
+                            // Glow effect based on audio
+                            for (let i = 3; i > 0; i--) {
+                                let glowSize = BLOCK_SIZE + (i * 8 * audioLevel);
+                                fill(this.col[0], this.col[1], this.col[2], 50 / i);
+                                noStroke();
+                                rect(-glowSize/2, -glowSize/2, glowSize, glowSize);
+                            }
+
+                            // Main block
+                            fill(this.col[0], this.col[1], this.col[2]);
+                            stroke(255);
+                            strokeWeight(2);
+                            let size = BLOCK_SIZE + sizeBoost;
+                            rect(-size/2, -size/2, size, size);
+
+                            pop();
+                        }
+                    }
+                }
+                pop();
+            }
+
+            move(dx, dy) {
+                this.x += dx;
+                this.y += dy;
+                if (this.collision()) {
+                    this.x -= dx;
+                    this.y -= dy;
+                    return false;
+                }
+                return true;
+            }
+
+            rotate() {
+                const newShape = this.shape[0].map((_, i) =>
+                    this.shape.map(row => row[i]).reverse()
+                );
+                const oldShape = this.shape;
+                this.shape = newShape;
+                if (this.collision()) {
+                    this.shape = oldShape;
+                }
+            }
+
+            collision() {
+                for (let row = 0; row < this.shape.length; row++) {
+                    for (let col = 0; col < this.shape[row].length; col++) {
+                        if (this.shape[row][col]) {
+                            let newX = this.x + col;
+                            let newY = this.y + row;
+                            if (newX < 0 || newX >= COLS || newY >= ROWS) {
+                                return true;
+                            }
+                            if (newY >= 0 && grid[newY][newX]) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+                return false;
+            }
+
+            lock() {
+                for (let row = 0; row < this.shape.length; row++) {
+                    for (let col = 0; col < this.shape[row].length; col++) {
+                        if (this.shape[row][col]) {
+                            let newY = this.y + row;
+                            let newX = this.x + col;
+                            if (newY >= 0) {
+                                grid[newY][newX] = this.col;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        function setup() {
+            let canvas = createCanvas(COLS * BLOCK_SIZE + 200, ROWS * BLOCK_SIZE);
+            canvas.parent('canvas-container');
+            canvas.mousePressed(startAudio);
+
+            for (let i = 0; i < ROWS; i++) {
+                grid[i] = Array(COLS).fill(0);
+            }
+
+            currentPiece = new Piece();
+            frameRate(60);
+        }
+
+        function startAudio() {
+            if (!audioStarted) {
+                userStartAudio();
+                mic = new p5.AudioIn();
+                mic.start();
+                amplitude = new p5.Amplitude();
+                amplitude.setInput(mic);
+                audioStarted = true;
+            }
+        }
+
+        function draw() {
+            if (!gameOver && !paused) {
+                let now = millis();
+                let deltaTime = now - lastTime;
+                lastTime = now;
+
+                dropCounter += deltaTime;
+                if (dropCounter > dropInterval) {
+                    if (!currentPiece.move(0, 1)) {
+                        currentPiece.lock();
+                        clearLines();
+                        currentPiece = new Piece();
+                        if (currentPiece.collision()) {
+                            gameOver = true;
+                        }
+                    }
+                    dropCounter = 0;
+                }
+            }
+
+            // Get audio level
+            if (audioStarted && amplitude) {
+                audioLevel = amplitude.getLevel();
+                if (mic) {
+                    frequencySpectrum = mic.fft.analyze();
+                }
+            }
+
+            // Background with audio reactive gradient
+            let bgColor = audioLevel * 100;
+            background(bgColor, bgColor/2, bgColor);
+
+            // Draw frequency spectrum
+            if (audioStarted) {
+                drawFrequencySpectrum();
+            }
+
+            push();
+            translate(50, 0);
+
+            // Draw grid
+            for (let row = 0; row < ROWS; row++) {
+                for (let col = 0; col < COLS; col++) {
+                    let px = col * BLOCK_SIZE;
+                    let py = row * BLOCK_SIZE;
+
+                    if (grid[row][col]) {
+                        let col_data = grid[row][col];
+
+                        // Audio reactive glow
+                        for (let i = 3; i > 0; i--) {
+                            let glowSize = BLOCK_SIZE + (i * 8 * audioLevel);
+                            push();
+                            translate(px + BLOCK_SIZE/2, py + BLOCK_SIZE/2);
+                            fill(col_data[0], col_data[1], col_data[2], 50 / i);
+                            noStroke();
+                            rect(-glowSize/2, -glowSize/2, glowSize, glowSize);
+                            pop();
+                        }
+
+                        // Main block
+                        fill(col_data[0], col_data[1], col_data[2]);
+                        stroke(255);
+                        strokeWeight(2);
+                        rect(px, py, BLOCK_SIZE, BLOCK_SIZE);
+                    } else {
+                        stroke(100, 100, 100, 50);
+                        strokeWeight(1);
+                        noFill();
+                        rect(px, py, BLOCK_SIZE, BLOCK_SIZE);
+                    }
+                }
+            }
+
+            // Draw current piece
+            if (!gameOver && currentPiece) {
+                currentPiece.draw();
+            }
+
+            pop();
+
+            // Audio notice
+            if (!audioStarted) {
+                fill(0, 0, 0, 200);
+                rect(width/2 - 150, height/2 - 60, 300, 120);
+                fill(255);
+                textAlign(CENTER, CENTER);
+                textSize(20);
+                text('Click anywhere to enable\naudio reactive mode!', width/2, height/2);
+            }
+
+            // Game over overlay
+            if (gameOver) {
+                fill(0, 0, 0, 200);
+                rect(0, height/2 - 50, width, 100);
+                fill(255);
+                textAlign(CENTER, CENTER);
+                textSize(32);
+                text('GAME OVER', width/2, height/2 - 20);
+                textSize(16);
+                text('Press R to restart', width/2, height/2 + 20);
+            }
+
+            if (paused) {
+                fill(0, 0, 0, 150);
+                rect(0, height/2 - 40, width, 80);
+                fill(255);
+                textAlign(CENTER, CENTER);
+                textSize(32);
+                text('PAUSED', width/2, height/2);
+            }
+        }
+
+        function drawFrequencySpectrum() {
+            push();
+            translate(COLS * BLOCK_SIZE + 80, 0);
+
+            stroke(255, 0, 255);
+            strokeWeight(2);
+            noFill();
+
+            // Draw waveform
+            beginShape();
+            for (let i = 0; i < 100; i++) {
+                let x = map(i, 0, 100, 0, 100);
+                let y = map(audioLevel * sin(i * 0.1 + frameCount * 0.1), -1, 1, height/4, height*3/4);
+                vertex(x, y);
+            }
+            endShape();
+
+            // Draw circular visualizer
+            push();
+            translate(50, height/2);
+            rotate(frameCount * 0.01);
+
+            for (let i = 0; i < 12; i++) {
+                let angle = (i / 12) * TWO_PI;
+                let r = 30 + audioLevel * 100;
+                let x = cos(angle) * r;
+                let y = sin(angle) * r;
+
+                fill(255, 0, 255, 150);
+                noStroke();
+                circle(x, y, 10 + audioLevel * 20);
+            }
+            pop();
+
+            pop();
+        }
+
+        function clearLines() {
+            let linesCleared = 0;
+            for (let row = ROWS - 1; row >= 0; row--) {
+                if (grid[row].every(cell => cell !== 0)) {
+                    grid.splice(row, 1);
+                    grid.unshift(Array(COLS).fill(0));
+                    linesCleared++;
+                    row++;
+                }
+            }
+            if (linesCleared > 0) {
+                lines += linesCleared;
+                score += linesCleared * linesCleared * 100 * level;
+                level = Math.floor(lines / 10) + 1;
+                dropInterval = Math.max(100, 1000 - (level - 1) * 100);
+
+                document.getElementById('score').textContent = score;
+                document.getElementById('lines').textContent = lines;
+                document.getElementById('level').textContent = level;
+            }
+        }
+
+        function keyPressed() {
+            if (gameOver && key === 'r') {
+                resetGame();
+                return;
+            }
+
+            if (key === 'p' || key === 'P') {
+                paused = !paused;
+                return;
+            }
+
+            if (paused || gameOver) return;
+
+            if (keyCode === LEFT_ARROW) {
+                currentPiece.move(-1, 0);
+            } else if (keyCode === RIGHT_ARROW) {
+                currentPiece.move(1, 0);
+            } else if (keyCode === DOWN_ARROW) {
+                if (currentPiece.move(0, 1)) {
+                    score += 1;
+                    document.getElementById('score').textContent = score;
+                }
+            } else if (keyCode === UP_ARROW) {
+                currentPiece.rotate();
+            } else if (key === ' ') {
+                while (currentPiece.move(0, 1)) {
+                    score += 2;
+                }
+                document.getElementById('score').textContent = score;
+            }
+        }
+
+        function resetGame() {
+            grid = [];
+            for (let i = 0; i < ROWS; i++) {
+                grid[i] = Array(COLS).fill(0);
+            }
+            currentPiece = new Piece();
+            gameOver = false;
+            paused = false;
+            score = 0;
+            lines = 0;
+            level = 1;
+            dropCounter = 0;
+            dropInterval = 1000;
+
+            document.getElementById('score').textContent = score;
+            document.getElementById('lines').textContent = lines;
+            document.getElementById('level').textContent = level;
+        }
+    </script>
+</body>
+</html>

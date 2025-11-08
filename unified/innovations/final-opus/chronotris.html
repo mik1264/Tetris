@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chronotris - Multi-Timeline Tetris</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            color: #fff;
+        }
+
+        .game-container {
+            text-align: center;
+            background: rgba(26, 26, 46, 0.95);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            border: 2px solid #e94560;
+        }
+
+        h1 {
+            color: #e94560;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .subtitle {
+            color: #a8a8a8;
+            font-style: italic;
+            margin-bottom: 20px;
+        }
+
+        .timelines-container {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            align-items: flex-start;
+            margin: 20px 0;
+        }
+
+        .timeline {
+            position: relative;
+        }
+
+        .timeline-label {
+            background: linear-gradient(135deg, #e94560, #c73650);
+            padding: 8px 20px;
+            border-radius: 10px 10px 0 0;
+            font-weight: bold;
+            font-size: 1.1em;
+            margin-bottom: -3px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .timeline-past .timeline-label {
+            background: linear-gradient(135deg, #666, #444);
+        }
+
+        .timeline-present .timeline-label {
+            background: linear-gradient(135deg, #e94560, #c73650);
+            animation: presentPulse 2s infinite;
+        }
+
+        @keyframes presentPulse {
+            0%, 100% { box-shadow: 0 0 10px rgba(233, 69, 96, 0.5); }
+            50% { box-shadow: 0 0 20px rgba(233, 69, 96, 0.8); }
+        }
+
+        .timeline-future .timeline-label {
+            background: linear-gradient(135deg, #4a90e2, #357abd);
+        }
+
+        canvas {
+            border: 3px solid #333;
+            background: #0a0a0a;
+            display: block;
+        }
+
+        .timeline-past canvas {
+            border-color: #666;
+            opacity: 0.8;
+        }
+
+        .timeline-present canvas {
+            border-color: #e94560;
+            box-shadow: 0 0 20px rgba(233, 69, 96, 0.3);
+        }
+
+        .timeline-future canvas {
+            border-color: #4a90e2;
+            opacity: 0.9;
+        }
+
+        .temporal-effects {
+            margin-top: 10px;
+            font-size: 0.85em;
+            color: #a8a8a8;
+        }
+
+        .side-panel {
+            margin-top: 20px;
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .info-box {
+            background: rgba(22, 33, 62, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #333;
+            min-width: 150px;
+        }
+
+        .info-box h3 {
+            color: #e94560;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .score, .level {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #fff;
+        }
+
+        .time-splice-indicator {
+            background: linear-gradient(135deg, rgba(233, 69, 96, 0.2), rgba(74, 144, 226, 0.2));
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #e94560;
+            margin: 10px auto;
+            max-width: 400px;
+        }
+
+        .time-splice-indicator h4 {
+            color: #e94560;
+            margin-bottom: 8px;
+        }
+
+        .splice-meter {
+            width: 100%;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .splice-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #e94560, #4a90e2);
+            transition: width 0.3s;
+            animation: timeFlow 2s linear infinite;
+        }
+
+        @keyframes timeFlow {
+            from { background-position: 0 0; }
+            to { background-position: 100px 0; }
+        }
+
+        .controls {
+            background: rgba(22, 33, 62, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #333;
+            text-align: left;
+            font-size: 0.85em;
+            margin: 20px auto;
+            max-width: 500px;
+        }
+
+        .controls h3 {
+            color: #e94560;
+            margin-bottom: 10px;
+        }
+
+        .controls p {
+            margin: 5px 0;
+            color: #fff;
+        }
+
+        .controls .special {
+            color: #4a90e2;
+            font-weight: bold;
+        }
+
+        button {
+            margin-top: 20px;
+            padding: 12px 30px;
+            font-size: 1.1em;
+            font-weight: bold;
+            background: linear-gradient(135deg, #e94560, #c73650);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 10px rgba(233, 69, 96, 0.3);
+            font-family: 'Courier New', monospace;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(233, 69, 96, 0.5);
+        }
+
+        .intro-screen {
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .intro-screen.hidden {
+            display: none;
+        }
+
+        .quote {
+            background: rgba(233, 69, 96, 0.1);
+            border-left: 4px solid #e94560;
+            padding: 20px;
+            margin: 20px 0;
+            font-style: italic;
+            border-radius: 5px;
+        }
+
+        .game-over {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(26, 26, 46, 0.98);
+            color: white;
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            display: none;
+            z-index: 1000;
+            border: 3px solid #e94560;
+            max-width: 500px;
+        }
+
+        .game-over.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <!-- Intro Screen -->
+        <div class="intro-screen" id="introScreen">
+            <h1>⏰ Chronotris</h1>
+            <p class="subtitle">Multi-Timeline Tetris</p>
+
+            <div class="quote">
+                "Time is an illusion. Lunchtime doubly so."
+                <br>— Douglas Adams
+                <br><br>
+                "The past, present and future are only illusions, even if stubborn ones."
+                <br>— Albert Einstein
+            </div>
+
+            <div style="margin: 20px 0; line-height: 1.8;">
+                <h3 style="color: #e94560; margin-bottom: 15px;">Master Three Timelines Simultaneously</h3>
+                <p>In Chronotris, you control <strong>three parallel timelines</strong> at once!</p>
+                <br>
+                <p><strong>The Timelines:</strong></p>
+                <ul style="margin-left: 20px; margin-top: 10px;">
+                    <li><span style="color: #666;">PAST:</span> What has happened - affects the present</li>
+                    <li><span style="color: #e94560;">PRESENT:</span> Your main timeline - what is happening now</li>
+                    <li><span style="color: #4a90e2;">FUTURE:</span> Ghost preview of what will happen</li>
+                </ul>
+                <br>
+                <p><strong>Temporal Mechanics:</strong></p>
+                <ul style="margin-left: 20px; margin-top: 10px;">
+                    <li>Clearing lines in PAST causes cascade effects in PRESENT</li>
+                    <li>FUTURE shows 3 pieces ahead as ghosts</li>
+                    <li>Press SPACE to merge all timelines for 10 seconds!</li>
+                    <li>Create paradoxes at your own risk...</li>
+                </ul>
+            </div>
+
+            <button onclick="startGame()">Enter the Time Stream</button>
+        </div>
+
+        <!-- Main Game -->
+        <div id="mainGame" style="display: none;">
+            <h1>⏰ Chronotris</h1>
+            <p class="subtitle">Past, Present, and Future Converge</p>
+
+            <div class="timelines-container">
+                <div class="timeline timeline-past">
+                    <div class="timeline-label">PAST</div>
+                    <canvas id="past" width="200" height="400"></canvas>
+                    <div class="temporal-effects">Echoes of what was</div>
+                </div>
+
+                <div class="timeline timeline-present">
+                    <div class="timeline-label">PRESENT</div>
+                    <canvas id="present" width="200" height="400"></canvas>
+                    <div class="temporal-effects">The eternal now</div>
+                </div>
+
+                <div class="timeline timeline-future">
+                    <div class="timeline-label">FUTURE</div>
+                    <canvas id="future" width="200" height="400"></canvas>
+                    <div class="temporal-effects">Shadows of what's to come</div>
+                </div>
+            </div>
+
+            <div class="time-splice-indicator">
+                <h4>Time Splice Energy</h4>
+                <div class="splice-meter">
+                    <div class="splice-fill" id="spliceFill" style="width: 100%"></div>
+                </div>
+                <p style="margin-top: 8px; font-size: 0.9em;">Press SPACE to merge timelines</p>
+            </div>
+
+            <div class="side-panel">
+                <div class="info-box">
+                    <h3>Temporal Score</h3>
+                    <div class="score" id="score">0</div>
+                </div>
+                <div class="info-box">
+                    <h3>Time Level</h3>
+                    <div class="level" id="level">1</div>
+                </div>
+                <div class="info-box">
+                    <h3>Paradoxes</h3>
+                    <div id="paradoxes" style="color: #ffc107;">0</div>
+                </div>
+            </div>
+
+            <div class="controls">
+                <h3>Temporal Controls</h3>
+                <p><strong>←/→</strong> Move (affects all timelines)</p>
+                <p><strong>↓</strong> Soft Drop</p>
+                <p><strong>↑</strong> Rotate</p>
+                <p class="special">SPACE - Time Splice (merge timelines)</p>
+                <p><strong>P</strong> Pause time</p>
+            </div>
+
+            <button id="startBtn">Start Time Journey</button>
+        </div>
+    </div>
+
+    <div class="game-over" id="gameOver">
+        <h2>Time Collapsed</h2>
+        <p>Final Score: <span id="finalScore">0</span></p>
+        <p>Timelines Mastered: <span id="finalLevel">1</span></p>
+        <p>Paradoxes Created: <span id="finalParadoxes">0</span></p>
+        <button onclick="location.reload()">Reset Timeline</button>
+    </div>
+
+    <script>
+        // Three canvases for three timelines
+        const canvasPast = document.getElementById('past');
+        const canvasPresent = document.getElementById('present');
+        const canvasFuture = document.getElementById('future');
+        const ctxPast = canvasPast.getContext('2d');
+        const ctxPresent = canvasPresent.getContext('2d');
+        const ctxFuture = canvasFuture.getContext('2d');
+
+        const COLS = 10;
+        const ROWS = 20;
+        const BLOCK_SIZE = 20;
+
+        // Tetromino shapes
+        const SHAPES = {
+            'I': [[1, 1, 1, 1]],
+            'O': [[1, 1], [1, 1]],
+            'T': [[0, 1, 0], [1, 1, 1]],
+            'S': [[0, 1, 1], [1, 1, 0]],
+            'Z': [[1, 1, 0], [0, 1, 1]],
+            'J': [[1, 0, 0], [1, 1, 1]],
+            'L': [[0, 0, 1], [1, 1, 1]]
+        };
+
+        const COLORS = {
+            'I': '#00f0f0',
+            'O': '#f0f000',
+            'T': '#a000f0',
+            'S': '#00f000',
+            'Z': '#f00000',
+            'J': '#0000f0',
+            'L': '#f0a000'
+        };
+
+        // Three boards for three timelines
+        let boardPast = [];
+        let boardPresent = [];
+        let boardFuture = [];
+
+        let currentPiecePast = null;
+        let currentPiecePresent = null;
+        let currentPieceFuture = null;
+
+        let pieceQueue = []; // Queue of upcoming pieces
+        let score = 0;
+        let level = 1;
+        let lines = 0;
+        let paradoxes = 0;
+        let gameLoop = null;
+        let dropCounter = 0;
+        let dropInterval = 1000;
+        let lastTime = 0;
+        let isPaused = false;
+        let gameRunning = false;
+        let timeSpliceActive = false;
+        let timeSpliceEnergy = 100;
+        let timeSpliceEndTime = 0;
+
+        function startGame() {
+            document.getElementById('introScreen').classList.add('hidden');
+            document.getElementById('mainGame').style.display = 'block';
+        }
+
+        function createBoards() {
+            boardPast = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+            boardPresent = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+            boardFuture = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+        }
+
+        function drawBlock(ctx, x, y, color, opacity = 1) {
+            ctx.globalAlpha = opacity;
+            ctx.fillStyle = color;
+            ctx.fillRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+            ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+            ctx.globalAlpha = 1;
+        }
+
+        function drawBoard(ctx, board, opacity = 1) {
+            ctx.fillStyle = '#0a0a0a';
+            ctx.fillRect(0, 0, COLS * BLOCK_SIZE, ROWS * BLOCK_SIZE);
+
+            for (let row = 0; row < ROWS; row++) {
+                for (let col = 0; col < COLS; col++) {
+                    if (board[row][col]) {
+                        drawBlock(ctx, col, row, board[row][col], opacity);
+                    }
+                }
+            }
+
+            // Draw grid
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+            ctx.lineWidth = 1;
+            for (let i = 1; i < COLS; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i * BLOCK_SIZE, 0);
+                ctx.lineTo(i * BLOCK_SIZE, ROWS * BLOCK_SIZE);
+                ctx.stroke();
+            }
+            for (let i = 1; i < ROWS; i++) {
+                ctx.beginPath();
+                ctx.moveTo(0, i * BLOCK_SIZE);
+                ctx.lineTo(COLS * BLOCK_SIZE, i * BLOCK_SIZE);
+                ctx.stroke();
+            }
+        }
+
+        function createPiece() {
+            const pieces = Object.keys(SHAPES);
+            const type = pieces[Math.floor(Math.random() * pieces.length)];
+            return {
+                shape: SHAPES[type],
+                color: COLORS[type],
+                x: Math.floor(COLS / 2) - Math.floor(SHAPES[type][0].length / 2),
+                y: 0,
+                type: type
+            };
+        }
+
+        function initPieceQueue() {
+            pieceQueue = [];
+            for (let i = 0; i < 5; i++) {
+                pieceQueue.push(createPiece());
+            }
+        }
+
+        function getNextPiece() {
+            const piece = pieceQueue.shift();
+            pieceQueue.push(createPiece());
+            return {...piece}; // Return a copy
+        }
+
+        function drawPiece(ctx, piece, opacity = 1) {
+            piece.shape.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value) {
+                        drawBlock(ctx, piece.x + x, piece.y + y, piece.color, opacity);
+                    }
+                });
+            });
+        }
+
+        function checkCollision(piece, board, offsetX = 0, offsetY = 0) {
+            for (let y = 0; y < piece.shape.length; y++) {
+                for (let x = 0; x < piece.shape[y].length; x++) {
+                    if (piece.shape[y][x]) {
+                        const newX = piece.x + x + offsetX;
+                        const newY = piece.y + y + offsetY;
+
+                        if (newX < 0 || newX >= COLS || newY >= ROWS) {
+                            return true;
+                        }
+
+                        if (newY >= 0 && board[newY][newX]) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        function mergePiece(piece, board) {
+            piece.shape.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value) {
+                        const boardY = piece.y + y;
+                        const boardX = piece.x + x;
+                        if (boardY >= 0) {
+                            board[boardY][boardX] = piece.color;
+                        }
+                    }
+                });
+            });
+        }
+
+        function clearLines(board, timeline) {
+            let linesCleared = 0;
+
+            for (let row = ROWS - 1; row >= 0; row--) {
+                if (board[row].every(cell => cell !== 0)) {
+                    board.splice(row, 1);
+                    board.unshift(Array(COLS).fill(0));
+                    linesCleared++;
+                    row++;
+                }
+            }
+
+            if (linesCleared > 0) {
+                lines += linesCleared;
+
+                // Temporal cascade: clearing in past affects present
+                if (timeline === 'past') {
+                    // Add bonus lines to present
+                    for (let i = 0; i < linesCleared; i++) {
+                        if (Math.random() < 0.5) {
+                            const row = ROWS - 1;
+                            for (let col = 0; col < COLS; col++) {
+                                if (Math.random() < 0.3) {
+                                    boardPresent[row][col] = 0; // Clear some blocks in present
+                                }
+                            }
+                        }
+                    }
+                    score += linesCleared * 200; // Bonus for past manipulation
+                } else if (timeline === 'present') {
+                    score += [0, 40, 100, 300, 1200][linesCleared] * level;
+                }
+
+                updateScore();
+            }
+
+            return linesCleared;
+        }
+
+        function rotate(piece) {
+            const newShape = piece.shape[0].map((_, i) =>
+                piece.shape.map(row => row[i]).reverse()
+            );
+            return { ...piece, shape: newShape };
+        }
+
+        function movePieces(direction) {
+            if (isPaused) return;
+
+            // Move all timeline pieces
+            [
+                { piece: currentPiecePast, board: boardPast },
+                { piece: currentPiecePresent, board: boardPresent },
+                { piece: currentPieceFuture, board: boardFuture }
+            ].forEach(({ piece, board }) => {
+                if (!piece) return;
+
+                if (direction === 'left' && !checkCollision(piece, board, -1, 0)) {
+                    piece.x--;
+                } else if (direction === 'right' && !checkCollision(piece, board, 1, 0)) {
+                    piece.x++;
+                }
+            });
+        }
+
+        function dropPieces() {
+            if (isPaused) return;
+
+            // Drop pieces in each timeline at different speeds
+            if (currentPiecePast) {
+                if (!checkCollision(currentPiecePast, boardPast, 0, 1)) {
+                    currentPiecePast.y++;
+                } else {
+                    mergePiece(currentPiecePast, boardPast);
+                    clearLines(boardPast, 'past');
+                    currentPiecePast = currentPiecePresent ? {...currentPiecePresent} : null;
+                    if (currentPiecePast) currentPiecePast.y = 0;
+                }
+            }
+
+            if (currentPiecePresent) {
+                if (!checkCollision(currentPiecePresent, boardPresent, 0, 1)) {
+                    currentPiecePresent.y++;
+                } else {
+                    mergePiece(currentPiecePresent, boardPresent);
+                    clearLines(boardPresent, 'present');
+                    currentPiecePresent = currentPieceFuture ? {...currentPieceFuture} : null;
+                    if (currentPiecePresent) currentPiecePresent.y = 0;
+                }
+            }
+
+            if (currentPieceFuture) {
+                if (!checkCollision(currentPieceFuture, boardFuture, 0, 1)) {
+                    currentPieceFuture.y++;
+                } else {
+                    mergePiece(currentPieceFuture, boardFuture);
+                    clearLines(boardFuture, 'future');
+                    currentPieceFuture = getNextPiece();
+                }
+            }
+
+            // Check for paradoxes (inconsistencies between timelines)
+            checkParadoxes();
+        }
+
+        function checkParadoxes() {
+            // Simple paradox: if future has fewer blocks than present
+            const presentBlocks = boardPresent.flat().filter(x => x).length;
+            const futureBlocks = boardFuture.flat().filter(x => x).length;
+
+            if (futureBlocks < presentBlocks - 10 && Math.random() < 0.1) {
+                paradoxes++;
+                // Paradox penalty: add random blocks
+                for (let i = 0; i < 3; i++) {
+                    const row = ROWS - 1 - i;
+                    const col = Math.floor(Math.random() * COLS);
+                    boardPresent[row][col] = '#ff0000';
+                }
+                document.getElementById('paradoxes').textContent = paradoxes;
+            }
+        }
+
+        function timeSplice() {
+            if (timeSpliceEnergy < 20 || timeSpliceActive) return;
+
+            timeSpliceActive = true;
+            timeSpliceEnergy -= 20;
+            timeSpliceEndTime = Date.now() + 5000; // 5 seconds
+
+            // Merge all timelines into present
+            for (let row = 0; row < ROWS; row++) {
+                for (let col = 0; col < COLS; col++) {
+                    if (boardPast[row][col] && !boardPresent[row][col]) {
+                        boardPresent[row][col] = boardPast[row][col];
+                    }
+                    if (boardFuture[row][col] && !boardPresent[row][col]) {
+                        boardPresent[row][col] = boardFuture[row][col];
+                    }
+                }
+            }
+
+            setTimeout(() => {
+                timeSpliceActive = false;
+            }, 5000);
+        }
+
+        function updateScore() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('level').textContent = level;
+            document.getElementById('paradoxes').textContent = paradoxes;
+
+            level = Math.floor(lines / 10) + 1;
+            dropInterval = Math.max(200, 1000 - (level - 1) * 100);
+        }
+
+        function gameOver() {
+            gameRunning = false;
+            cancelAnimationFrame(gameLoop);
+
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('finalLevel').textContent = level;
+            document.getElementById('finalParadoxes').textContent = paradoxes;
+            document.getElementById('gameOver').classList.add('show');
+        }
+
+        function update(time = 0) {
+            if (!gameRunning || isPaused) return;
+
+            const deltaTime = time - lastTime;
+            lastTime = time;
+            dropCounter += deltaTime;
+
+            if (dropCounter > dropInterval) {
+                dropPieces();
+                dropCounter = 0;
+            }
+
+            // Update time splice energy
+            if (!timeSpliceActive && timeSpliceEnergy < 100) {
+                timeSpliceEnergy = Math.min(100, timeSpliceEnergy + 0.1);
+                document.getElementById('spliceFill').style.width = timeSpliceEnergy + '%';
+            }
+
+            // Draw all timelines
+            drawBoard(ctxPast, boardPast, 0.8);
+            drawBoard(ctxPresent, boardPresent, 1);
+            drawBoard(ctxFuture, boardFuture, 0.9);
+
+            if (currentPiecePast) drawPiece(ctxPast, currentPiecePast, 0.8);
+            if (currentPiecePresent) drawPiece(ctxPresent, currentPiecePresent, 1);
+            if (currentPieceFuture) drawPiece(ctxFuture, currentPieceFuture, 0.5);
+
+            // Draw future preview pieces
+            let yOffset = 0;
+            for (let i = 0; i < 3; i++) {
+                if (pieceQueue[i]) {
+                    const ghostPiece = {...pieceQueue[i], y: yOffset};
+                    drawPiece(ctxFuture, ghostPiece, 0.2);
+                    yOffset += 3;
+                }
+            }
+
+            // Check game over
+            if (currentPiecePresent && checkCollision(currentPiecePresent, boardPresent)) {
+                gameOver();
+            }
+
+            gameLoop = requestAnimationFrame(update);
+        }
+
+        function toggleGame() {
+            if (!gameRunning) {
+                createBoards();
+                initPieceQueue();
+                score = 0;
+                level = 1;
+                lines = 0;
+                paradoxes = 0;
+                dropCounter = 0;
+                dropInterval = 1000;
+                isPaused = false;
+                gameRunning = true;
+                timeSpliceEnergy = 100;
+
+                currentPieceFuture = getNextPiece();
+                currentPiecePresent = getNextPiece();
+                currentPiecePast = getNextPiece();
+
+                updateScore();
+                document.getElementById('gameOver').classList.remove('show');
+                document.getElementById('startBtn').textContent = 'Restart Timeline';
+
+                lastTime = 0;
+                update();
+            } else {
+                location.reload();
+            }
+        }
+
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            if (!gameRunning) return;
+
+            switch(e.key) {
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    movePieces('left');
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    movePieces('right');
+                    break;
+                case 'ArrowDown':
+                    e.preventDefault();
+                    dropPieces();
+                    score += 1;
+                    updateScore();
+                    break;
+                case 'ArrowUp':
+                    e.preventDefault();
+                    if (!isPaused) {
+                        // Rotate all pieces
+                        if (currentPiecePast) {
+                            const rotated = rotate(currentPiecePast);
+                            if (!checkCollision(rotated, boardPast)) {
+                                currentPiecePast = rotated;
+                            }
+                        }
+                        if (currentPiecePresent) {
+                            const rotated = rotate(currentPiecePresent);
+                            if (!checkCollision(rotated, boardPresent)) {
+                                currentPiecePresent = rotated;
+                            }
+                        }
+                        if (currentPieceFuture) {
+                            const rotated = rotate(currentPieceFuture);
+                            if (!checkCollision(rotated, boardFuture)) {
+                                currentPieceFuture = rotated;
+                            }
+                        }
+                    }
+                    break;
+                case ' ':
+                    e.preventDefault();
+                    timeSplice();
+                    break;
+                case 'p':
+                case 'P':
+                    e.preventDefault();
+                    isPaused = !isPaused;
+                    if (!isPaused) {
+                        lastTime = performance.now();
+                        update(lastTime);
+                    }
+                    break;
+            }
+        });
+
+        document.getElementById('startBtn').onclick = toggleGame;
+
+        // Initial draw
+        createBoards();
+        drawBoard(ctxPast, boardPast, 0.8);
+        drawBoard(ctxPresent, boardPresent, 1);
+        drawBoard(ctxFuture, boardFuture, 0.9);
+    </script>
+</body>
+</html>

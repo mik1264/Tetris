@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js Tetris - Particle Effects</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: radial-gradient(circle at 50% 50%, #1a0033 0%, #000000 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        #container {
+            position: relative;
+        }
+
+        #game-canvas {
+            border-radius: 25px;
+            box-shadow: 0 0 50px rgba(138, 43, 226, 0.5), 0 0 100px rgba(75, 0, 130, 0.3);
+        }
+
+        .ui-overlay {
+            position: absolute;
+            color: white;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(138, 43, 226, 0.8);
+            pointer-events: none;
+        }
+
+        #stats {
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            border-radius: 15px;
+            border: 2px solid rgba(138, 43, 226, 0.5);
+        }
+
+        #stats h3 {
+            color: #ba55d3;
+            margin-bottom: 15px;
+            font-size: 1.4em;
+            text-align: center;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            font-size: 1.2em;
+        }
+
+        .stat-value {
+            color: #ba55d3;
+            margin-left: 15px;
+        }
+
+        #particle-count {
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px 25px;
+            border-radius: 10px;
+            border: 2px solid rgba(138, 43, 226, 0.5);
+            font-size: 1.1em;
+        }
+
+        #controls {
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid rgba(138, 43, 226, 0.5);
+            text-align: center;
+        }
+
+        #start-btn {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #8a2be2 0%, #4b0082 100%);
+            color: white;
+            border: 3px solid #ba55d3;
+            padding: 30px 60px;
+            font-size: 1.8em;
+            border-radius: 20px;
+            cursor: pointer;
+            box-shadow: 0 0 30px rgba(138, 43, 226, 0.6);
+            pointer-events: auto;
+            transition: all 0.3s ease;
+        }
+
+        #start-btn:hover {
+            transform: translate(-50%, -50%) scale(1.1);
+            box-shadow: 0 0 50px rgba(138, 43, 226, 1);
+        }
+
+        #start-btn.hidden {
+            display: none;
+        }
+
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            color: white;
+            padding: 50px;
+            border-radius: 25px;
+            text-align: center;
+            display: none;
+            border: 3px solid #ba55d3;
+            box-shadow: 0 0 40px rgba(138, 43, 226, 0.8);
+        }
+
+        .game-over.show {
+            display: block;
+        }
+
+        .game-over h2 {
+            font-size: 3.5em;
+            margin-bottom: 30px;
+            color: #ba55d3;
+            text-shadow: 0 0 20px rgba(138, 43, 226, 1);
+        }
+
+        .game-over p {
+            font-size: 1.5em;
+            margin: 15px 0;
+        }
+
+        .game-over button {
+            background: linear-gradient(135deg, #8a2be2 0%, #4b0082 100%);
+            color: white;
+            border: 2px solid #ba55d3;
+            padding: 20px 40px;
+            font-size: 1.4em;
+            border-radius: 15px;
+            cursor: pointer;
+            margin-top: 30px;
+            transition: all 0.3s;
+        }
+
+        .game-over button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 30px rgba(138, 43, 226, 1);
+        }
+
+        h1 {
+            position: absolute;
+            top: -100px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 3.2em;
+            text-shadow: 0 0 20px rgba(138, 43, 226, 1);
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <h1>✨ Three.js Tetris - Particles</h1>
+        <canvas id="game-canvas"></canvas>
+
+        <div class="ui-overlay" id="stats">
+            <h3>💫 Stats</h3>
+            <div class="stat-row">
+                <span>Score:</span>
+                <span class="stat-value" id="score">0</span>
+            </div>
+            <div class="stat-row">
+                <span>Level:</span>
+                <span class="stat-value" id="level">1</span>
+            </div>
+            <div class="stat-row">
+                <span>Lines:</span>
+                <span class="stat-value" id="lines">0</span>
+            </div>
+        </div>
+
+        <div class="ui-overlay" id="particle-count">
+            Particles: <span id="particle-value">0</span>
+        </div>
+
+        <div class="ui-overlay" id="controls">
+            <strong>🎮 Controls</strong><br>
+            ←/→ Move | ↑ Rotate<br>
+            ↓ Drop | Space Hard Drop
+        </div>
+
+        <button id="start-btn">Start Particle Tetris</button>
+
+        <div class="game-over" id="game-over">
+            <h2>Game Over!</h2>
+            <p>Final Score: <span id="final-score">0</span></p>
+            <p>Total Particles: <span id="final-particles">0</span></p>
+            <button onclick="location.reload()">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        const BOARD_WIDTH = 10;
+        const BOARD_HEIGHT = 20;
+        const BLOCK_SIZE = 1;
+        const COLORS = {
+            I: 0x00f0f0, O: 0xf0f000, T: 0xa000f0,
+            S: 0x00f000, Z: 0xf00000, J: 0x0000f0, L: 0xf0a000
+        };
+        const SHAPES = {
+            I: [[1,1,1,1]], O: [[1,1],[1,1]], T: [[0,1,0],[1,1,1]],
+            S: [[0,1,1],[1,1,0]], Z: [[1,1,0],[0,1,1]],
+            J: [[1,0,0],[1,1,1]], L: [[0,0,1],[1,1,1]]
+        };
+
+        let gameState = {
+            board: Array(BOARD_HEIGHT).fill().map(() => Array(BOARD_WIDTH).fill(null)),
+            boardMeshes: Array(BOARD_HEIGHT).fill().map(() => Array(BOARD_WIDTH).fill(null)),
+            currentPiece: null,
+            currentMeshes: [],
+            nextPiece: null,
+            position: { x: 0, y: 0 },
+            score: 0,
+            lines: 0,
+            level: 1,
+            totalParticles: 0,
+            gameOver: false,
+            paused: false,
+            gameLoop: null
+        };
+
+        const particles = [];
+        const trailParticles = [];
+
+        // Three.js Setup
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x000000, 0.02);
+
+        const camera = new THREE.PerspectiveCamera(75, 800 / 600, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({
+            canvas: document.getElementById('game-canvas'),
+            antialias: true
+        });
+
+        renderer.setSize(800, 600);
+        renderer.setClearColor(0x000000);
+
+        camera.position.set(5, 10, 22);
+        camera.lookAt(5, 10, 0);
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
+        scene.add(ambientLight);
+
+        const pointLight1 = new THREE.PointLight(0x8a2be2, 1, 50);
+        pointLight1.position.set(5, 15, 10);
+        scene.add(pointLight1);
+
+        const pointLight2 = new THREE.PointLight(0x4b0082, 0.8, 50);
+        pointLight2.position.set(-5, 15, -10);
+        scene.add(pointLight2);
+
+        // Particle system
+        class Particle {
+            constructor(x, y, z, color) {
+                const geometry = new THREE.SphereGeometry(0.1, 8, 8);
+                const material = new THREE.MeshBasicMaterial({
+                    color: color,
+                    transparent: true,
+                    opacity: 1
+                });
+                this.mesh = new THREE.Mesh(geometry, material);
+                this.mesh.position.set(x, y, z);
+
+                this.velocity = new THREE.Vector3(
+                    (Math.random() - 0.5) * 0.3,
+                    Math.random() * 0.5 + 0.2,
+                    (Math.random() - 0.5) * 0.3
+                );
+                this.life = 1.0;
+                this.decay = 0.01 + Math.random() * 0.01;
+
+                scene.add(this.mesh);
+            }
+
+            update() {
+                this.mesh.position.add(this.velocity);
+                this.velocity.y -= 0.01; // gravity
+                this.life -= this.decay;
+                this.mesh.material.opacity = this.life;
+
+                return this.life > 0;
+            }
+
+            destroy() {
+                scene.remove(this.mesh);
+            }
+        }
+
+        class TrailParticle {
+            constructor(x, y, z, color) {
+                const geometry = new THREE.SphereGeometry(0.05, 6, 6);
+                const material = new THREE.MeshBasicMaterial({
+                    color: color,
+                    transparent: true,
+                    opacity: 0.6
+                });
+                this.mesh = new THREE.Mesh(geometry, material);
+                this.mesh.position.set(x, y, z);
+                this.life = 0.5;
+
+                scene.add(this.mesh);
+            }
+
+            update() {
+                this.life -= 0.05;
+                this.mesh.material.opacity = this.life;
+                return this.life > 0;
+            }
+
+            destroy() {
+                scene.remove(this.mesh);
+            }
+        }
+
+        function createExplosion(x, y, color, count = 30) {
+            for (let i = 0; i < count; i++) {
+                const particle = new Particle(
+                    x + (Math.random() - 0.5) * 0.5,
+                    y + (Math.random() - 0.5) * 0.5,
+                    (Math.random() - 0.5) * 0.5,
+                    color
+                );
+                particles.push(particle);
+                gameState.totalParticles++;
+            }
+        }
+
+        function createTrail(x, y, color) {
+            const trail = new TrailParticle(x, y, 0, color);
+            trailParticles.push(trail);
+        }
+
+        function updateParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                if (!particles[i].update()) {
+                    particles[i].destroy();
+                    particles.splice(i, 1);
+                }
+            }
+
+            for (let i = trailParticles.length - 1; i >= 0; i--) {
+                if (!trailParticles[i].update()) {
+                    trailParticles[i].destroy();
+                    trailParticles.splice(i, 1);
+                }
+            }
+
+            document.getElementById('particle-value').textContent = particles.length + trailParticles.length;
+        }
+
+        // Board frame
+        function createBoardFrame() {
+            const geometry = new THREE.BoxGeometry(BOARD_WIDTH + 0.2, BOARD_HEIGHT, 0.2);
+            const material = new THREE.MeshPhongMaterial({
+                color: 0x4b0082,
+                transparent: true,
+                opacity: 0.3,
+                emissive: 0x8a2be2,
+                emissiveIntensity: 0.2
+            });
+
+            const backWall = new THREE.Mesh(geometry, material);
+            backWall.position.set(BOARD_WIDTH / 2, BOARD_HEIGHT / 2, -0.1);
+            scene.add(backWall);
+
+            // Glowing edges
+            const edgesGeometry = new THREE.EdgesGeometry(geometry);
+            const edgesMaterial = new THREE.LineBasicMaterial({ color: 0xba55d3 });
+            const edges = new THREE.LineSegments(edgesGeometry, edgesMaterial);
+            backWall.add(edges);
+        }
+
+        function createBlock(color, x, y) {
+            const geometry = new THREE.BoxGeometry(BLOCK_SIZE * 0.95, BLOCK_SIZE * 0.95, BLOCK_SIZE * 0.95);
+            const material = new THREE.MeshPhongMaterial({
+                color: color,
+                emissive: color,
+                emissiveIntensity: 0.3,
+                shininess: 100
+            });
+            const cube = new THREE.Mesh(geometry, material);
+
+            const edges = new THREE.EdgesGeometry(geometry);
+            const edgeMaterial = new THREE.LineBasicMaterial({ color: 0xffffff });
+            const edgeLines = new THREE.LineSegments(edges, edgeMaterial);
+            cube.add(edgeLines);
+
+            cube.position.set(x + BLOCK_SIZE / 2, y + BLOCK_SIZE / 2, 0);
+            return cube;
+        }
+
+        function createPiece() {
+            const pieces = Object.keys(SHAPES);
+            const type = pieces[Math.floor(Math.random() * pieces.length)];
+            return { type, shape: SHAPES[type], color: COLORS[type] };
+        }
+
+        function drawCurrentPiece() {
+            gameState.currentMeshes.forEach(mesh => scene.remove(mesh));
+            gameState.currentMeshes = [];
+
+            if (!gameState.currentPiece) return;
+
+            const { shape, color } = gameState.currentPiece;
+            const { x, y } = gameState.position;
+
+            shape.forEach((row, dy) => {
+                row.forEach((cell, dx) => {
+                    if (cell) {
+                        const posY = BOARD_HEIGHT - (y + dy) - 1;
+                        const posX = x + dx;
+                        const mesh = createBlock(color, posX, posY);
+                        scene.add(mesh);
+                        gameState.currentMeshes.push(mesh);
+
+                        // Create trail particles
+                        if (Math.random() < 0.3) {
+                            createTrail(
+                                posX + BLOCK_SIZE / 2,
+                                posY + BLOCK_SIZE / 2,
+                                color
+                            );
+                        }
+                    }
+                });
+            });
+        }
+
+        function drawBoard() {
+            gameState.boardMeshes.forEach(row => {
+                row.forEach(mesh => {
+                    if (mesh) scene.remove(mesh);
+                });
+            });
+
+            for (let y = 0; y < BOARD_HEIGHT; y++) {
+                for (let x = 0; x < BOARD_WIDTH; x++) {
+                    if (gameState.board[y][x]) {
+                        const posY = BOARD_HEIGHT - y - 1;
+                        const mesh = createBlock(gameState.board[y][x], x, posY);
+                        scene.add(mesh);
+                        gameState.boardMeshes[y][x] = mesh;
+                    } else {
+                        gameState.boardMeshes[y][x] = null;
+                    }
+                }
+            }
+        }
+
+        function checkCollision(piece, pos) {
+            const { shape } = piece;
+            const { x, y } = pos;
+            for (let dy = 0; dy < shape.length; dy++) {
+                for (let dx = 0; dx < shape[dy].length; dx++) {
+                    if (shape[dy][dx]) {
+                        const newX = x + dx, newY = y + dy;
+                        if (newX < 0 || newX >= BOARD_WIDTH || newY >= BOARD_HEIGHT) return true;
+                        if (newY >= 0 && gameState.board[newY][newX]) return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        function rotatePiece(piece) {
+            const rotated = piece.shape[0].map((_, i) =>
+                piece.shape.map(row => row[i]).reverse()
+            );
+            return { ...piece, shape: rotated };
+        }
+
+        function lockPiece() {
+            const { shape, color } = gameState.currentPiece;
+            const { x, y } = gameState.position;
+
+            shape.forEach((row, dy) => {
+                row.forEach((cell, dx) => {
+                    if (cell && y + dy >= 0) {
+                        gameState.board[y + dy][x + dx] = color;
+
+                        // Particle effect on lock
+                        const posY = BOARD_HEIGHT - (y + dy) - 1;
+                        createExplosion(x + dx + 0.5, posY + 0.5, color, 10);
+                    }
+                });
+            });
+
+            clearLines();
+            spawnPiece();
+        }
+
+        function clearLines() {
+            let linesCleared = 0;
+            const clearedLinePositions = [];
+
+            for (let y = BOARD_HEIGHT - 1; y >= 0; y--) {
+                if (gameState.board[y].every(cell => cell !== null)) {
+                    // Create massive explosion for cleared line
+                    for (let x = 0; x < BOARD_WIDTH; x++) {
+                        const posY = BOARD_HEIGHT - y - 1;
+                        createExplosion(x + 0.5, posY + 0.5, gameState.board[y][x], 20);
+                    }
+
+                    gameState.board.splice(y, 1);
+                    gameState.board.unshift(Array(BOARD_WIDTH).fill(null));
+                    linesCleared++;
+                    y++;
+                }
+            }
+
+            if (linesCleared > 0) {
+                gameState.lines += linesCleared;
+                gameState.score += [0, 100, 300, 500, 800][linesCleared] * gameState.level;
+                gameState.level = Math.floor(gameState.lines / 10) + 1;
+                updateStats();
+            }
+        }
+
+        function spawnPiece() {
+            gameState.currentPiece = gameState.nextPiece || createPiece();
+            gameState.nextPiece = createPiece();
+            gameState.position = {
+                x: Math.floor(BOARD_WIDTH / 2) - Math.floor(gameState.currentPiece.shape[0].length / 2),
+                y: 0
+            };
+            if (checkCollision(gameState.currentPiece, gameState.position)) endGame();
+        }
+
+        function movePiece(dx, dy) {
+            const newPos = { x: gameState.position.x + dx, y: gameState.position.y + dy };
+            if (!checkCollision(gameState.currentPiece, newPos)) {
+                gameState.position = newPos;
+                drawCurrentPiece();
+                return true;
+            }
+            return false;
+        }
+
+        function rotate() {
+            const rotated = rotatePiece(gameState.currentPiece);
+            if (!checkCollision(rotated, gameState.position)) {
+                gameState.currentPiece = rotated;
+
+                // Rotation particle effect
+                const { x, y } = gameState.position;
+                const color = gameState.currentPiece.color;
+                createExplosion(x + 1, BOARD_HEIGHT - y - 1, color, 15);
+
+                drawCurrentPiece();
+            }
+        }
+
+        function hardDrop() {
+            while (movePiece(0, 1)) {}
+            lockPiece();
+            gameState.score += 20;
+            updateStats();
+        }
+
+        function gameLoop() {
+            if (gameState.paused || gameState.gameOver) return;
+            if (!movePiece(0, 1)) lockPiece();
+            drawBoard();
+            drawCurrentPiece();
+        }
+
+        function updateStats() {
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('level').textContent = gameState.level;
+            document.getElementById('lines').textContent = gameState.lines;
+        }
+
+        function endGame() {
+            gameState.gameOver = true;
+            clearInterval(gameState.gameLoop);
+
+            // Final explosion
+            for (let x = 0; x < BOARD_WIDTH; x++) {
+                for (let y = 0; y < BOARD_HEIGHT; y++) {
+                    if (gameState.board[y][x]) {
+                        setTimeout(() => {
+                            const posY = BOARD_HEIGHT - y - 1;
+                            createExplosion(x + 0.5, posY + 0.5, gameState.board[y][x], 25);
+                        }, y * 50);
+                    }
+                }
+            }
+
+            setTimeout(() => {
+                document.getElementById('final-score').textContent = gameState.score;
+                document.getElementById('final-particles').textContent = gameState.totalParticles;
+                document.getElementById('game-over').classList.add('show');
+            }, 1500);
+        }
+
+        function startGame() {
+            gameState = {
+                board: Array(BOARD_HEIGHT).fill().map(() => Array(BOARD_WIDTH).fill(null)),
+                boardMeshes: Array(BOARD_HEIGHT).fill().map(() => Array(BOARD_WIDTH).fill(null)),
+                currentPiece: null,
+                currentMeshes: [],
+                nextPiece: null,
+                position: { x: 0, y: 0 },
+                score: 0, lines: 0, level: 1,
+                totalParticles: 0,
+                gameOver: false, paused: false, gameLoop: null
+            };
+
+            spawnPiece();
+            drawBoard();
+            drawCurrentPiece();
+            updateStats();
+
+            const speed = Math.max(300, 1000 - (gameState.level - 1) * 100);
+            gameState.gameLoop = setInterval(gameLoop, speed);
+            document.getElementById('start-btn').classList.add('hidden');
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            updateParticles();
+
+            // Camera animation
+            const time = Date.now() * 0.0002;
+            camera.position.x = Math.sin(time) * 2 + 5;
+            camera.lookAt(5, 10, 0);
+
+            // Pulsing lights
+            pointLight1.intensity = 1 + Math.sin(time * 2) * 0.3;
+            pointLight2.intensity = 0.8 + Math.cos(time * 2) * 0.2;
+
+            renderer.render(scene, camera);
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (gameState.gameOver) return;
+            switch(e.key) {
+                case 'ArrowLeft': e.preventDefault(); movePiece(-1, 0); break;
+                case 'ArrowRight': e.preventDefault(); movePiece(1, 0); break;
+                case 'ArrowDown': e.preventDefault(); if (movePiece(0, 1)) { gameState.score++; updateStats(); } break;
+                case 'ArrowUp': e.preventDefault(); rotate(); break;
+                case ' ': e.preventDefault(); hardDrop(); break;
+                case 'p': case 'P': e.preventDefault(); gameState.paused = !gameState.paused; break;
+            }
+        });
+
+        document.getElementById('start-btn').addEventListener('click', startGame);
+
+        createBoardFrame();
+        animate();
+    </script>
+</body>
+</html>

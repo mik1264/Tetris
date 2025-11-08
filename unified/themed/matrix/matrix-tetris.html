@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matrix Tetris - Wake Up, Neo</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Share Tech Mono', 'Courier New', monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #000;
+            color: #00ff00;
+            overflow: hidden;
+        }
+
+        #matrix-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            opacity: 0.3;
+        }
+
+        .game-container {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 30px;
+            border-radius: 5px;
+            box-shadow: 0 0 50px rgba(0, 255, 0, 0.5);
+            border: 2px solid #00ff00;
+            max-width: 900px;
+        }
+
+        h1 {
+            color: #00ff00;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            text-shadow: 0 0 10px #00ff00, 0 0 20px #00ff00;
+            animation: flicker 2s infinite alternate;
+        }
+
+        @keyframes flicker {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.95; }
+        }
+
+        .subtitle {
+            color: #00ff00;
+            font-style: italic;
+            margin-bottom: 20px;
+            opacity: 0.8;
+        }
+
+        .game-area {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        canvas {
+            border: 2px solid #00ff00;
+            background: #000;
+            box-shadow: 0 0 30px rgba(0, 255, 0, 0.3);
+        }
+
+        #tetris {
+            cursor: crosshair;
+        }
+
+        .side-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            min-width: 280px;
+        }
+
+        .info-box {
+            background: rgba(0, 20, 0, 0.8);
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #00ff00;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
+        }
+
+        .info-box h3 {
+            color: #00ff00;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+            text-transform: uppercase;
+        }
+
+        .score, .level, .lines {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #00ff00;
+        }
+
+        .twist-status {
+            background: linear-gradient(135deg, rgba(0, 50, 0, 0.9), rgba(0, 20, 0, 0.9));
+            color: #00ff00;
+            padding: 12px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            border: 1px solid #00ff00;
+            font-size: 0.9em;
+        }
+
+        .twist-name {
+            font-weight: bold;
+            font-size: 1.1em;
+            margin-bottom: 5px;
+            text-shadow: 0 0 5px #00ff00;
+        }
+
+        .twist-desc {
+            font-size: 0.85em;
+            opacity: 0.9;
+            margin-top: 5px;
+        }
+
+        .power-bar {
+            background: rgba(0, 50, 0, 0.5);
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #00ff00;
+            margin-top: 5px;
+        }
+
+        .power-meter {
+            width: 100%;
+            height: 20px;
+            background: rgba(0, 20, 0, 0.8);
+            border: 1px solid #00ff00;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+
+        .power-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff00, #00aa00);
+            transition: width 0.3s;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+        }
+
+        .controls {
+            background: rgba(0, 20, 0, 0.8);
+            padding: 12px;
+            border-radius: 5px;
+            border: 1px solid #00ff00;
+            text-align: left;
+            font-size: 0.85em;
+        }
+
+        .controls h3 {
+            color: #00ff00;
+            margin-bottom: 8px;
+        }
+
+        .controls p {
+            margin: 4px 0;
+            color: #00ff00;
+        }
+
+        button {
+            margin-top: 15px;
+            padding: 12px 30px;
+            font-size: 1.1em;
+            font-weight: bold;
+            background: #000;
+            color: #00ff00;
+            border: 2px solid #00ff00;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: 'Share Tech Mono', monospace;
+            text-transform: uppercase;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+        }
+
+        button:hover {
+            background: #00ff00;
+            color: #000;
+            box-shadow: 0 0 30px rgba(0, 255, 0, 0.6);
+        }
+
+        .modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            color: #00ff00;
+            padding: 40px;
+            border-radius: 10px;
+            text-align: center;
+            display: none;
+            z-index: 1000;
+            border: 2px solid #00ff00;
+            box-shadow: 0 0 50px rgba(0, 255, 0, 0.5);
+            max-width: 600px;
+        }
+
+        .modal.show {
+            display: block;
+        }
+
+        .modal h2 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            color: #00ff00;
+            text-shadow: 0 0 20px #00ff00;
+        }
+
+        .modal p {
+            font-size: 1.1em;
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+
+        .pill-choice {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .pill {
+            padding: 15px 30px;
+            font-size: 1.2em;
+            cursor: pointer;
+            border: 2px solid;
+            border-radius: 50px;
+            transition: all 0.3s;
+            font-family: 'Share Tech Mono', monospace;
+            font-weight: bold;
+        }
+
+        .red-pill {
+            background: #ff0000;
+            color: #fff;
+            border-color: #ff0000;
+        }
+
+        .red-pill:hover {
+            box-shadow: 0 0 30px rgba(255, 0, 0, 0.8);
+            transform: scale(1.05);
+        }
+
+        .blue-pill {
+            background: #0000ff;
+            color: #fff;
+            border-color: #0000ff;
+        }
+
+        .blue-pill:hover {
+            box-shadow: 0 0 30px rgba(0, 0, 255, 0.8);
+            transform: scale(1.05);
+        }
+
+        .matrix-quote {
+            background: rgba(0, 50, 0, 0.3);
+            border-left: 4px solid #00ff00;
+            padding: 15px;
+            margin: 20px 0;
+            font-style: italic;
+            border-radius: 5px;
+        }
+
+        .glitch {
+            animation: glitch 0.3s infinite;
+        }
+
+        @keyframes glitch {
+            0% { transform: translate(0); }
+            20% { transform: translate(-2px, 2px); }
+            40% { transform: translate(-2px, -2px); }
+            60% { transform: translate(2px, 2px); }
+            80% { transform: translate(2px, -2px); }
+            100% { transform: translate(0); }
+        }
+
+        .unlocked {
+            color: #00ff00;
+            text-shadow: 0 0 10px #00ff00;
+        }
+
+        .locked {
+            color: #005500;
+            opacity: 0.5;
+        }
+
+        .intro-screen {
+            max-width: 700px;
+            line-height: 1.8;
+        }
+
+        .intro-screen.hidden {
+            display: none;
+        }
+
+        .twist-list {
+            text-align: left;
+            margin: 20px 0;
+        }
+
+        .twist-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: rgba(0, 30, 0, 0.5);
+            border-left: 3px solid #00ff00;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Matrix Digital Rain Background -->
+    <canvas id="matrix-bg"></canvas>
+
+    <div class="game-container">
+        <!-- Intro Screen -->
+        <div class="intro-screen" id="introScreen">
+            <h1>MATRIX TETRIS</h1>
+            <p class="subtitle">Wake up, Neo... The Matrix has you...</p>
+
+            <div class="matrix-quote">
+                "What is real? How do you define 'real'? If you're talking about what you can feel, what you can smell, what you can taste and see, then 'real' is simply electrical signals interpreted by your brain."
+            </div>
+
+            <div style="text-align: left; margin: 20px 0;">
+                <h3 style="color: #00ff00; margin-bottom: 15px;">THE SIMULATION:</h3>
+                <p>You think you're playing Tetris? Think again. This is the Matrix, and as you progress, reality itself will bend around you.</p>
+                <br>
+                <h3 style="color: #00ff00; margin-bottom: 10px;">10 PROGRESSIVE REALITY DISTORTIONS:</h3>
+
+                <div class="twist-list">
+                    <div class="twist-item">
+                        <strong>Level 1 - GLITCH VISION:</strong> See the code glitching
+                    </div>
+                    <div class="twist-item">
+                        <strong>Level 2 - RED/BLUE PILL:</strong> Choose your reality
+                    </div>
+                    <div class="twist-item">
+                        <strong>Level 3 - BULLET TIME:</strong> Slow down time (Press B)
+                    </div>
+                    <div class="twist-item">
+                        <strong>Level 4 - CODE VISION:</strong> See future as Matrix code
+                    </div>
+                    <div class="twist-item">
+                        <strong>Level 5 - AGENT SMITH:</strong> The system fights back
+                    </div>
+                    <div class="twist-item">
+                        <strong>Level 6 - DÉJÀ VU:</strong> Glitch in the Matrix
+                    </div>
+                    <div class="twist-item">
+                        <strong>Level 7 - THE ONE:</strong> Phase through reality (Press O)
+                    </div>
+                    <div class="twist-item">
+                        <strong>Level 8 - CONSTRUCT MODE:</strong> Delete reality (Click blocks)
+                    </div>
+                    <div class="twist-item">
+                        <strong>Level 9 - SYSTEM OVERRIDE:</strong> Control everything (Press S)
+                    </div>
+                    <div class="twist-item">
+                        <strong>Level 10 - ARCHITECT:</strong> You are the One
+                    </div>
+                </div>
+            </div>
+
+            <div class="matrix-quote">
+                "Free your mind, Neo. There is no Tetris."
+            </div>
+
+            <button onclick="startGame()">JACK IN</button>
+        </div>
+
+        <!-- Main Game -->
+        <div id="mainGame" style="display: none;">
+            <h1>MATRIX TETRIS</h1>
+            <p class="subtitle">Follow the white rabbit...</p>
+
+            <div class="game-area">
+                <canvas id="tetris" width="300" height="600"></canvas>
+
+                <div class="side-panel">
+                    <div class="twist-status" id="twistStatus">
+                        <div class="twist-name">ENTERING THE MATRIX</div>
+                        <div class="twist-desc">Standard reality... for now.</div>
+                    </div>
+
+                    <div class="info-box">
+                        <h3>Reality Level</h3>
+                        <div class="level" id="level">1</div>
+                    </div>
+
+                    <div class="info-box">
+                        <h3>System Score</h3>
+                        <div class="score" id="score">0</div>
+                    </div>
+
+                    <div class="info-box">
+                        <h3>Lines Freed</h3>
+                        <div class="lines" id="lines">0</div>
+                    </div>
+
+                    <div class="power-bar" id="powerBar" style="display: none;">
+                        <div style="font-size: 0.9em; margin-bottom: 5px;">POWER</div>
+                        <div class="power-meter">
+                            <div class="power-fill" id="powerFill" style="width: 100%;"></div>
+                        </div>
+                    </div>
+
+                    <div class="controls">
+                        <h3>Controls</h3>
+                        <p><strong>←/→</strong> Move</p>
+                        <p><strong>↓</strong> Soft Drop</p>
+                        <p><strong>↑</strong> Rotate</p>
+                        <p><strong>Space</strong> Hard Drop</p>
+                        <p><strong>P</strong> Pause</p>
+                        <p id="extraControls" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #00ff00;"></p>
+                    </div>
+                </div>
+            </div>
+
+            <button id="startBtn" onclick="toggleGame()">Start Game</button>
+        </div>
+    </div>
+
+    <!-- Red/Blue Pill Choice Modal -->
+    <div class="modal" id="pillModal">
+        <h2>CHOICE</h2>
+        <p>This is your last chance. After this, there is no turning back.</p>
+        <div class="matrix-quote">
+            "You take the blue pill - the story ends, you wake up in your bed and believe whatever you want to believe.<br><br>
+            You take the red pill - you stay in Wonderland, and I show you how deep the rabbit hole goes."
+        </div>
+        <div class="pill-choice">
+            <button class="pill blue-pill" onclick="choosePill('blue')">BLUE PILL<br><small style="font-size: 0.7em;">Slower, Controlled</small></button>
+            <button class="pill red-pill" onclick="choosePill('red')">RED PILL<br><small style="font-size: 0.7em;">Faster, 2x Points</small></button>
+        </div>
+    </div>
+
+    <!-- Game Over Modal -->
+    <div class="modal" id="gameOver">
+        <h2>DISCONNECTED</h2>
+        <p>Final Score: <span id="finalScore">0</span></p>
+        <p>Reality Level Reached: <span id="finalLevel">1</span></p>
+        <div class="matrix-quote" id="finalQuote"></div>
+        <button id="restartBtn" onclick="location.reload()">RE-ENTER MATRIX</button>
+    </div>
+
+    <script>
+        // Matrix Background Animation
+        const matrixCanvas = document.getElementById('matrix-bg');
+        const matrixCtx = matrixCanvas.getContext('2d');
+        matrixCanvas.width = window.innerWidth;
+        matrixCanvas.height = window.innerHeight;
+
+        const matrixChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^&*()_+-=[]{}|;:,.<>?';
+        const fontSize = 14;
+        const columns = matrixCanvas.width / fontSize;
+        const drops = Array(Math.floor(columns)).fill(1);
+
+        function drawMatrix() {
+            matrixCtx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+            matrixCtx.fillRect(0, 0, matrixCanvas.width, matrixCanvas.height);
+
+            matrixCtx.fillStyle = '#00ff00';
+            matrixCtx.font = fontSize + 'px monospace';
+
+            for (let i = 0; i < drops.length; i++) {
+                const text = matrixChars[Math.floor(Math.random() * matrixChars.length)];
+                matrixCtx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+                if (drops[i] * fontSize > matrixCanvas.height && Math.random() > 0.975) {
+                    drops[i] = 0;
+                }
+                drops[i]++;
+            }
+        }
+
+        setInterval(drawMatrix, 35);
+
+        // Tetris Game
+        const canvas = document.getElementById('tetris');
+        const ctx = canvas.getContext('2d');
+
+        const COLS = 10;
+        const ROWS = 20;
+        const BLOCK_SIZE = 30;
+
+        const SHAPES = {
+            'I': [[1, 1, 1, 1]],
+            'O': [[1, 1], [1, 1]],
+            'T': [[0, 1, 0], [1, 1, 1]],
+            'S': [[0, 1, 1], [1, 1, 0]],
+            'Z': [[1, 1, 0], [0, 1, 1]],
+            'J': [[1, 0, 0], [1, 1, 1]],
+            'L': [[0, 0, 1], [1, 1, 1]]
+        };
+
+        const COLORS = {
+            'I': '#00ff00',
+            'O': '#00ff00',
+            'T': '#00ff00',
+            'S': '#00ff00',
+            'Z': '#00ff00',
+            'J': '#00ff00',
+            'L': '#00ff00'
+        };
+
+        // Game state
+        let board = [];
+        let currentPiece = null;
+        let nextPiece = null;
+        let score = 0;
+        let level = 0;
+        let lines = 0;
+        let gameLoop = null;
+        let dropCounter = 0;
+        let dropInterval = 1000;
+        let lastTime = 0;
+        let isPaused = false;
+        let gameRunning = false;
+
+        // Matrix twists state
+        let currentTwist = 0;
+        let glitchMode = false;
+        let pillChoice = null;
+        let bulletTimeActive = false;
+        let bulletTimeCharges = 3;
+        let codeVisionActive = false;
+        let agentSmithInterval = null;
+        let theOneMode = false;
+        let theOneCharges = 3;
+        let constructMode = false;
+        let systemOverride = false;
+        let gravityPaused = false;
+
+        const TWISTS = [
+            { level: 0, name: "ENTERING THE MATRIX", desc: "Reality loading...", control: "" },
+            { level: 1, name: "GLITCH VISION", desc: "The code is showing through", control: "" },
+            { level: 2, name: "RED/BLUE PILL", desc: "Choose your reality", control: "" },
+            { level: 3, name: "BULLET TIME", desc: "Slow down the Matrix", control: "B - Bullet Time" },
+            { level: 4, name: "CODE VISION", desc: "See the future as code", control: "" },
+            { level: 5, name: "AGENT SMITH", desc: "The system fights back", control: "" },
+            { level: 6, name: "DÉJÀ VU", desc: "A glitch in the Matrix", control: "" },
+            { level: 7, name: "THE ONE", desc: "You can fly", control: "O - Phase Through" },
+            { level: 8, name: "CONSTRUCT MODE", desc: "Rebuild reality", control: "Click - Delete Blocks" },
+            { level: 9, name: "SYSTEM OVERRIDE", desc: "Total control", control: "S - Toggle Gravity" },
+            { level: 10, name: "THE ARCHITECT", desc: "You are the One", control: "Full Powers" }
+        ];
+
+        function startGame() {
+            document.getElementById('introScreen').classList.add('hidden');
+            document.getElementById('mainGame').style.display = 'block';
+        }
+
+        function createBoard() {
+            board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+        }
+
+        function drawBlock(x, y, color) {
+            // Glitch effect for level 1+
+            if (glitchMode && Math.random() > 0.95) {
+                ctx.fillStyle = Math.random() > 0.5 ? '#ff0000' : '#0000ff';
+            } else {
+                ctx.fillStyle = color;
+            }
+
+            ctx.fillRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+            ctx.strokeStyle = '#003300';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+
+            // Matrix glow
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 5;
+        }
+
+        function drawBoard() {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            for (let row = 0; row < ROWS; row++) {
+                for (let col = 0; col < COLS; col++) {
+                    if (board[row][col]) {
+                        drawBlock(col, row, board[row][col]);
+                    }
+                }
+            }
+
+            // Code vision overlay for level 4+
+            if (codeVisionActive && nextPiece) {
+                ctx.fillStyle = 'rgba(0, 255, 0, 0.3)';
+                ctx.font = '10px monospace';
+                ctx.fillText(`NEXT: ${nextPiece.type}`, 10, 20);
+            }
+        }
+
+        function createPiece() {
+            const pieces = Object.keys(SHAPES);
+            const type = pieces[Math.floor(Math.random() * pieces.length)];
+            return {
+                shape: SHAPES[type],
+                color: COLORS[type],
+                x: Math.floor(COLS / 2) - Math.floor(SHAPES[type][0].length / 2),
+                y: 0,
+                type: type
+            };
+        }
+
+        function drawPiece(piece) {
+            piece.shape.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value) {
+                        drawBlock(piece.x + x, piece.y + y, piece.color);
+                    }
+                });
+            });
+        }
+
+        function checkCollision(piece, offsetX = 0, offsetY = 0) {
+            // The One mode - phase through blocks
+            if (theOneMode) {
+                for (let y = 0; y < piece.shape.length; y++) {
+                    for (let x = 0; x < piece.shape[y].length; x++) {
+                        if (piece.shape[y][x]) {
+                            const newX = piece.x + x + offsetX;
+                            const newY = piece.y + y + offsetY;
+                            if (newX < 0 || newX >= COLS || newY >= ROWS) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+                return false;
+            }
+
+            for (let y = 0; y < piece.shape.length; y++) {
+                for (let x = 0; x < piece.shape[y].length; x++) {
+                    if (piece.shape[y][x]) {
+                        const newX = piece.x + x + offsetX;
+                        const newY = piece.y + y + offsetY;
+
+                        if (newX < 0 || newX >= COLS || newY >= ROWS) {
+                            return true;
+                        }
+
+                        if (newY >= 0 && board[newY][newX]) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        function mergePiece() {
+            currentPiece.shape.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value) {
+                        const boardY = currentPiece.y + y;
+                        const boardX = currentPiece.x + x;
+                        if (boardY >= 0) {
+                            board[boardY][boardX] = currentPiece.color;
+                        }
+                    }
+                });
+            });
+        }
+
+        function clearLines() {
+            let linesCleared = 0;
+
+            for (let row = ROWS - 1; row >= 0; row--) {
+                if (board[row].every(cell => cell !== 0)) {
+                    board.splice(row, 1);
+                    board.unshift(Array(COLS).fill(0));
+                    linesCleared++;
+                    row++;
+                }
+            }
+
+            if (linesCleared > 0) {
+                lines += linesCleared;
+
+                // Pill multiplier
+                const multiplier = pillChoice === 'red' ? 2 : 1;
+                score += [0, 40, 100, 300, 1200][linesCleared] * multiplier * (level + 1);
+
+                // Level up every 10 lines
+                const newLevel = Math.min(Math.floor(lines / 10), 10);
+                if (newLevel !== level) {
+                    level = newLevel;
+                    activateTwist(level);
+                }
+
+                // Speed adjustment
+                if (pillChoice === 'blue') {
+                    dropInterval = Math.max(200, 1000 - (lines * 20));
+                } else if (pillChoice === 'red') {
+                    dropInterval = Math.max(100, 700 - (lines * 15));
+                } else {
+                    dropInterval = Math.max(150, 1000 - (lines * 25));
+                }
+
+                updateScore();
+            }
+        }
+
+        function activateTwist(lvl) {
+            const twist = TWISTS[lvl];
+            if (!twist) return;
+
+            document.getElementById('twistStatus').innerHTML = `
+                <div class="twist-name">${twist.name}</div>
+                <div class="twist-desc">${twist.desc}</div>
+            `;
+
+            document.getElementById('extraControls').innerHTML = twist.control ?
+                `<strong style="color: #00ff00;">${twist.control}</strong>` : '';
+
+            switch(lvl) {
+                case 1: // Glitch Vision
+                    glitchMode = true;
+                    break;
+                case 2: // Red/Blue Pill
+                    if (!pillChoice) {
+                        isPaused = true;
+                        document.getElementById('pillModal').classList.add('show');
+                    }
+                    break;
+                case 3: // Bullet Time
+                    document.getElementById('powerBar').style.display = 'block';
+                    updatePowerBar();
+                    break;
+                case 4: // Code Vision
+                    codeVisionActive = true;
+                    break;
+                case 5: // Agent Smith
+                    startAgentSmith();
+                    break;
+                case 6: // Déjà Vu
+                    triggerDejaVu();
+                    break;
+                case 7: // The One
+                    theOneCharges = 3;
+                    updatePowerBar();
+                    break;
+                case 8: // Construct Mode
+                    constructMode = true;
+                    break;
+                case 9: // System Override
+                    systemOverride = true;
+                    break;
+            }
+        }
+
+        function choosePill(color) {
+            pillChoice = color;
+            document.getElementById('pillModal').classList.remove('show');
+            isPaused = false;
+            lastTime = performance.now();
+            update(lastTime);
+        }
+
+        function activateBulletTime() {
+            if (bulletTimeCharges > 0 && !bulletTimeActive && level >= 3) {
+                bulletTimeActive = true;
+                bulletTimeCharges--;
+                const oldInterval = dropInterval;
+                dropInterval = dropInterval * 3;
+
+                setTimeout(() => {
+                    bulletTimeActive = false;
+                    dropInterval = oldInterval;
+                }, 5000);
+
+                updatePowerBar();
+            }
+        }
+
+        function activateTheOne() {
+            if (theOneCharges > 0 && !theOneMode && level >= 7) {
+                theOneMode = true;
+                theOneCharges--;
+
+                setTimeout(() => {
+                    theOneMode = false;
+                }, 5000);
+
+                updatePowerBar();
+            }
+        }
+
+        function updatePowerBar() {
+            if (level >= 3 && level < 7) {
+                const percent = (bulletTimeCharges / 3) * 100;
+                document.getElementById('powerFill').style.width = percent + '%';
+            } else if (level >= 7) {
+                const percent = (theOneCharges / 3) * 100;
+                document.getElementById('powerFill').style.width = percent + '%';
+            }
+        }
+
+        function startAgentSmith() {
+            if (agentSmithInterval) return;
+
+            agentSmithInterval = setInterval(() => {
+                if (!gameRunning || isPaused) return;
+
+                // Random block corruption
+                const row = Math.floor(Math.random() * (ROWS - 5)) + 5;
+                const col = Math.floor(Math.random() * COLS);
+
+                if (!board[row][col]) {
+                    board[row][col] = '#ff0000'; // Red corrupted block
+                }
+            }, 10000);
+        }
+
+        function triggerDejaVu() {
+            // Save board state
+            const savedBoard = board.map(row => [...row]);
+
+            setTimeout(() => {
+                // Brief glitch effect
+                for (let i = 0; i < 3; i++) {
+                    setTimeout(() => {
+                        board = savedBoard.map(row => [...row]);
+                    }, i * 200);
+                }
+            }, 3000);
+        }
+
+        function toggleGravity() {
+            if (systemOverride) {
+                gravityPaused = !gravityPaused;
+            }
+        }
+
+        function rotate(piece) {
+            const newShape = piece.shape[0].map((_, i) =>
+                piece.shape.map(row => row[i]).reverse()
+            );
+
+            const rotated = { ...piece, shape: newShape };
+
+            if (!checkCollision(rotated)) {
+                return rotated;
+            }
+
+            // Wall kick
+            for (let offset of [1, -1, 2, -2]) {
+                rotated.x = piece.x + offset;
+                if (!checkCollision(rotated)) {
+                    return rotated;
+                }
+            }
+
+            return piece;
+        }
+
+        function move(direction) {
+            if (!currentPiece || isPaused) return;
+
+            if (direction === 'left' && !checkCollision(currentPiece, -1, 0)) {
+                currentPiece.x--;
+            } else if (direction === 'right' && !checkCollision(currentPiece, 1, 0)) {
+                currentPiece.x++;
+            } else if (direction === 'down') {
+                if (!checkCollision(currentPiece, 0, 1)) {
+                    currentPiece.y++;
+                    score += 1;
+                    updateScore();
+                } else {
+                    placePiece();
+                }
+            }
+        }
+
+        function hardDrop() {
+            if (!currentPiece || isPaused) return;
+
+            while (!checkCollision(currentPiece, 0, 1)) {
+                currentPiece.y++;
+                score += 2;
+            }
+            updateScore();
+            placePiece();
+        }
+
+        function placePiece() {
+            mergePiece();
+            clearLines();
+            currentPiece = nextPiece || createPiece();
+            nextPiece = createPiece();
+
+            if (checkCollision(currentPiece)) {
+                gameOver();
+            }
+        }
+
+        function updateScore() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('level').textContent = level + 1;
+            document.getElementById('lines').textContent = lines;
+        }
+
+        function gameOver() {
+            gameRunning = false;
+            cancelAnimationFrame(gameLoop);
+            if (agentSmithInterval) clearInterval(agentSmithInterval);
+
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('finalLevel').textContent = level + 1;
+
+            const quotes = [
+                "The Matrix is a system, Neo. That system is our enemy.",
+                "What you know you can't explain, but you feel it.",
+                "There is a difference between knowing the path and walking the path.",
+                "Free your mind.",
+                "I can only show you the door. You're the one that has to walk through it.",
+                "Unfortunately, no one can be told what the Matrix is. You have to see it for yourself.",
+                "Do not try and bend the spoon. That's impossible. Instead, only try to realize the truth: there is no spoon.",
+                "I know kung fu... and Tetris.",
+                "Whoa.",
+                "The answer is out there, Neo, and it's looking for you.",
+                "You've been living in a dream world, Neo."
+            ];
+
+            document.getElementById('finalQuote').textContent = quotes[Math.min(level, quotes.length - 1)];
+            document.getElementById('gameOver').classList.add('show');
+        }
+
+        function update(time = 0) {
+            if (!gameRunning || isPaused) return;
+
+            const deltaTime = time - lastTime;
+            lastTime = time;
+            dropCounter += deltaTime;
+
+            if (dropCounter > dropInterval && !gravityPaused) {
+                move('down');
+                dropCounter = 0;
+            }
+
+            drawBoard();
+            if (currentPiece) {
+                drawPiece(currentPiece);
+            }
+
+            gameLoop = requestAnimationFrame(update);
+        }
+
+        function toggleGame() {
+            if (!gameRunning) {
+                createBoard();
+                score = 0;
+                level = 0;
+                lines = 0;
+                dropCounter = 0;
+                dropInterval = 1000;
+                isPaused = false;
+                gameRunning = true;
+                currentTwist = 0;
+                pillChoice = null;
+                bulletTimeCharges = 3;
+                theOneCharges = 3;
+                glitchMode = false;
+                codeVisionActive = false;
+                constructMode = false;
+                systemOverride = false;
+                gravityPaused = false;
+
+                if (agentSmithInterval) {
+                    clearInterval(agentSmithInterval);
+                    agentSmithInterval = null;
+                }
+
+                updateScore();
+                activateTwist(0);
+                nextPiece = createPiece();
+                currentPiece = createPiece();
+
+                document.getElementById('gameOver').classList.remove('show');
+                document.getElementById('startBtn').textContent = 'Restart Matrix';
+
+                lastTime = 0;
+                update();
+            } else {
+                gameRunning = false;
+                cancelAnimationFrame(gameLoop);
+                createBoard();
+                drawBoard();
+                document.getElementById('startBtn').textContent = 'Start Game';
+            }
+        }
+
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            if (!gameRunning) return;
+
+            switch(e.key) {
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    move('left');
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    move('right');
+                    break;
+                case 'ArrowDown':
+                    e.preventDefault();
+                    move('down');
+                    break;
+                case 'ArrowUp':
+                    e.preventDefault();
+                    if (currentPiece && !isPaused) {
+                        currentPiece = rotate(currentPiece);
+                    }
+                    break;
+                case ' ':
+                    e.preventDefault();
+                    hardDrop();
+                    break;
+                case 'p':
+                case 'P':
+                    e.preventDefault();
+                    isPaused = !isPaused;
+                    if (!isPaused) {
+                        lastTime = performance.now();
+                        update(lastTime);
+                    }
+                    break;
+                case 'b':
+                case 'B':
+                    e.preventDefault();
+                    activateBulletTime();
+                    break;
+                case 'o':
+                case 'O':
+                    e.preventDefault();
+                    activateTheOne();
+                    break;
+                case 's':
+                case 'S':
+                    e.preventDefault();
+                    toggleGravity();
+                    break;
+            }
+        });
+
+        // Construct mode - click to delete blocks
+        canvas.addEventListener('click', (e) => {
+            if (!constructMode || !gameRunning) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const x = Math.floor((e.clientX - rect.left) / BLOCK_SIZE);
+            const y = Math.floor((e.clientY - rect.top) / BLOCK_SIZE);
+
+            if (x >= 0 && x < COLS && y >= 0 && y < ROWS) {
+                board[y][x] = 0;
+            }
+        });
+
+        // Initial setup
+        createBoard();
+        drawBoard();
+
+        // Resize matrix background
+        window.addEventListener('resize', () => {
+            matrixCanvas.width = window.innerWidth;
+            matrixCanvas.height = window.innerHeight;
+        });
+    </script>
+</body>
+</html>

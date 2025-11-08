@@ -1,0 +1,1131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Diplomtetris - Negotiation Tetris</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Courier New', monospace;
+        }
+
+        .game-container {
+            display: flex;
+            gap: 30px;
+            align-items: flex-start;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .game-area {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        canvas {
+            border: 3px solid #333;
+            background: #1a1a2e;
+            image-rendering: pixelated;
+        }
+
+        .negotiation-panel {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            padding: 15px;
+            border-radius: 10px;
+            color: white;
+            max-width: 300px;
+        }
+
+        .negotiation-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .offer-card {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .offer-card:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateX(5px);
+        }
+
+        .offer-from {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .offer-details {
+            font-size: 12px;
+            margin: 5px 0;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 5px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .accept-btn {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .reject-btn {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .counter-btn {
+            background: #FFC107;
+            color: black;
+        }
+
+        .action-btn:hover {
+            opacity: 0.8;
+            transform: scale(1.05);
+        }
+
+        .info-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            color: #333;
+        }
+
+        .diplomacy-status {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 15px;
+            border-radius: 10px;
+            color: white;
+        }
+
+        .ai-player {
+            padding: 10px;
+            margin: 5px 0;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+        }
+
+        .ai-name {
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .relationship {
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        .relationship-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 3px;
+        }
+
+        .relationship-fill {
+            height: 100%;
+            transition: width 0.5s ease, background 0.5s ease;
+        }
+
+        .stats {
+            background: #f0f4f8;
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        .stat-item {
+            margin: 8px 0;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .controls {
+            background: #e1e8ed;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 14px;
+        }
+
+        .title {
+            font-size: 28px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            text-align: center;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: #7f8c8d;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .chat-message {
+            padding: 5px;
+            margin: 5px 0;
+            border-radius: 5px;
+            font-size: 12px;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .trade-history {
+            max-height: 150px;
+            overflow-y: auto;
+            font-size: 12px;
+        }
+
+        .trade-entry {
+            padding: 5px;
+            margin: 2px 0;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+
+        .alliance-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-left: 5px;
+        }
+
+        .alliance-active {
+            background: #4CAF50;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="info-panel">
+            <div>
+                <div class="title">DIPLOMTETRIS</div>
+                <div class="subtitle">Negotiate, Trade, Survive</div>
+            </div>
+
+            <div class="diplomacy-status">
+                <h3>🤝 Diplomatic Relations</h3>
+
+                <div class="ai-player">
+                    <div class="ai-name">
+                        <span>🤖 Aggressor</span>
+                        <span class="alliance-indicator" id="alliance-aggressor"></span>
+                    </div>
+                    <div class="relationship">
+                        <span>Relationship: <span id="rel-aggressor">Neutral</span></span>
+                        <div class="relationship-bar">
+                            <div class="relationship-fill" id="relbar-aggressor" style="width: 50%; background: #FFC107;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ai-player">
+                    <div class="ai-name">
+                        <span>🧠 Strategist</span>
+                        <span class="alliance-indicator" id="alliance-strategist"></span>
+                    </div>
+                    <div class="relationship">
+                        <span>Relationship: <span id="rel-strategist">Neutral</span></span>
+                        <div class="relationship-bar">
+                            <div class="relationship-fill" id="relbar-strategist" style="width: 50%; background: #FFC107;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ai-player">
+                    <div class="ai-name">
+                        <span>💰 Merchant</span>
+                        <span class="alliance-indicator" id="alliance-merchant"></span>
+                    </div>
+                    <div class="relationship">
+                        <span>Relationship: <span id="rel-merchant">Neutral</span></span>
+                        <div class="relationship-bar">
+                            <div class="relationship-fill" id="relbar-merchant" style="width: 50%; background: #FFC107;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stats">
+                <h3>📊 Statistics</h3>
+                <div class="stat-item">
+                    <span>Score:</span>
+                    <span id="score">0</span>
+                </div>
+                <div class="stat-item">
+                    <span>Resources:</span>
+                    <span id="resources">10</span>
+                </div>
+                <div class="stat-item">
+                    <span>Trades Made:</span>
+                    <span id="trades">0</span>
+                </div>
+                <div class="stat-item">
+                    <span>Alliances:</span>
+                    <span id="alliances">0</span>
+                </div>
+                <div class="stat-item">
+                    <span>Reputation:</span>
+                    <span id="reputation">50</span>
+                </div>
+            </div>
+
+            <div class="controls">
+                <h3>🎮 Controls</h3>
+                <div>← → : Move</div>
+                <div>↓ : Soft Drop</div>
+                <div>↑ : Rotate</div>
+                <div>Space : Hard Drop</div>
+                <div>1-3 : Offer Trade</div>
+                <div>P : Pause</div>
+                <div><br><strong>Diplomacy Tips:</strong></div>
+                <div>• Build relationships</div>
+                <div>• Trade pieces strategically</div>
+                <div>• Form alliances for bonuses</div>
+                <div>• Watch your reputation!</div>
+            </div>
+        </div>
+
+        <div class="game-area">
+            <canvas id="gameCanvas"></canvas>
+
+            <div class="negotiation-panel">
+                <div class="negotiation-title">📨 Active Negotiations</div>
+                <div id="negotiationArea">
+                    <!-- Offers will appear here -->
+                </div>
+                <div class="trade-history">
+                    <h4>Trade History:</h4>
+                    <div id="tradeHistory"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Game constants
+        const BLOCK_SIZE = 30;
+        const COLS = 10;
+        const ROWS = 20;
+        canvas.width = COLS * BLOCK_SIZE;
+        canvas.height = ROWS * BLOCK_SIZE;
+
+        // Tetromino shapes
+        const SHAPES = [
+            { shape: [[1,1,1,1]], name: 'I-Beam', value: 4 },
+            { shape: [[1,1,1],[0,1,0]], name: 'T-Block', value: 3 },
+            { shape: [[1,1,0],[0,1,1]], name: 'Z-Block', value: 2 },
+            { shape: [[0,1,1],[1,1,0]], name: 'S-Block', value: 2 },
+            { shape: [[1,1],[1,1]], name: 'Square', value: 2 },
+            { shape: [[1,1,1],[1,0,0]], name: 'L-Block', value: 3 },
+            { shape: [[1,1,1],[0,0,1]], name: 'J-Block', value: 3 }
+        ];
+
+        // AI Players with personalities
+        const AI_PLAYERS = {
+            aggressor: {
+                name: 'Aggressor',
+                personality: 'aggressive',
+                relationship: 50,
+                alliance: false,
+                tradePreference: 'attacks',
+                color: '#e74c3c'
+            },
+            strategist: {
+                name: 'Strategist',
+                personality: 'calculated',
+                relationship: 50,
+                alliance: false,
+                tradePreference: 'mutual',
+                color: '#3498db'
+            },
+            merchant: {
+                name: 'Merchant',
+                personality: 'opportunistic',
+                relationship: 50,
+                alliance: false,
+                tradePreference: 'profit',
+                color: '#f39c12'
+            }
+        };
+
+        // Game state
+        let board = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+        let currentPiece = null;
+        let nextPiece = null;
+        let gameRunning = true;
+        let score = 0;
+        let resources = 10;
+        let reputation = 50;
+        let tradesCompleted = 0;
+        let activeAlliances = 0;
+        let dropCounter = 0;
+        let lastTime = 0;
+        let isPaused = false;
+
+        // Negotiation state
+        let activeOffers = [];
+        let offerIdCounter = 0;
+        let tradeHistory = [];
+
+        class Piece {
+            constructor(shapeData = null) {
+                if (shapeData) {
+                    this.shapeData = shapeData;
+                } else {
+                    this.shapeData = SHAPES[Math.floor(Math.random() * SHAPES.length)];
+                }
+                this.shape = this.shapeData.shape;
+                this.name = this.shapeData.name;
+                this.value = this.shapeData.value;
+                this.x = Math.floor(COLS / 2) - Math.floor(this.shape[0].length / 2);
+                this.y = 0;
+                this.color = this.getColorForPiece();
+                this.tradedFrom = null;
+            }
+
+            getColorForPiece() {
+                const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#FFA07A'];
+                return colors[SHAPES.indexOf(this.shapeData)];
+            }
+
+            rotate() {
+                const rotated = this.shape[0].map((_, i) =>
+                    this.shape.map(row => row[i]).reverse()
+                );
+
+                const prevShape = this.shape;
+                this.shape = rotated;
+
+                if (this.collides()) {
+                    this.shape = prevShape;
+                }
+            }
+
+            collides() {
+                for (let y = 0; y < this.shape.length; y++) {
+                    for (let x = 0; x < this.shape[y].length; x++) {
+                        if (this.shape[y][x]) {
+                            const boardX = this.x + x;
+                            const boardY = this.y + y;
+
+                            if (boardX < 0 || boardX >= COLS || boardY >= ROWS) {
+                                return true;
+                            }
+
+                            if (boardY >= 0 && board[boardY][boardX]) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+                return false;
+            }
+
+            lock() {
+                for (let y = 0; y < this.shape.length; y++) {
+                    for (let x = 0; x < this.shape[y].length; x++) {
+                        if (this.shape[y][x]) {
+                            const boardY = this.y + y;
+                            const boardX = this.x + x;
+                            if (boardY >= 0) {
+                                board[boardY][boardX] = this.color;
+                            }
+                        }
+                    }
+                }
+
+                // Bonus for pieces from allies
+                if (this.tradedFrom && AI_PLAYERS[this.tradedFrom].alliance) {
+                    score += 50;
+                    resources += 1;
+                }
+            }
+        }
+
+        function generateAIOffer() {
+            if (Math.random() > 0.7 || activeOffers.length >= 3) return;
+
+            const aiKeys = Object.keys(AI_PLAYERS);
+            const ai = AI_PLAYERS[aiKeys[Math.floor(Math.random() * aiKeys.length)]];
+
+            let offerType;
+            let offer = {
+                id: offerIdCounter++,
+                from: ai.name,
+                aiKey: aiKeys[aiKeys.indexOf(Object.values(AI_PLAYERS).find(p => p.name === ai.name).name.toLowerCase())],
+                timestamp: Date.now()
+            };
+
+            // Generate offer based on AI personality
+            switch(ai.personality) {
+                case 'aggressive':
+                    if (Math.random() > 0.5) {
+                        // Attack offer
+                        offer.type = 'attack';
+                        offer.message = `Send garbage blocks to your enemies for ${3 + Math.floor(Math.random() * 3)} resources`;
+                        offer.cost = 3 + Math.floor(Math.random() * 3);
+                        offer.effect = 'garbage';
+                    } else {
+                        // Piece swap
+                        offer.type = 'swap';
+                        offer.message = `Trade your current piece for a random one`;
+                        offer.cost = 2;
+                        offer.effect = 'swap';
+                    }
+                    break;
+
+                case 'calculated':
+                    if (ai.alliance) {
+                        // Alliance benefit
+                        offer.type = 'alliance';
+                        offer.message = `Alliance bonus: Clear bottom row for ${5} resources`;
+                        offer.cost = 5;
+                        offer.effect = 'clearRow';
+                    } else {
+                        // Strategic piece
+                        offer.type = 'piece';
+                        offer.message = `Get an I-Beam for ${4} resources`;
+                        offer.cost = 4;
+                        offer.piece = SHAPES[0]; // I-Beam
+                        offer.effect = 'getPiece';
+                    }
+                    break;
+
+                case 'opportunistic':
+                    // Resource trade
+                    if (Math.random() > 0.5) {
+                        offer.type = 'trade';
+                        offer.message = `Trade ${2} resources for ${100} points`;
+                        offer.cost = 2;
+                        offer.gain = 100;
+                        offer.effect = 'points';
+                    } else {
+                        offer.type = 'trade';
+                        offer.message = `Buy ${3} resources for ${150} points`;
+                        offer.cost = -3; // Negative cost means you gain resources
+                        offer.gain = -150; // Negative gain means you lose points
+                        offer.effect = 'resources';
+                    }
+                    break;
+            }
+
+            activeOffers.push(offer);
+            displayOffer(offer);
+        }
+
+        function displayOffer(offer) {
+            const negotiationArea = document.getElementById('negotiationArea');
+
+            const offerCard = document.createElement('div');
+            offerCard.className = 'offer-card';
+            offerCard.id = `offer-${offer.id}`;
+
+            const ai = AI_PLAYERS[offer.aiKey] || AI_PLAYERS[Object.keys(AI_PLAYERS)[0]];
+
+            offerCard.innerHTML = `
+                <div class="offer-from" style="color: ${ai.color};">${offer.from}</div>
+                <div class="offer-details">${offer.message}</div>
+                <div class="action-buttons">
+                    <button class="action-btn accept-btn" onclick="acceptOffer(${offer.id})">Accept</button>
+                    <button class="action-btn reject-btn" onclick="rejectOffer(${offer.id})">Reject</button>
+                    <button class="action-btn counter-btn" onclick="counterOffer(${offer.id})">Counter</button>
+                </div>
+            `;
+
+            negotiationArea.appendChild(offerCard);
+
+            // Remove old offers
+            if (negotiationArea.children.length > 3) {
+                negotiationArea.removeChild(negotiationArea.firstChild);
+            }
+
+            // Auto-expire offers
+            setTimeout(() => {
+                const element = document.getElementById(`offer-${offer.id}`);
+                if (element) {
+                    element.remove();
+                    activeOffers = activeOffers.filter(o => o.id !== offer.id);
+                }
+            }, 15000);
+        }
+
+        function acceptOffer(offerId) {
+            const offer = activeOffers.find(o => o.id === offerId);
+            if (!offer) return;
+
+            const ai = AI_PLAYERS[offer.aiKey];
+
+            // Check if player can afford
+            if (offer.cost > 0 && resources < offer.cost) {
+                addTradeHistory(`❌ Insufficient resources for ${ai.name}'s offer`);
+                return;
+            }
+
+            if (offer.gain && offer.gain < 0 && score < Math.abs(offer.gain)) {
+                addTradeHistory(`❌ Insufficient score for ${ai.name}'s offer`);
+                return;
+            }
+
+            // Execute offer
+            switch(offer.effect) {
+                case 'garbage':
+                    // Add garbage rows to board
+                    for (let i = 0; i < 2; i++) {
+                        board.shift();
+                        const garbageRow = Array(COLS).fill('#808080');
+                        garbageRow[Math.floor(Math.random() * COLS)] = null; // One gap
+                        board.push(garbageRow);
+                    }
+                    break;
+
+                case 'swap':
+                    if (currentPiece) {
+                        currentPiece = new Piece();
+                    }
+                    break;
+
+                case 'clearRow':
+                    board[ROWS - 1] = Array(COLS).fill(null);
+                    break;
+
+                case 'getPiece':
+                    nextPiece = new Piece(offer.piece);
+                    nextPiece.tradedFrom = offer.aiKey;
+                    break;
+
+                case 'points':
+                    score += offer.gain;
+                    break;
+
+                case 'resources':
+                    resources -= offer.cost; // Double negative makes positive
+                    score += offer.gain;
+                    break;
+            }
+
+            // Update resources and relationships
+            resources -= offer.cost;
+            updateRelationship(offer.aiKey, 10);
+            reputation += 2;
+            tradesCompleted++;
+
+            addTradeHistory(`✅ Accepted ${ai.name}'s offer`);
+
+            // Remove offer
+            document.getElementById(`offer-${offerId}`).remove();
+            activeOffers = activeOffers.filter(o => o.id !== offerId);
+
+            updateDisplay();
+        }
+
+        function rejectOffer(offerId) {
+            const offer = activeOffers.find(o => o.id === offerId);
+            if (!offer) return;
+
+            const ai = AI_PLAYERS[offer.aiKey];
+            updateRelationship(offer.aiKey, -5);
+
+            addTradeHistory(`❌ Rejected ${ai.name}'s offer`);
+
+            document.getElementById(`offer-${offerId}`).remove();
+            activeOffers = activeOffers.filter(o => o.id !== offerId);
+
+            updateDisplay();
+        }
+
+        function counterOffer(offerId) {
+            const offer = activeOffers.find(o => o.id === offerId);
+            if (!offer) return;
+
+            const ai = AI_PLAYERS[offer.aiKey];
+
+            // Simple counter logic
+            const accepted = Math.random() > 0.5 - (ai.relationship / 200);
+
+            if (accepted) {
+                offer.cost = Math.max(1, offer.cost - 1);
+                addTradeHistory(`✅ ${ai.name} accepted counter-offer`);
+                acceptOffer(offerId);
+            } else {
+                updateRelationship(offer.aiKey, -3);
+                addTradeHistory(`❌ ${ai.name} rejected counter-offer`);
+                document.getElementById(`offer-${offerId}`).remove();
+                activeOffers = activeOffers.filter(o => o.id !== offerId);
+            }
+
+            updateDisplay();
+        }
+
+        function updateRelationship(aiKey, change) {
+            const ai = AI_PLAYERS[aiKey];
+            ai.relationship = Math.max(0, Math.min(100, ai.relationship + change));
+
+            // Update alliance status
+            const wasAllied = ai.alliance;
+            ai.alliance = ai.relationship >= 75;
+
+            if (!wasAllied && ai.alliance) {
+                activeAlliances++;
+                addTradeHistory(`🤝 Formed alliance with ${ai.name}!`);
+            } else if (wasAllied && !ai.alliance) {
+                activeAlliances--;
+                addTradeHistory(`💔 Lost alliance with ${ai.name}`);
+            }
+
+            // Update display
+            const relText = ai.relationship < 25 ? 'Hostile' :
+                          ai.relationship < 50 ? 'Unfriendly' :
+                          ai.relationship < 75 ? 'Neutral' :
+                          'Allied';
+
+            document.getElementById(`rel-${aiKey}`).textContent = relText;
+
+            const relBar = document.getElementById(`relbar-${aiKey}`);
+            relBar.style.width = ai.relationship + '%';
+            relBar.style.background = ai.relationship < 25 ? '#e74c3c' :
+                                     ai.relationship < 50 ? '#e67e22' :
+                                     ai.relationship < 75 ? '#FFC107' :
+                                     '#4CAF50';
+
+            const allianceIndicator = document.getElementById(`alliance-${aiKey}`);
+            allianceIndicator.className = ai.alliance ? 'alliance-indicator alliance-active' : 'alliance-indicator';
+        }
+
+        function addTradeHistory(message) {
+            const historyDiv = document.getElementById('tradeHistory');
+            const entry = document.createElement('div');
+            entry.className = 'trade-entry';
+            entry.textContent = message;
+            historyDiv.insertBefore(entry, historyDiv.firstChild);
+
+            // Keep only recent history
+            while (historyDiv.children.length > 5) {
+                historyDiv.removeChild(historyDiv.lastChild);
+            }
+        }
+
+        function initiatePlayerTrade(targetAI) {
+            if (resources < 2) {
+                addTradeHistory('❌ Need at least 2 resources to trade');
+                return;
+            }
+
+            const ai = AI_PLAYERS[Object.keys(AI_PLAYERS)[targetAI - 1]];
+            if (!ai) return;
+
+            resources -= 2;
+            updateRelationship(Object.keys(AI_PLAYERS)[targetAI - 1], 5);
+
+            // Give player a good piece
+            nextPiece = new Piece(SHAPES[Math.random() > 0.5 ? 0 : 1]); // I-beam or T-block
+            nextPiece.tradedFrom = Object.keys(AI_PLAYERS)[targetAI - 1];
+
+            addTradeHistory(`🤝 Traded with ${ai.name}`);
+            tradesCompleted++;
+            updateDisplay();
+        }
+
+        function clearLines() {
+            let linesCleared = 0;
+
+            for (let y = ROWS - 1; y >= 0; y--) {
+                if (board[y].every(cell => cell !== null)) {
+                    board.splice(y, 1);
+                    board.unshift(Array(COLS).fill(null));
+                    linesCleared++;
+                    y++;
+                }
+            }
+
+            if (linesCleared > 0) {
+                const baseScore = linesCleared * 100;
+                const allianceBonus = activeAlliances * 50 * linesCleared;
+                const reputationMultiplier = 1 + (reputation / 100);
+
+                score += Math.floor(baseScore * reputationMultiplier) + allianceBonus;
+                resources += linesCleared;
+
+                if (linesCleared >= 2) {
+                    reputation = Math.min(100, reputation + linesCleared);
+                }
+            }
+        }
+
+        function updateDisplay() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('resources').textContent = resources;
+            document.getElementById('trades').textContent = tradesCompleted;
+            document.getElementById('alliances').textContent = activeAlliances;
+            document.getElementById('reputation').textContent = reputation;
+        }
+
+        function draw() {
+            // Clear canvas
+            ctx.fillStyle = '#1a1a2e';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw grid
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.lineWidth = 1;
+            for (let x = 0; x <= COLS; x++) {
+                ctx.beginPath();
+                ctx.moveTo(x * BLOCK_SIZE, 0);
+                ctx.lineTo(x * BLOCK_SIZE, canvas.height);
+                ctx.stroke();
+            }
+            for (let y = 0; y <= ROWS; y++) {
+                ctx.beginPath();
+                ctx.moveTo(0, y * BLOCK_SIZE);
+                ctx.lineTo(canvas.width, y * BLOCK_SIZE);
+                ctx.stroke();
+            }
+
+            // Draw alliance glow effect
+            if (activeAlliances > 0) {
+                ctx.shadowColor = '#4CAF50';
+                ctx.shadowBlur = 10 * activeAlliances;
+            }
+
+            // Draw board
+            for (let y = 0; y < ROWS; y++) {
+                for (let x = 0; x < COLS; x++) {
+                    if (board[y][x]) {
+                        drawBlock(x, y, board[y][x]);
+                    }
+                }
+            }
+
+            ctx.shadowBlur = 0;
+
+            // Draw current piece
+            if (currentPiece && !isPaused) {
+                for (let y = 0; y < currentPiece.shape.length; y++) {
+                    for (let x = 0; x < currentPiece.shape[y].length; x++) {
+                        if (currentPiece.shape[y][x]) {
+                            drawBlock(
+                                currentPiece.x + x,
+                                currentPiece.y + y,
+                                currentPiece.color
+                            );
+                        }
+                    }
+                }
+
+                // Draw ghost piece
+                let ghostY = currentPiece.y;
+                while (!wouldCollide(currentPiece, 0, 1)) {
+                    currentPiece.y++;
+                }
+                let finalY = currentPiece.y;
+                currentPiece.y = ghostY;
+
+                ctx.globalAlpha = 0.3;
+                for (let y = 0; y < currentPiece.shape.length; y++) {
+                    for (let x = 0; x < currentPiece.shape[y].length; x++) {
+                        if (currentPiece.shape[y][x]) {
+                            drawBlock(
+                                currentPiece.x + x,
+                                finalY + y,
+                                currentPiece.color
+                            );
+                        }
+                    }
+                }
+                ctx.globalAlpha = 1;
+            }
+
+            // Draw next piece preview
+            if (nextPiece) {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+                ctx.fillRect(5, 5, 80, 80);
+                ctx.strokeStyle = 'white';
+                ctx.strokeRect(5, 5, 80, 80);
+
+                ctx.fillStyle = 'white';
+                ctx.font = '12px Courier New';
+                ctx.fillText('NEXT:', 10, 20);
+
+                // Draw next piece
+                const scale = 15;
+                for (let y = 0; y < nextPiece.shape.length; y++) {
+                    for (let x = 0; x < nextPiece.shape[y].length; x++) {
+                        if (nextPiece.shape[y][x]) {
+                            ctx.fillStyle = nextPiece.color;
+                            ctx.fillRect(20 + x * scale, 30 + y * scale, scale - 1, scale - 1);
+                        }
+                    }
+                }
+            }
+
+            // Draw pause overlay
+            if (isPaused) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = 'white';
+                ctx.font = '30px Courier New';
+                ctx.textAlign = 'center';
+                ctx.fillText('PAUSED', canvas.width / 2, canvas.height / 2);
+                ctx.font = '16px Courier New';
+                ctx.fillText('Press P to continue', canvas.width / 2, canvas.height / 2 + 30);
+            }
+
+            // Draw game over
+            if (!gameRunning) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = 'white';
+                ctx.font = '30px Courier New';
+                ctx.textAlign = 'center';
+                ctx.fillText('DIPLOMACY FAILED', canvas.width / 2, canvas.height / 2);
+                ctx.font = '16px Courier New';
+                ctx.fillText('Press R to restart negotiations', canvas.width / 2, canvas.height / 2 + 30);
+            }
+        }
+
+        function drawBlock(x, y, color) {
+            ctx.fillStyle = color;
+            ctx.fillRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+
+            // Inner highlight
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.fillRect(x * BLOCK_SIZE + 2, y * BLOCK_SIZE + 2, BLOCK_SIZE - 4, 2);
+
+            // Border
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(x * BLOCK_SIZE + 0.5, y * BLOCK_SIZE + 0.5, BLOCK_SIZE - 1, BLOCK_SIZE - 1);
+        }
+
+        function wouldCollide(piece, dx, dy) {
+            for (let y = 0; y < piece.shape.length; y++) {
+                for (let x = 0; x < piece.shape[y].length; x++) {
+                    if (piece.shape[y][x]) {
+                        const newX = piece.x + x + dx;
+                        const newY = piece.y + y + dy;
+
+                        if (newX < 0 || newX >= COLS || newY >= ROWS) {
+                            return true;
+                        }
+
+                        if (newY >= 0 && board[newY][newX]) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        function gameLoop(time = 0) {
+            if (!gameRunning) {
+                requestAnimationFrame(gameLoop);
+                return;
+            }
+
+            const deltaTime = time - lastTime;
+            lastTime = time;
+
+            if (!isPaused) {
+                dropCounter += deltaTime;
+
+                // Drop speed affected by alliances
+                const dropSpeed = 500 - (activeAlliances * 50);
+
+                if (dropCounter > dropSpeed) {
+                    if (currentPiece) {
+                        if (!wouldCollide(currentPiece, 0, 1)) {
+                            currentPiece.y++;
+                        } else {
+                            currentPiece.lock();
+                            clearLines();
+
+                            // Use next piece if available, otherwise generate new
+                            if (nextPiece) {
+                                currentPiece = nextPiece;
+                                nextPiece = null;
+                            } else {
+                                currentPiece = new Piece();
+                            }
+
+                            if (currentPiece.collides()) {
+                                gameRunning = false;
+                            }
+                        }
+                    } else {
+                        currentPiece = new Piece();
+                    }
+                    dropCounter = 0;
+                }
+            }
+
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            if (!gameRunning && e.key.toLowerCase() === 'r') {
+                // Reset game
+                board = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+                score = 0;
+                resources = 10;
+                reputation = 50;
+                tradesCompleted = 0;
+                activeAlliances = 0;
+                activeOffers = [];
+                tradeHistory = [];
+
+                // Reset AI relationships
+                for (let ai in AI_PLAYERS) {
+                    AI_PLAYERS[ai].relationship = 50;
+                    AI_PLAYERS[ai].alliance = false;
+                    updateRelationship(ai, 0);
+                }
+
+                currentPiece = new Piece();
+                nextPiece = null;
+                gameRunning = true;
+                updateDisplay();
+                return;
+            }
+
+            if (!gameRunning || !currentPiece) return;
+
+            if (e.key.toLowerCase() === 'p') {
+                isPaused = !isPaused;
+                return;
+            }
+
+            if (isPaused) return;
+
+            // Number keys for trading
+            if (e.key >= '1' && e.key <= '3') {
+                initiatePlayerTrade(parseInt(e.key));
+                return;
+            }
+
+            switch(e.key) {
+                case 'ArrowLeft':
+                    if (!wouldCollide(currentPiece, -1, 0)) {
+                        currentPiece.x--;
+                    }
+                    break;
+                case 'ArrowRight':
+                    if (!wouldCollide(currentPiece, 1, 0)) {
+                        currentPiece.x++;
+                    }
+                    break;
+                case 'ArrowDown':
+                    if (!wouldCollide(currentPiece, 0, 1)) {
+                        currentPiece.y++;
+                        score++;
+                    }
+                    break;
+                case 'ArrowUp':
+                    currentPiece.rotate();
+                    break;
+                case ' ':
+                    while (!wouldCollide(currentPiece, 0, 1)) {
+                        currentPiece.y++;
+                        score += 2;
+                    }
+                    currentPiece.lock();
+                    clearLines();
+
+                    if (nextPiece) {
+                        currentPiece = nextPiece;
+                        nextPiece = null;
+                    } else {
+                        currentPiece = new Piece();
+                    }
+
+                    if (currentPiece.collides()) {
+                        gameRunning = false;
+                    }
+                    dropCounter = 0;
+                    break;
+            }
+        });
+
+        // AI offer generation timer
+        setInterval(() => {
+            if (!isPaused && gameRunning) {
+                generateAIOffer();
+
+                // Random relationship changes
+                if (Math.random() > 0.8) {
+                    const aiKeys = Object.keys(AI_PLAYERS);
+                    const randomAI = aiKeys[Math.floor(Math.random() * aiKeys.length)];
+                    const change = (Math.random() - 0.5) * 10;
+                    updateRelationship(randomAI, change);
+                }
+            }
+        }, 5000);
+
+        // Initialize
+        currentPiece = new Piece();
+        updateDisplay();
+
+        // Initialize relationships
+        for (let ai in AI_PLAYERS) {
+            updateRelationship(ai, 0);
+        }
+
+        gameLoop();
+    </script>
+</body>
+</html>

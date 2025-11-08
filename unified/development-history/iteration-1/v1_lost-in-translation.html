@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lost in Translation - A Language Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Verdana', sans-serif;
+            background: linear-gradient(135deg, #134e5e 0%, #71b280 100%);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.98);
+            color: #333;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            color: #134e5e;
+        }
+
+        .subtitle {
+            text-align: center;
+            font-style: italic;
+            margin-bottom: 30px;
+            color: #666;
+        }
+
+        .intro-screen, .game-screen, .victory-screen {
+            display: none;
+        }
+
+        .intro-screen.active, .game-screen.active, .victory-screen.active {
+            display: block;
+        }
+
+        .quote {
+            background: rgba(113, 178, 128, 0.1);
+            border-left: 4px solid #71b280;
+            padding: 20px;
+            margin: 20px 0;
+            font-style: italic;
+            border-radius: 5px;
+        }
+
+        .conversation-area {
+            background: #f8f9fa;
+            border: 3px solid #dee2e6;
+            border-radius: 15px;
+            padding: 30px;
+            margin: 30px 0;
+            min-height: 400px;
+        }
+
+        .scene-header {
+            text-align: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #134e5e;
+        }
+
+        .scene-icon {
+            font-size: 4em;
+            margin-bottom: 10px;
+        }
+
+        .scene-title {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #134e5e;
+            margin-bottom: 5px;
+        }
+
+        .scene-description {
+            color: #666;
+            font-style: italic;
+        }
+
+        .dialogue-box {
+            background: white;
+            border-left: 4px solid #134e5e;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .dialogue-box.player {
+            border-left-color: #71b280;
+            background: #f1f8f4;
+        }
+
+        .speaker {
+            font-weight: bold;
+            color: #134e5e;
+            margin-bottom: 8px;
+        }
+
+        .dialogue-box.player .speaker {
+            color: #71b280;
+        }
+
+        .dialogue-text {
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .misunderstanding {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+
+        .misunderstanding-icon {
+            font-size: 2em;
+            margin-bottom: 5px;
+        }
+
+        .response-options {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin: 25px 0;
+        }
+
+        .response-button {
+            background: white;
+            border: 3px solid #134e5e;
+            border-radius: 10px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: left;
+        }
+
+        .response-button:hover {
+            background: #e8f5e9;
+            border-color: #71b280;
+            transform: translateX(10px);
+        }
+
+        .response-button .response-label {
+            font-weight: bold;
+            color: #134e5e;
+            margin-bottom: 8px;
+        }
+
+        .response-button .response-text {
+            color: #666;
+        }
+
+        .response-button.correct {
+            background: #d4edda;
+            border-color: #28a745;
+            animation: success-pulse 0.6s;
+        }
+
+        .response-button.incorrect {
+            background: #f8d7da;
+            border-color: #dc3545;
+            animation: shake 0.5s;
+        }
+
+        @keyframes success-pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        .feedback {
+            margin-top: 20px;
+            padding: 25px;
+            border-radius: 10px;
+            display: none;
+            line-height: 1.6;
+        }
+
+        .feedback.show {
+            display: block;
+        }
+
+        .feedback.success {
+            background: #d4edda;
+            border: 2px solid #28a745;
+            color: #155724;
+        }
+
+        .feedback.error {
+            background: #f8d7da;
+            border: 2px solid #dc3545;
+            color: #721c24;
+        }
+
+        .forms-of-life {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .life-badge {
+            padding: 8px 16px;
+            background: #e9ecef;
+            border-radius: 20px;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .life-badge.current {
+            background: linear-gradient(135deg, #134e5e, #71b280);
+            color: white;
+            font-weight: bold;
+        }
+
+        .life-badge.completed {
+            background: #28a745;
+            color: white;
+        }
+
+        .score-panel {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 12px;
+        }
+
+        .score-item {
+            text-align: center;
+        }
+
+        .score-item .label {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .score-item .value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #134e5e;
+        }
+
+        button {
+            padding: 15px 40px;
+            font-size: 1.1em;
+            background: linear-gradient(135deg, #134e5e, #71b280);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            margin: 10px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(19, 78, 94, 0.4);
+        }
+
+        .button-container {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #134e5e, #71b280);
+            transition: width 0.5s;
+        }
+
+        .insight-box {
+            background: linear-gradient(135deg, rgba(19, 78, 94, 0.1), rgba(113, 178, 128, 0.1));
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border: 2px solid #71b280;
+        }
+
+        .insight-box h4 {
+            color: #134e5e;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Intro Screen -->
+        <div class="intro-screen active">
+            <h1>🌍 Lost in Translation</h1>
+            <p class="subtitle">Navigate Different Forms of Life</p>
+
+            <div class="quote">
+                "If a lion could speak, we could not understand him."
+                <br><br>
+                <strong>— Ludwig Wittgenstein, Philosophical Investigations</strong>
+            </div>
+
+            <div style="margin: 30px 0; line-height: 1.8;">
+                <p>The same words can cause profound misunderstandings when used across different "forms of life"—different social contexts with their own practices and conventions.</p>
+                <br>
+                <p>A scientist's "hypothesis," a poet's "truth," a lawyer's "argument," and an artist's "experiment" all use familiar words, but <strong>mean different things</strong> in their respective language games.</p>
+                <br>
+                <p>Your mission: Navigate conversations across different forms of life. Learn to recognize when miscommunication happens and choose responses that bridge different language games.</p>
+            </div>
+
+            <div class="quote">
+                <strong>The Challenge:</strong> You'll encounter misunderstandings between people from different "forms of life." Choose the response that shows understanding of both language games.
+            </div>
+
+            <div class="button-container">
+                <button onclick="startGame()">Begin Journey</button>
+            </div>
+        </div>
+
+        <!-- Game Screen -->
+        <div class="game-screen">
+            <h1>🌍 Lost in Translation</h1>
+
+            <div class="score-panel">
+                <div class="score-item">
+                    <div class="label">Understanding Points</div>
+                    <div class="value" id="score">0</div>
+                </div>
+                <div class="score-item">
+                    <div class="label">Scenario</div>
+                    <div class="value" id="scenario">1</div>
+                </div>
+                <div class="score-item">
+                    <div class="label">Bridges Built</div>
+                    <div class="value" id="bridges">0</div>
+                </div>
+            </div>
+
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+
+            <div class="forms-of-life" id="formsOfLife"></div>
+
+            <div class="conversation-area" id="conversationArea"></div>
+
+            <div class="button-container">
+                <button onclick="nextScenario()" id="nextButton" style="display: none;">Next Scenario →</button>
+            </div>
+        </div>
+
+        <!-- Victory Screen -->
+        <div class="victory-screen">
+            <h1>🎓 Cross-Cultural Communicator!</h1>
+
+            <div class="quote">
+                "What has to be accepted, the given, is—so one could say—forms of life."
+                <br><br>
+                <strong>— Ludwig Wittgenstein, Philosophical Investigations</strong>
+            </div>
+
+            <div class="score-panel">
+                <div class="score-item">
+                    <div class="label">Final Understanding</div>
+                    <div class="value" id="finalScore">0</div>
+                </div>
+                <div class="score-item">
+                    <div class="label">Bridges Built</div>
+                    <div class="value" id="finalBridges">0</div>
+                </div>
+            </div>
+
+            <div style="margin: 30px 0; line-height: 1.8; background: linear-gradient(135deg, rgba(19, 78, 94, 0.1), rgba(113, 178, 128, 0.1)); padding: 25px; border-radius: 12px;">
+                <h3 style="color: #134e5e; margin-bottom: 15px;">What You've Learned:</h3>
+                <p><strong>Forms of Life:</strong> Language is embedded in different social practices, each with its own rules and conventions. A word in one form of life may function completely differently in another.</p>
+                <br>
+                <p><strong>Miscommunication:</strong> Many misunderstandings arise not from ignorance, but from assuming everyone is playing the same language game when they're actually in different forms of life.</p>
+                <br>
+                <p><strong>Building Bridges:</strong> Understanding requires recognizing which language game someone is playing and translating between different practices.</p>
+                <br>
+                <p><strong>No Universal Language:</strong> There's no "pure" language above all forms of life. We must always work within and between specific practices.</p>
+            </div>
+
+            <div class="button-container">
+                <button onclick="location.reload()">Navigate More Forms of Life</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const gameState = {
+            score: 0,
+            scenarioIndex: 0,
+            bridges: 0,
+            completedForms: new Set()
+        };
+
+        const scenarios = [
+            {
+                forms: ["🔬 Lab", "📜 Poetry Reading"],
+                icon: "🔬📜",
+                title: "Scientist meets Poet",
+                description: "A scientific conference after-party",
+                dialogue: [
+                    {
+                        speaker: "Scientist",
+                        text: "My latest hypothesis about quantum entanglement is quite beautiful—the mathematics is elegant.",
+                        isPlayer: false
+                    },
+                    {
+                        speaker: "Poet",
+                        text: "Oh wonderful! I also write about beauty and truth. Tell me, what emotions does your work evoke?",
+                        isPlayer: false
+                    }
+                ],
+                misunderstanding: "The poet thinks 'beauty' and 'truth' work the same way in both language games!",
+                responses: [
+                    {
+                        label: "Response A",
+                        text: "Actually, in science, 'beautiful' means mathematically elegant and simple. It's not about emotions—it's about the structure of the equations.",
+                        correct: true,
+                        explanation: "Perfect! You recognized that 'beauty' functions differently in scientific and poetic language games. Scientists use 'beauty' for elegant simplicity; poets use it for aesthetic and emotional impact. Different forms of life, different rules."
+                    },
+                    {
+                        label: "Response B",
+                        text: "Yes, both science and poetry seek beauty and truth in the same way—they're universal values!",
+                        correct: false,
+                        explanation: "Not quite. While both use the words 'beauty' and 'truth,' these terms function differently in each language game. Scientific truth is empirical verification; poetic truth is experiential resonance. Same words, different practices."
+                    },
+                    {
+                        label: "Response C",
+                        text: "Science isn't about beauty at all—only poetry deals with beauty.",
+                        correct: false,
+                        explanation: "This misses the point. Scientists DO talk about beauty, but in their language game it means something different—mathematical elegance. Both forms of life are valid; they just use the word differently."
+                    }
+                ]
+            },
+            {
+                forms: ["⚖️ Courtroom", "☕ Café"],
+                icon: "⚖️☕",
+                title: "Lawyer meets Friend",
+                description: "Casual conversation outside court",
+                dialogue: [
+                    {
+                        speaker: "Lawyer",
+                        text: "I presented a strong argument today—the evidence was conclusive.",
+                        isPlayer: false
+                    },
+                    {
+                        speaker: "Friend",
+                        text: "That's great! Though you know, we had quite an argument yesterday about where to eat dinner. Sometimes there's no right answer!",
+                        isPlayer: false
+                    }
+                ],
+                misunderstanding: "The friend is using 'argument' in the everyday sense (disagreement), while the lawyer means a logical case!",
+                responses: [
+                    {
+                        label: "Response A",
+                        text: "In law, an 'argument' is a logical case supported by evidence and precedent. It's not about disagreeing—it's about structured reasoning.",
+                        correct: true,
+                        explanation: "Excellent! You identified the different language games. Legal 'arguments' are formal, structured presentations. Everyday 'arguments' are disputes or disagreements. Same word, completely different practices and rules."
+                    },
+                    {
+                        label: "Response B",
+                        text: "Arguments are arguments—they're all about convincing someone you're right.",
+                        correct: false,
+                        explanation: "This overlooks the crucial difference. While both involve persuasion, legal arguments follow strict rules of evidence and logic. Everyday arguments have no such formal structure. The practices differ, so the word functions differently."
+                    },
+                    {
+                        label: "Response C",
+                        text: "You're both arguing, so you're both wrong. Arguments are bad.",
+                        correct: false,
+                        explanation: "This misses Wittgenstein's point entirely! 'Argument' isn't good or bad—it functions differently in different forms of life. Legal argument is a professional practice; casual argument is social disagreement. We must understand the context."
+                    }
+                ]
+            },
+            {
+                forms: ["🎨 Art Studio", "🔬 Lab"],
+                icon: "🎨🔬",
+                title: "Artist meets Scientist",
+                description: "Discussion about their work",
+                dialogue: [
+                    {
+                        speaker: "Artist",
+                        text: "My new piece is an experiment with color theory and emotional response.",
+                        isPlayer: false
+                    },
+                    {
+                        speaker: "Scientist",
+                        text: "Interesting! What's your control group? How are you measuring the variables?",
+                        isPlayer: false
+                    }
+                ],
+                misunderstanding: "The scientist assumes 'experiment' means scientific method, but the artist means creative exploration!",
+                responses: [
+                    {
+                        label: "Response A",
+                        text: "In art, 'experiment' means trying new creative approaches, not controlled scientific testing. Different language game, different rules.",
+                        correct: true,
+                        explanation: "Perfect! Scientific experiments require controls and measurements. Artistic experiments involve creative exploration. Both are valid uses of 'experiment,' but they belong to different forms of life with different practices."
+                    },
+                    {
+                        label: "Response B",
+                        text: "All experiments need controls and measurements—that's what makes them experiments.",
+                        correct: false,
+                        explanation: "This privileges the scientific language game as if it's the 'correct' one. But 'experiment' has been used in artistic contexts for centuries with different meaning. No single form of life owns the word."
+                    },
+                    {
+                        label: "Response C",
+                        text: "Artists shouldn't use the word 'experiment'—it belongs to science.",
+                        correct: false,
+                        explanation: "This misunderstands language games entirely. Words aren't owned by one practice. They function differently in different forms of life. Both uses are legitimate within their respective contexts."
+                    }
+                ]
+            },
+            {
+                forms: ["🏛️ Philosophy Seminar", "💼 Business Meeting"],
+                icon: "🏛️💼",
+                title: "Philosopher meets Executive",
+                description: "Discussion about decision-making",
+                dialogue: [
+                    {
+                        speaker: "Philosopher",
+                        text: "We must question whether the concept of 'value' is even coherent in this framework.",
+                        isPlayer: false
+                    },
+                    {
+                        speaker: "Executive",
+                        text: "Of course value is coherent! This quarter we added $2M in shareholder value.",
+                        isPlayer: false
+                    }
+                ],
+                misunderstanding: "Philosophical 'value' (conceptual analysis) vs. business 'value' (monetary worth)!",
+                responses: [
+                    {
+                        label: "Response A",
+                        text: "You're using 'value' in different language games. Philosophy examines the concept itself; business measures monetary worth. Both are valid in their contexts.",
+                        correct: true,
+                        explanation: "Excellent! This shows understanding of different forms of life. Philosophical value is about conceptual analysis and ethics. Business value is quantifiable monetary worth. Neither is 'wrong'—they're different practices."
+                    },
+                    {
+                        label: "Response B",
+                        text: "Value always means worth—what something is worth in money or importance.",
+                        correct: false,
+                        explanation: "This oversimplifies. While both relate to 'worth,' philosophical investigation of value asks fundamentally different questions than business valuation. The practices and criteria are completely different."
+                    },
+                    {
+                        label: "Response C",
+                        text: "Philosophers overcomplicate everything. Business value is the real value.",
+                        correct: false,
+                        explanation: "This dismisses philosophical inquiry as less legitimate. Wittgenstein would say both language games are valid in their own contexts. The problem is assuming one form of life is more 'real' than another."
+                    }
+                ]
+            },
+            {
+                forms: ["⛪ Religious Service", "📚 Academic Lecture"],
+                icon: "⛪📚",
+                title: "Clergy meets Professor",
+                description: "Interfaith academic dialogue",
+                dialogue: [
+                    {
+                        speaker: "Clergy",
+                        text: "Faith gives us truth beyond what can be proven—it's a different kind of knowing.",
+                        isPlayer: false
+                    },
+                    {
+                        speaker: "Professor",
+                        text: "But 'truth' requires evidence and verification. Without proof, it's just belief.",
+                        isPlayer: false
+                    }
+                ],
+                misunderstanding: "Religious 'truth' (lived conviction) vs. academic 'truth' (verified knowledge)!",
+                responses: [
+                    {
+                        label: "Response A",
+                        text: "You're playing different language games. Religious truth is existential commitment; academic truth is empirical verification. Each has its own criteria within its form of life.",
+                        correct: true,
+                        explanation: "Perfect! This recognizes both forms of life as legitimate. Religious language games involve commitment, practice, and lived experience. Academic language games involve evidence and verification. Both use 'truth' but with different rules and criteria."
+                    },
+                    {
+                        label: "Response B",
+                        text: "There's only one kind of truth—scientific, provable truth. Everything else is just opinion.",
+                        correct: false,
+                        explanation: "This privileges one language game (scientific) as the only valid one. Wittgenstein would reject this. Different forms of life have different practices, all legitimate in their contexts. No single game is 'correct.'"
+                    },
+                    {
+                        label: "Response C",
+                        text: "Religious truth is higher than academic truth—faith transcends reason.",
+                        correct: false,
+                        explanation: "This makes the opposite error—privileging religious language over academic. Wittgenstein's point is that both are valid within their own forms of life. Neither is 'higher'—they're different practices with different rules."
+                    }
+                ]
+            },
+            {
+                forms: ["🎭 Theater", "📰 Journalism"],
+                icon: "🎭📰",
+                title: "Actor meets Journalist",
+                description: "Discussion about representing reality",
+                dialogue: [
+                    {
+                        speaker: "Actor",
+                        text: "My character's truth comes from emotional authenticity, even if the events are fictional.",
+                        isPlayer: false
+                    },
+                    {
+                        speaker: "Journalist",
+                        text: "But truth means reporting what actually happened—verified facts, not feelings.",
+                        isPlayer: false
+                    }
+                ],
+                misunderstanding: "Artistic 'truth' (emotional authenticity) vs. journalistic 'truth' (factual accuracy)!",
+                responses: [
+                    {
+                        label: "Response A",
+                        text: "Different forms of life, different 'truths.' Theater seeks emotional/artistic truth through authenticity. Journalism seeks factual truth through verification. Both are legitimate practices.",
+                        correct: true,
+                        explanation: "Brilliant! You've grasped the core insight. Artistic truth involves authentic representation of human experience. Journalistic truth involves accurate reporting of events. Same word, different language games, different criteria for success."
+                    },
+                    {
+                        label: "Response B",
+                        text: "There's only one truth—what really happened. Fiction can't be 'true.'",
+                        correct: false,
+                        explanation: "This misses how 'truth' functions in artistic contexts. When we say a performance 'rings true,' we don't mean it's factual—we mean it authentically represents human experience. Different language game, different rules."
+                    },
+                    {
+                        label: "Response C",
+                        text: "Emotional truth is more important than facts because feelings matter more.",
+                        correct: false,
+                        explanation: "This wrongly ranks language games. Wittgenstein wouldn't say one form of truth is 'more important.' They serve different purposes in different forms of life. Both have value in their contexts."
+                    }
+                ]
+            }
+        ];
+
+        function startGame() {
+            document.querySelector('.intro-screen').classList.remove('active');
+            document.querySelector('.game-screen').classList.add('active');
+            loadScenario();
+        }
+
+        function loadScenario() {
+            if (gameState.scenarioIndex >= scenarios.length) {
+                showVictory();
+                return;
+            }
+
+            const scenario = scenarios[gameState.scenarioIndex];
+
+            // Update forms of life badges
+            updateFormsOfLife(scenario.forms);
+
+            // Build conversation area
+            const conversationArea = document.getElementById('conversationArea');
+            conversationArea.innerHTML = `
+                <div class="scene-header">
+                    <div class="scene-icon">${scenario.icon}</div>
+                    <div class="scene-title">${scenario.title}</div>
+                    <div class="scene-description">${scenario.description}</div>
+                </div>
+            `;
+
+            // Add dialogue
+            scenario.dialogue.forEach(line => {
+                const dialogueBox = document.createElement('div');
+                dialogueBox.className = line.isPlayer ? 'dialogue-box player' : 'dialogue-box';
+                dialogueBox.innerHTML = `
+                    <div class="speaker">${line.speaker}:</div>
+                    <div class="dialogue-text">${line.text}</div>
+                `;
+                conversationArea.appendChild(dialogueBox);
+            });
+
+            // Add misunderstanding notice
+            const misunderstanding = document.createElement('div');
+            misunderstanding.className = 'misunderstanding';
+            misunderstanding.innerHTML = `
+                <div class="misunderstanding-icon">⚠️</div>
+                <strong>Potential Misunderstanding:</strong> ${scenario.misunderstanding}
+            `;
+            conversationArea.appendChild(misunderstanding);
+
+            // Add response options
+            const responsesContainer = document.createElement('div');
+            responsesContainer.className = 'response-options';
+
+            scenario.responses.forEach((response, index) => {
+                const button = document.createElement('div');
+                button.className = 'response-button';
+                button.innerHTML = `
+                    <div class="response-label">${response.label}</div>
+                    <div class="response-text">${response.text}</div>
+                `;
+                button.onclick = () => selectResponse(response, button);
+                responsesContainer.appendChild(button);
+            });
+
+            conversationArea.appendChild(responsesContainer);
+
+            // Add feedback area
+            const feedback = document.createElement('div');
+            feedback.className = 'feedback';
+            feedback.id = 'feedback';
+            conversationArea.appendChild(feedback);
+
+            document.getElementById('nextButton').style.display = 'none';
+
+            updateProgress();
+            updateScore();
+        }
+
+        function selectResponse(response, button) {
+            const buttons = document.querySelectorAll('.response-button');
+            buttons.forEach(btn => btn.onclick = null);
+
+            const feedback = document.getElementById('feedback');
+
+            if (response.correct) {
+                button.classList.add('correct');
+                feedback.className = 'feedback success show';
+                feedback.innerHTML = `
+                    <strong>🎯 Excellent Understanding!</strong>
+                    <br><br>
+                    ${response.explanation}
+                `;
+                gameState.score += 100;
+                gameState.bridges++;
+
+                // Mark forms as completed
+                const scenario = scenarios[gameState.scenarioIndex];
+                scenario.forms.forEach(form => gameState.completedForms.add(form));
+            } else {
+                button.classList.add('incorrect');
+
+                // Highlight correct answer
+                buttons.forEach((btn, index) => {
+                    if (scenarios[gameState.scenarioIndex].responses[index].correct) {
+                        btn.classList.add('correct');
+                    }
+                });
+
+                feedback.className = 'feedback error show';
+                feedback.innerHTML = `
+                    <strong>Not quite...</strong>
+                    <br><br>
+                    ${response.explanation}
+                `;
+                gameState.score += 30;
+            }
+
+            updateScore();
+            document.getElementById('nextButton').style.display = 'inline-block';
+        }
+
+        function updateFormsOfLife(currentForms) {
+            const container = document.getElementById('formsOfLife');
+            const allForms = ['🔬 Lab', '📜 Poetry Reading', '⚖️ Courtroom', '☕ Café',
+                            '🎨 Art Studio', '🏛️ Philosophy Seminar', '💼 Business Meeting',
+                            '⛪ Religious Service', '📚 Academic Lecture', '🎭 Theater', '📰 Journalism'];
+
+            container.innerHTML = '';
+
+            currentForms.forEach(form => {
+                const badge = document.createElement('div');
+                badge.className = 'life-badge current';
+                badge.textContent = form;
+                container.appendChild(badge);
+            });
+        }
+
+        function nextScenario() {
+            gameState.scenarioIndex++;
+            loadScenario();
+        }
+
+        function updateScore() {
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('scenario').textContent = gameState.scenarioIndex + 1;
+            document.getElementById('bridges').textContent = gameState.bridges;
+        }
+
+        function updateProgress() {
+            const progress = (gameState.scenarioIndex / scenarios.length) * 100;
+            document.getElementById('progressFill').style.width = progress + '%';
+        }
+
+        function showVictory() {
+            document.querySelector('.game-screen').classList.remove('active');
+            document.querySelector('.victory-screen').classList.add('active');
+
+            document.getElementById('finalScore').textContent = gameState.score;
+            document.getElementById('finalBridges').textContent = gameState.bridges;
+        }
+    </script>
+</body>
+</html>

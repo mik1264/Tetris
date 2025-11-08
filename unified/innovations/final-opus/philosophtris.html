@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Philosophtris - Multi-Ruleset Philosophical Tetris</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Georgia', serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: #ecf0f1;
+        }
+
+        .game-container {
+            text-align: center;
+            background: rgba(44, 62, 80, 0.95);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            border: 2px solid #95a5a6;
+        }
+
+        h1 {
+            color: #e74c3c;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .subtitle {
+            color: #bdc3c7;
+            font-style: italic;
+            margin-bottom: 20px;
+        }
+
+        .game-area {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        canvas {
+            border: 3px solid #e74c3c;
+            background: #1a1a1a;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+        }
+
+        .side-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            min-width: 280px;
+        }
+
+        .philosophy-box {
+            background: linear-gradient(135deg, rgba(231, 76, 60, 0.2), rgba(192, 57, 43, 0.2));
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #e74c3c;
+        }
+
+        .philosophy-box h3 {
+            color: #e74c3c;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+
+        .philosophy-description {
+            font-size: 0.9em;
+            line-height: 1.4;
+            color: #ecf0f1;
+            font-style: italic;
+        }
+
+        .info-box {
+            background: rgba(52, 73, 94, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #95a5a6;
+        }
+
+        .info-box h3 {
+            color: #bdc3c7;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .score, .level {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #ecf0f1;
+        }
+
+        .special-meter {
+            background: rgba(241, 196, 15, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #f1c40f;
+            margin-top: 10px;
+        }
+
+        .special-meter h4 {
+            color: #f1c40f;
+            margin-bottom: 8px;
+        }
+
+        .meter-bar {
+            width: 100%;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .meter-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #f1c40f, #f39c12);
+            transition: width 0.3s;
+        }
+
+        .controls {
+            background: rgba(52, 73, 94, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #95a5a6;
+            text-align: left;
+            font-size: 0.85em;
+        }
+
+        .controls h3 {
+            color: #bdc3c7;
+            margin-bottom: 10px;
+        }
+
+        .controls p {
+            margin: 5px 0;
+            color: #ecf0f1;
+        }
+
+        button {
+            margin-top: 20px;
+            padding: 12px 30px;
+            font-size: 1.1em;
+            font-weight: bold;
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 10px rgba(231, 76, 60, 0.3);
+            font-family: 'Georgia', serif;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(231, 76, 60, 0.4);
+        }
+
+        .intro-screen {
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .intro-screen.hidden {
+            display: none;
+        }
+
+        .quote {
+            background: rgba(231, 76, 60, 0.1);
+            border-left: 4px solid #e74c3c;
+            padding: 20px;
+            margin: 20px 0;
+            font-style: italic;
+            border-radius: 5px;
+        }
+
+        .philosophy-list {
+            text-align: left;
+            margin: 20px 0;
+        }
+
+        .philosophy-item {
+            background: rgba(52, 73, 94, 0.5);
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 8px;
+            border-left: 3px solid #e74c3c;
+        }
+
+        .philosophy-item strong {
+            color: #f1c40f;
+        }
+
+        .game-over {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(44, 62, 80, 0.98);
+            color: white;
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            display: none;
+            z-index: 1000;
+            border: 3px solid #e74c3c;
+            max-width: 500px;
+        }
+
+        .game-over.show {
+            display: block;
+        }
+
+        .game-over h2 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            color: #e74c3c;
+        }
+
+        .game-over p {
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+
+        .philosophical-achievement {
+            background: rgba(241, 196, 15, 0.2);
+            padding: 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border: 2px solid #f1c40f;
+        }
+
+        .philosophical-achievement h3 {
+            color: #f1c40f;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <!-- Intro Screen -->
+        <div class="intro-screen" id="introScreen">
+            <h1>🏛️ Philosophtris</h1>
+            <p class="subtitle">Each Level, A Different Philosophy</p>
+
+            <div class="quote">
+                "The unexamined life is not worth living."
+                <br>— Socrates
+                <br><br>
+                "Man is condemned to be free."
+                <br>— Jean-Paul Sartre
+                <br><br>
+                "One must imagine Sisyphus happy."
+                <br>— Albert Camus
+            </div>
+
+            <div style="margin: 20px 0; line-height: 1.8;">
+                <h3 style="color: #e74c3c; margin-bottom: 15px;">A Journey Through Philosophical Systems</h3>
+                <p>Each level of Philosophtris follows the logic of a different philosophical school. The rules of Tetris itself change to reflect different ways of understanding reality, meaning, and existence.</p>
+            </div>
+
+            <div class="philosophy-list">
+                <div class="philosophy-item">
+                    <strong>Level 1 - Platonism:</strong> Only perfect forms clear. Gaps are eternal flaws.
+                </div>
+                <div class="philosophy-item">
+                    <strong>Level 2 - Nihilism:</strong> Clearing lines means nothing. Score means nothing.
+                </div>
+                <div class="philosophy-item">
+                    <strong>Level 3 - Utilitarianism:</strong> Maximize happiness, minimize suffering.
+                </div>
+                <div class="philosophy-item">
+                    <strong>Level 4 - Existentialism:</strong> Define your own win condition.
+                </div>
+                <div class="philosophy-item">
+                    <strong>Level 5 - Stoicism:</strong> Control only what you can control.
+                </div>
+                <div class="philosophy-item">
+                    <strong>Level 6 - Buddhism:</strong> Seek emptiness through non-attachment.
+                </div>
+                <div class="philosophy-item">
+                    <strong>Level 7 - Absurdism:</strong> Sisyphean mode—embrace futility.
+                </div>
+            </div>
+
+            <button onclick="startGame()">Begin Philosophical Journey</button>
+        </div>
+
+        <!-- Main Game -->
+        <div id="mainGame" style="display: none;">
+            <h1>🏛️ Philosophtris</h1>
+            <p class="subtitle">Experience Philosophy Through Gameplay</p>
+
+            <div class="game-area">
+                <canvas id="tetris" width="300" height="600"></canvas>
+
+                <div class="side-panel">
+                    <div class="philosophy-box">
+                        <h3 id="philosophyName">Platonism</h3>
+                        <p class="philosophy-description" id="philosophyDesc">
+                            Only perfect forms matter. Imperfection is permanent.
+                        </p>
+                    </div>
+
+                    <div class="info-box">
+                        <h3>Score</h3>
+                        <div class="score" id="score">0</div>
+                    </div>
+
+                    <div class="info-box">
+                        <h3>Philosophy Level</h3>
+                        <div class="level" id="level">1</div>
+                    </div>
+
+                    <div class="special-meter" id="specialMeter">
+                        <h4 id="meterLabel">Perfection Meter</h4>
+                        <div class="meter-bar">
+                            <div class="meter-fill" id="meterFill" style="width: 0%"></div>
+                        </div>
+                        <p style="margin-top: 8px; font-size: 0.85em;" id="meterDesc">Perfect lines: 0</p>
+                    </div>
+
+                    <div class="controls">
+                        <h3>Controls</h3>
+                        <p><strong>←/→</strong> Move</p>
+                        <p><strong>↓</strong> Soft Drop</p>
+                        <p><strong>↑</strong> Rotate</p>
+                        <p><strong>Space</strong> Hard Drop</p>
+                        <p><strong>P</strong> Pause</p>
+                    </div>
+                </div>
+            </div>
+
+            <button id="startBtn">Start Philosophical Journey</button>
+        </div>
+    </div>
+
+    <div class="game-over" id="gameOver">
+        <h2 id="gameOverTitle">Journey Complete</h2>
+        <p>Final Score: <span id="finalScore">0</span></p>
+        <p>Philosophies Experienced: <span id="philosophiesExperienced">0</span></p>
+
+        <div class="philosophical-achievement">
+            <h3 id="achievementTitle">Philosophical Novice</h3>
+            <p id="achievementText">You've taken your first steps into philosophical thinking through play.</p>
+        </div>
+
+        <button onclick="location.reload()">Begin New Journey</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('tetris');
+        const ctx = canvas.getContext('2d');
+
+        const COLS = 10;
+        const ROWS = 20;
+        const BLOCK_SIZE = 30;
+
+        // Tetromino shapes
+        const SHAPES = {
+            'I': [[1, 1, 1, 1]],
+            'O': [[1, 1], [1, 1]],
+            'T': [[0, 1, 0], [1, 1, 1]],
+            'S': [[0, 1, 1], [1, 1, 0]],
+            'Z': [[1, 1, 0], [0, 1, 1]],
+            'J': [[1, 0, 0], [1, 1, 1]],
+            'L': [[0, 0, 1], [1, 1, 1]]
+        };
+
+        const COLORS = {
+            'I': '#3498db',
+            'O': '#f39c12',
+            'T': '#9b59b6',
+            'S': '#2ecc71',
+            'Z': '#e74c3c',
+            'J': '#1abc9c',
+            'L': '#e67e22'
+        };
+
+        // Philosophical systems
+        const PHILOSOPHIES = [
+            {
+                name: 'Platonism',
+                description: 'Only perfect forms matter. Imperfection is permanent.',
+                meterLabel: 'Perfection Meter',
+                rules: {
+                    clearOnlyPerfect: true, // Only clear lines without gaps
+                    gapsPermanent: true,    // Gaps can never be filled
+                },
+                scoreMultiplier: 3,
+                special: 'perfectLines'
+            },
+            {
+                name: 'Nihilism',
+                description: 'Nothing matters. Lines clear but score doesn\'t increase. Find your own meaning.',
+                meterLabel: 'Meaninglessness Meter',
+                rules: {
+                    scoreIsPointless: true,  // Score doesn't increase
+                    linesVanish: false,      // Lines still clear
+                },
+                scoreMultiplier: 0,
+                special: 'persistence'
+            },
+            {
+                name: 'Utilitarianism',
+                description: 'Each piece has happiness value. Maximize total happiness, minimize suffering.',
+                meterLabel: 'Happiness Balance',
+                rules: {
+                    pieceHappiness: true,    // Each piece type has different value
+                    sufferingPenalty: true,  // Some pieces cause "suffering"
+                },
+                scoreMultiplier: 1,
+                special: 'happiness'
+            },
+            {
+                name: 'Existentialism',
+                description: 'You choose your own win condition. Freedom is both gift and burden.',
+                meterLabel: 'Authenticity Meter',
+                rules: {
+                    playerDefinesGoal: true,
+                    freedomBurden: true,     // Extra pressure from choice
+                },
+                scoreMultiplier: 2,
+                special: 'authenticity'
+            },
+            {
+                name: 'Stoicism',
+                description: 'Accept what you cannot control. Remain calm despite chaos.',
+                meterLabel: 'Tranquility Meter',
+                rules: {
+                    randomGarbage: true,     // Random garbage appears
+                    calmBonus: true,         // Bonus for steady play
+                },
+                scoreMultiplier: 1,
+                special: 'tranquility'
+            },
+            {
+                name: 'Buddhism',
+                description: 'Seek emptiness. Attachment causes suffering. Let pieces go.',
+                meterLabel: 'Detachment Meter',
+                rules: {
+                    impermanence: true,      // Pieces randomly change
+                    emptyGoal: true,         // Goal is empty board
+                },
+                scoreMultiplier: 1,
+                special: 'detachment'
+            },
+            {
+                name: 'Absurdism',
+                description: 'Sisyphean mode. Lines reappear after clearing. Embrace the absurd.',
+                meterLabel: 'Persistence Meter',
+                rules: {
+                    sisyphean: true,         // Cleared lines reappear
+                    embraceAbsurd: true,     // Points for continuing
+                },
+                scoreMultiplier: 1,
+                special: 'absurdity'
+            }
+        ];
+
+        let board = [];
+        let currentPiece = null;
+        let score = 0;
+        let philosophyLevel = 0;
+        let lines = 0;
+        let gameLoop = null;
+        let dropCounter = 0;
+        let dropInterval = 1000;
+        let lastTime = 0;
+        let isPaused = false;
+        let gameRunning = false;
+
+        // Philosophy-specific variables
+        let perfectLines = 0;
+        let happiness = 50;
+        let persistence = 0;
+        let tranquility = 100;
+        let detachment = 0;
+        let existentialGoal = null;
+        let garbageTimer = 0;
+
+        function startGame() {
+            document.getElementById('introScreen').classList.add('hidden');
+            document.getElementById('mainGame').style.display = 'block';
+        }
+
+        function createBoard() {
+            board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+        }
+
+        function drawBlock(x, y, color) {
+            ctx.fillStyle = color;
+            ctx.fillRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+        }
+
+        function drawBoard() {
+            ctx.fillStyle = '#1a1a1a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            for (let row = 0; row < ROWS; row++) {
+                for (let col = 0; col < COLS; col++) {
+                    if (board[row][col]) {
+                        drawBlock(col, row, board[row][col]);
+                    }
+                }
+            }
+
+            // Draw grid lines faintly
+            ctx.strokeStyle = 'rgba(149, 165, 166, 0.1)';
+            ctx.lineWidth = 1;
+            for (let i = 1; i < COLS; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i * BLOCK_SIZE, 0);
+                ctx.lineTo(i * BLOCK_SIZE, canvas.height);
+                ctx.stroke();
+            }
+            for (let i = 1; i < ROWS; i++) {
+                ctx.beginPath();
+                ctx.moveTo(0, i * BLOCK_SIZE);
+                ctx.lineTo(canvas.width, i * BLOCK_SIZE);
+                ctx.stroke();
+            }
+        }
+
+        function createPiece() {
+            const pieces = Object.keys(SHAPES);
+            const type = pieces[Math.floor(Math.random() * pieces.length)];
+
+            // Buddhism: impermanence
+            if (PHILOSOPHIES[philosophyLevel].name === 'Buddhism' && Math.random() < 0.2) {
+                // Pieces might transform
+                setTimeout(() => {
+                    if (currentPiece && currentPiece.type === type) {
+                        const newType = pieces[Math.floor(Math.random() * pieces.length)];
+                        currentPiece.shape = SHAPES[newType];
+                        currentPiece.color = COLORS[newType];
+                        currentPiece.type = newType;
+                    }
+                }, 2000);
+            }
+
+            return {
+                shape: SHAPES[type],
+                color: COLORS[type],
+                x: Math.floor(COLS / 2) - Math.floor(SHAPES[type][0].length / 2),
+                y: 0,
+                type: type
+            };
+        }
+
+        function drawPiece(piece) {
+            piece.shape.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value) {
+                        drawBlock(piece.x + x, piece.y + y, piece.color);
+                    }
+                });
+            });
+        }
+
+        function checkCollision(piece, offsetX = 0, offsetY = 0) {
+            for (let y = 0; y < piece.shape.length; y++) {
+                for (let x = 0; x < piece.shape[y].length; x++) {
+                    if (piece.shape[y][x]) {
+                        const newX = piece.x + x + offsetX;
+                        const newY = piece.y + y + offsetY;
+
+                        if (newX < 0 || newX >= COLS || newY >= ROWS) {
+                            return true;
+                        }
+
+                        if (newY >= 0 && board[newY][newX]) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        function mergePiece() {
+            const philosophy = PHILOSOPHIES[philosophyLevel];
+
+            currentPiece.shape.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value) {
+                        const boardY = currentPiece.y + y;
+                        const boardX = currentPiece.x + x;
+                        if (boardY >= 0) {
+                            // Platonism: gaps are permanent (mark with special color)
+                            if (philosophy.rules.gapsPermanent && board[boardY][boardX] === 0) {
+                                board[boardY][boardX] = currentPiece.color;
+                            } else {
+                                board[boardY][boardX] = currentPiece.color;
+                            }
+                        }
+                    }
+                });
+            });
+
+            // Utilitarianism: track happiness
+            if (philosophy.rules.pieceHappiness) {
+                const pieceHappiness = {
+                    'I': 10, 'O': 5, 'T': 0, 'S': -5, 'Z': -5, 'J': 3, 'L': 3
+                };
+                happiness += pieceHappiness[currentPiece.type];
+                happiness = Math.max(0, Math.min(100, happiness));
+            }
+        }
+
+        function clearLines() {
+            const philosophy = PHILOSOPHIES[philosophyLevel];
+            let linesCleared = 0;
+            const clearedRows = [];
+
+            for (let row = ROWS - 1; row >= 0; row--) {
+                const isComplete = board[row].every(cell => cell !== 0);
+
+                if (philosophy.rules.clearOnlyPerfect) {
+                    // Platonism: only clear perfect lines (no gaps ever placed)
+                    const isPerfect = board[row].every(cell => cell !== 0 && cell !== 'gap');
+                    if (isPerfect) {
+                        clearedRows.push(row);
+                        linesCleared++;
+                        perfectLines++;
+                    }
+                } else if (isComplete) {
+                    if (philosophy.rules.sisyphean) {
+                        // Absurdism: lines reappear
+                        clearedRows.push(row);
+                        setTimeout(() => {
+                            if (gameRunning) {
+                                // Restore the line with random colors
+                                for (let col = 0; col < COLS; col++) {
+                                    const colors = Object.values(COLORS);
+                                    board[ROWS - 1][col] = colors[Math.floor(Math.random() * colors.length)];
+                                }
+                            }
+                        }, 1000);
+                    }
+                    clearedRows.push(row);
+                    linesCleared++;
+                }
+            }
+
+            // Actually clear the lines
+            clearedRows.forEach(row => {
+                board.splice(row, 1);
+                board.unshift(Array(COLS).fill(0));
+            });
+
+            if (linesCleared > 0) {
+                lines += linesCleared;
+
+                // Calculate score based on philosophy
+                if (!philosophy.rules.scoreIsPointless) {
+                    const baseScore = [0, 40, 100, 300, 1200][linesCleared];
+                    score += baseScore * philosophy.scoreMultiplier;
+
+                    // Special bonuses
+                    if (philosophy.rules.pieceHappiness) {
+                        score += Math.floor(happiness * linesCleared);
+                    }
+                    if (philosophy.rules.calmBonus && tranquility > 80) {
+                        score += 100 * linesCleared;
+                    }
+                } else {
+                    // Nihilism: score doesn't matter but track persistence
+                    persistence++;
+                }
+
+                updateScore();
+                updatePhilosophyMeter();
+
+                // Progress to next philosophy after certain lines
+                if (lines >= (philosophyLevel + 1) * 10 && philosophyLevel < PHILOSOPHIES.length - 1) {
+                    philosophyLevel++;
+                    updatePhilosophy();
+                }
+            }
+        }
+
+        function rotate(piece) {
+            const newShape = piece.shape[0].map((_, i) =>
+                piece.shape.map(row => row[i]).reverse()
+            );
+
+            const rotated = { ...piece, shape: newShape };
+
+            if (!checkCollision(rotated)) {
+                return rotated;
+            }
+
+            // Wall kick
+            for (let offset of [1, -1, 2, -2]) {
+                rotated.x = piece.x + offset;
+                if (!checkCollision(rotated)) {
+                    return rotated;
+                }
+            }
+
+            return piece;
+        }
+
+        function move(direction) {
+            if (!currentPiece || isPaused) return;
+
+            if (direction === 'left' && !checkCollision(currentPiece, -1, 0)) {
+                currentPiece.x--;
+            } else if (direction === 'right' && !checkCollision(currentPiece, 1, 0)) {
+                currentPiece.x++;
+            } else if (direction === 'down') {
+                if (!checkCollision(currentPiece, 0, 1)) {
+                    currentPiece.y++;
+                    score += 1;
+                    updateScore();
+                } else {
+                    placePiece();
+                }
+            }
+        }
+
+        function hardDrop() {
+            if (!currentPiece || isPaused) return;
+
+            while (!checkCollision(currentPiece, 0, 1)) {
+                currentPiece.y++;
+                score += 2;
+            }
+            updateScore();
+            placePiece();
+        }
+
+        function placePiece() {
+            mergePiece();
+            clearLines();
+            currentPiece = createPiece();
+
+            if (checkCollision(currentPiece)) {
+                gameOver();
+            }
+        }
+
+        function updatePhilosophy() {
+            const philosophy = PHILOSOPHIES[philosophyLevel];
+
+            document.getElementById('philosophyName').textContent = philosophy.name;
+            document.getElementById('philosophyDesc').textContent = philosophy.description;
+            document.getElementById('meterLabel').textContent = philosophy.meterLabel;
+
+            // Reset special meters
+            perfectLines = 0;
+            happiness = 50;
+            persistence = 0;
+            tranquility = 100;
+            detachment = 0;
+
+            // Special setup for philosophies
+            if (philosophy.name === 'Existentialism') {
+                // Let player choose goal
+                const goals = ['Height', 'Symmetry', 'Chaos', 'Minimalism'];
+                existentialGoal = goals[Math.floor(Math.random() * goals.length)];
+                document.getElementById('meterDesc').textContent = `Your chosen path: ${existentialGoal}`;
+            }
+
+            updatePhilosophyMeter();
+        }
+
+        function updatePhilosophyMeter() {
+            const philosophy = PHILOSOPHIES[philosophyLevel];
+            let meterPercent = 0;
+            let meterText = '';
+
+            switch (philosophy.special) {
+                case 'perfectLines':
+                    meterPercent = (perfectLines / 10) * 100;
+                    meterText = `Perfect lines: ${perfectLines}`;
+                    break;
+                case 'persistence':
+                    meterPercent = Math.min(persistence * 10, 100);
+                    meterText = `Continuing despite meaninglessness: ${persistence}`;
+                    break;
+                case 'happiness':
+                    meterPercent = happiness;
+                    meterText = `Happiness: ${happiness}%`;
+                    break;
+                case 'authenticity':
+                    meterPercent = Math.random() * 100; // Constantly changing
+                    meterText = `Being true to: ${existentialGoal}`;
+                    break;
+                case 'tranquility':
+                    meterPercent = tranquility;
+                    meterText = `Inner calm: ${tranquility}%`;
+                    break;
+                case 'detachment':
+                    meterPercent = detachment;
+                    meterText = `Non-attachment: ${detachment}%`;
+                    break;
+                case 'absurdity':
+                    meterPercent = (persistence % 10) * 10;
+                    meterText = `Embracing the absurd: ${persistence} cycles`;
+                    break;
+            }
+
+            document.getElementById('meterFill').style.width = meterPercent + '%';
+            document.getElementById('meterDesc').textContent = meterText;
+        }
+
+        function addRandomGarbage() {
+            const philosophy = PHILOSOPHIES[philosophyLevel];
+
+            if (philosophy.rules.randomGarbage) {
+                garbageTimer++;
+                if (garbageTimer > 100) {
+                    // Add random garbage line
+                    for (let col = 0; col < COLS; col++) {
+                        if (Math.random() < 0.7) {
+                            board[ROWS - 1][col] = '#95a5a6';
+                        }
+                    }
+                    tranquility = Math.max(0, tranquility - 10);
+                    garbageTimer = 0;
+                    updatePhilosophyMeter();
+                }
+            }
+        }
+
+        function updateScore() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('level').textContent = philosophyLevel + 1;
+        }
+
+        function gameOver() {
+            gameRunning = false;
+            cancelAnimationFrame(gameLoop);
+
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('philosophiesExperienced').textContent = philosophyLevel + 1;
+
+            // Determine achievement
+            let title = 'Philosophical Novice';
+            let text = "You've taken your first steps into philosophical thinking through play.";
+
+            if (philosophyLevel >= 6) {
+                title = 'Philosophical Sage';
+                text = 'You have experienced all major philosophical systems and found wisdom in each!';
+            } else if (philosophyLevel >= 4) {
+                title = 'Deep Thinker';
+                text = 'You navigate different philosophical frameworks with growing understanding.';
+            } else if (philosophyLevel >= 2) {
+                title = 'Philosophy Student';
+                text = 'You begin to see how different philosophies create different realities.';
+            }
+
+            // Special achievements
+            if (PHILOSOPHIES[philosophyLevel].name === 'Nihilism' && persistence > 20) {
+                title += ' (Übermensch)';
+                text += ' You created meaning from nothing!';
+            } else if (PHILOSOPHIES[philosophyLevel].name === 'Absurdism' && persistence > 30) {
+                title += ' (Happy Sisyphus)';
+                text += ' You embraced the absurd with joy!';
+            }
+
+            document.getElementById('achievementTitle').textContent = title;
+            document.getElementById('achievementText').textContent = text;
+            document.getElementById('gameOver').classList.add('show');
+        }
+
+        function update(time = 0) {
+            if (!gameRunning || isPaused) return;
+
+            const deltaTime = time - lastTime;
+            lastTime = time;
+            dropCounter += deltaTime;
+
+            if (dropCounter > dropInterval) {
+                move('down');
+                dropCounter = 0;
+            }
+
+            // Philosophy-specific updates
+            addRandomGarbage();
+
+            // Buddhism: check for empty board
+            if (PHILOSOPHIES[philosophyLevel].name === 'Buddhism') {
+                const isEmpty = board.every(row => row.every(cell => cell === 0));
+                if (isEmpty) {
+                    detachment = 100;
+                    score += 1000;
+                    updateScore();
+                    updatePhilosophyMeter();
+                }
+            }
+
+            drawBoard();
+            if (currentPiece) {
+                drawPiece(currentPiece);
+            }
+
+            gameLoop = requestAnimationFrame(update);
+        }
+
+        function toggleGame() {
+            if (!gameRunning) {
+                createBoard();
+                score = 0;
+                philosophyLevel = 0;
+                lines = 0;
+                dropCounter = 0;
+                dropInterval = 1000;
+                isPaused = false;
+                gameRunning = true;
+                garbageTimer = 0;
+
+                updateScore();
+                updatePhilosophy();
+                currentPiece = createPiece();
+
+                document.getElementById('gameOver').classList.remove('show');
+                document.getElementById('startBtn').textContent = 'Restart Journey';
+
+                lastTime = 0;
+                update();
+            } else {
+                location.reload();
+            }
+        }
+
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            if (!gameRunning) return;
+
+            switch(e.key) {
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    move('left');
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    move('right');
+                    break;
+                case 'ArrowDown':
+                    e.preventDefault();
+                    move('down');
+                    break;
+                case 'ArrowUp':
+                    e.preventDefault();
+                    if (currentPiece && !isPaused) {
+                        currentPiece = rotate(currentPiece);
+                    }
+                    break;
+                case ' ':
+                    e.preventDefault();
+                    hardDrop();
+                    break;
+                case 'p':
+                case 'P':
+                    e.preventDefault();
+                    isPaused = !isPaused;
+                    if (!isPaused) {
+                        lastTime = performance.now();
+                        update(lastTime);
+                    }
+                    break;
+            }
+        });
+
+        document.getElementById('startBtn').onclick = toggleGame;
+
+        // Initial draw
+        createBoard();
+        drawBoard();
+    </script>
+</body>
+</html>

@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chart.js Tetris - Data Visualization Game</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 20px;
+            font-style: italic;
+            font-size: 1.1em;
+        }
+
+        .game-area {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+            margin-bottom: 20px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 500px;
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .side-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .stats-card {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .stats-card h3 {
+            margin-bottom: 15px;
+            font-size: 1.3em;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+            padding-bottom: 10px;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            font-size: 1.1em;
+        }
+
+        .stat-value {
+            font-weight: bold;
+            font-size: 1.4em;
+        }
+
+        .chart-mini {
+            height: 150px;
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .controls {
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .controls h3 {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+        }
+
+        .controls p {
+            margin: 5px 0;
+            color: #666;
+        }
+
+        button {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 1.1em;
+            cursor: pointer;
+            margin: 10px 5px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .game-over {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .game-over-content {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .game-over h2 {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-size: 2.5em;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .game-area {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Chart.js Tetris</h1>
+        <p class="subtitle">Play Tetris Through Data Visualization - Each Column is a Live Bar Chart!</p>
+
+        <div class="game-area">
+            <div class="chart-container">
+                <canvas id="mainChart"></canvas>
+            </div>
+
+            <div class="side-panel">
+                <div class="stats-card">
+                    <h3>📈 Game Statistics</h3>
+                    <div class="stat-item">
+                        <span>Score:</span>
+                        <span class="stat-value" id="score">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>Level:</span>
+                        <span class="stat-value" id="level">1</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>Lines:</span>
+                        <span class="stat-value" id="lines">0</span>
+                    </div>
+                </div>
+
+                <div class="stats-card">
+                    <h3>📊 Performance Metrics</h3>
+                    <div class="chart-mini">
+                        <canvas id="scoreChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="stats-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <h3>🎯 Column Heights</h3>
+                    <div class="chart-mini">
+                        <canvas id="heightChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <h3>Controls</h3>
+            <p><strong>←/→</strong> Move | <strong>↑</strong> Rotate | <strong>↓</strong> Soft Drop | <strong>Space</strong> Hard Drop</p>
+            <button id="start-btn">Start Game</button>
+            <button id="pause-btn" style="display:none;">Pause</button>
+        </div>
+    </div>
+
+    <div class="game-over" id="game-over">
+        <div class="game-over-content">
+            <h2>Game Over!</h2>
+            <p style="font-size: 1.5em; margin: 20px 0;">Final Score: <strong id="final-score">0</strong></p>
+            <p style="font-size: 1.2em; margin: 10px 0;">Lines Cleared: <strong id="final-lines">0</strong></p>
+            <button id="restart-btn">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        // Game Configuration
+        const ROWS = 20;
+        const COLS = 10;
+
+        // Color palette
+        const COLORS = {
+            I: 'rgba(0, 240, 240, 0.8)',
+            O: 'rgba(240, 240, 0, 0.8)',
+            T: 'rgba(160, 0, 240, 0.8)',
+            S: 'rgba(0, 240, 0, 0.8)',
+            Z: 'rgba(240, 0, 0, 0.8)',
+            J: 'rgba(0, 0, 240, 0.8)',
+            L: 'rgba(240, 160, 0, 0.8)'
+        };
+
+        // Tetromino Shapes
+        const SHAPES = {
+            I: { blocks: [[0,0], [1,0], [2,0], [3,0]], color: 'I' },
+            O: { blocks: [[0,0], [1,0], [0,1], [1,1]], color: 'O' },
+            T: { blocks: [[1,0], [0,1], [1,1], [2,1]], color: 'T' },
+            S: { blocks: [[1,0], [2,0], [0,1], [1,1]], color: 'S' },
+            Z: { blocks: [[0,0], [1,0], [1,1], [2,1]], color: 'Z' },
+            J: { blocks: [[0,0], [0,1], [1,1], [2,1]], color: 'J' },
+            L: { blocks: [[2,0], [0,1], [1,1], [2,1]], color: 'L' }
+        };
+
+        // Game State
+        let gameState = {
+            board: Array(ROWS).fill().map(() => Array(COLS).fill(null)),
+            score: 0,
+            level: 1,
+            lines: 0,
+            currentPiece: null,
+            nextPiece: null,
+            gameOver: false,
+            paused: false,
+            gameLoop: null,
+            scoreHistory: [0]
+        };
+
+        // Chart.js configurations
+        const mainChartCtx = document.getElementById('mainChart').getContext('2d');
+        const scoreChartCtx = document.getElementById('scoreChart').getContext('2d');
+        const heightChartCtx = document.getElementById('heightChart').getContext('2d');
+
+        // Main game chart (stacked bar chart showing the board)
+        const mainChart = new Chart(mainChartCtx, {
+            type: 'bar',
+            data: {
+                labels: Array.from({length: COLS}, (_, i) => i + 1),
+                datasets: []
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                scales: {
+                    x: {
+                        stacked: true,
+                        max: COLS,
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.1)'
+                        }
+                    },
+                    y: {
+                        stacked: true,
+                        max: ROWS,
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.1)'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    title: {
+                        display: true,
+                        text: 'Tetris Game Board (Bar Chart View)',
+                        font: {
+                            size: 16,
+                            weight: 'bold'
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => {
+                                return `Column ${context.label}: Row ${context.parsed.x}`;
+                            }
+                        }
+                    }
+                },
+                animation: {
+                    duration: 200
+                }
+            }
+        });
+
+        // Score history chart
+        const scoreChart = new Chart(scoreChartCtx, {
+            type: 'line',
+            data: {
+                labels: [0],
+                datasets: [{
+                    label: 'Score',
+                    data: [0],
+                    borderColor: 'rgba(240, 147, 251, 1)',
+                    backgroundColor: 'rgba(240, 147, 251, 0.2)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        }
+                    },
+                    x: {
+                        display: false
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+
+        // Column heights chart
+        const heightChart = new Chart(heightChartCtx, {
+            type: 'bar',
+            data: {
+                labels: Array.from({length: COLS}, (_, i) => i + 1),
+                datasets: [{
+                    label: 'Height',
+                    data: Array(COLS).fill(0),
+                    backgroundColor: Array(COLS).fill().map((_, i) =>
+                        `hsla(${i * 36}, 70%, 60%, 0.8)`
+                    ),
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: ROWS,
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: 'white'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            color: 'white'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+
+        // Create random piece
+        function createPiece() {
+            const shapes = Object.keys(SHAPES);
+            const shapeKey = shapes[Math.floor(Math.random() * shapes.length)];
+            const shape = SHAPES[shapeKey];
+
+            return {
+                blocks: shape.blocks.map(b => [...b]),
+                color: shape.color,
+                x: Math.floor(COLS / 2) - 2,
+                y: 0
+            };
+        }
+
+        // Rotate piece
+        function rotatePiece(piece) {
+            const rotated = {
+                ...piece,
+                blocks: piece.blocks.map(([x, y]) => [-y, x])
+            };
+
+            const minX = Math.min(...rotated.blocks.map(b => b[0]));
+            const minY = Math.min(...rotated.blocks.map(b => b[1]));
+            rotated.blocks = rotated.blocks.map(([x, y]) => [x - minX, y - minY]);
+
+            return rotated;
+        }
+
+        // Check collision
+        function checkCollision(piece, offsetX = 0, offsetY = 0) {
+            return piece.blocks.some(([bx, by]) => {
+                const x = piece.x + bx + offsetX;
+                const y = piece.y + by + offsetY;
+
+                if (x < 0 || x >= COLS || y >= ROWS) return true;
+                if (y < 0) return false;
+                return gameState.board[y][x] !== null;
+            });
+        }
+
+        // Merge piece to board
+        function mergePiece() {
+            gameState.currentPiece.blocks.forEach(([bx, by]) => {
+                const x = gameState.currentPiece.x + bx;
+                const y = gameState.currentPiece.y + by;
+                if (y >= 0) {
+                    gameState.board[y][x] = gameState.currentPiece.color;
+                }
+            });
+        }
+
+        // Clear completed lines
+        function clearLines() {
+            let linesCleared = 0;
+
+            for (let row = ROWS - 1; row >= 0; row--) {
+                if (gameState.board[row].every(cell => cell !== null)) {
+                    gameState.board.splice(row, 1);
+                    gameState.board.unshift(Array(COLS).fill(null));
+                    linesCleared++;
+                    row++;
+                }
+            }
+
+            if (linesCleared > 0) {
+                gameState.lines += linesCleared;
+                gameState.score += [0, 100, 300, 500, 800][linesCleared] * gameState.level;
+                gameState.level = Math.floor(gameState.lines / 10) + 1;
+                updateStats();
+                updateScoreChart();
+            }
+        }
+
+        // Render board using Chart.js
+        function renderBoard() {
+            // Create datasets for each row, where data represents filled columns
+            const datasets = [];
+
+            // Process board from bottom to top
+            for (let row = ROWS - 1; row >= 0; row--) {
+                const rowData = gameState.board[row].map((cell, col) => {
+                    if (cell) return 1;
+
+                    // Check if current piece occupies this position
+                    if (gameState.currentPiece) {
+                        const isPieceBlock = gameState.currentPiece.blocks.some(([bx, by]) => {
+                            return gameState.currentPiece.x + bx === col &&
+                                   gameState.currentPiece.y + by === row;
+                        });
+                        if (isPieceBlock) return 1;
+                    }
+
+                    return 0;
+                });
+
+                // Determine color for this row
+                let rowColor = 'rgba(200, 200, 200, 0.3)';
+
+                for (let col = 0; col < COLS; col++) {
+                    if (gameState.board[row][col]) {
+                        rowColor = COLORS[gameState.board[row][col]];
+                        break;
+                    }
+
+                    if (gameState.currentPiece) {
+                        const isPieceBlock = gameState.currentPiece.blocks.some(([bx, by]) => {
+                            return gameState.currentPiece.x + bx === col &&
+                                   gameState.currentPiece.y + by === row;
+                        });
+                        if (isPieceBlock) {
+                            rowColor = COLORS[gameState.currentPiece.color];
+                            break;
+                        }
+                    }
+                }
+
+                if (rowData.some(v => v > 0)) {
+                    datasets.push({
+                        label: `Row ${row}`,
+                        data: rowData,
+                        backgroundColor: rowColor,
+                        borderWidth: 1,
+                        borderColor: 'rgba(255, 255, 255, 0.8)'
+                    });
+                }
+            }
+
+            mainChart.data.datasets = datasets;
+            mainChart.update('none');
+
+            updateHeightChart();
+        }
+
+        // Update score history chart
+        function updateScoreChart() {
+            if (scoreChart.data.labels.length > 50) {
+                scoreChart.data.labels.shift();
+                scoreChart.data.datasets[0].data.shift();
+            }
+
+            scoreChart.data.labels.push(scoreChart.data.labels.length);
+            scoreChart.data.datasets[0].data.push(gameState.score);
+            scoreChart.update('none');
+        }
+
+        // Update column heights chart
+        function updateHeightChart() {
+            const heights = Array(COLS).fill(0);
+
+            for (let col = 0; col < COLS; col++) {
+                for (let row = ROWS - 1; row >= 0; row--) {
+                    if (gameState.board[row][col]) {
+                        heights[col] = ROWS - row;
+                        break;
+                    }
+                }
+            }
+
+            heightChart.data.datasets[0].data = heights;
+            heightChart.update('none');
+        }
+
+        // Update statistics
+        function updateStats() {
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('level').textContent = gameState.level;
+            document.getElementById('lines').textContent = gameState.lines;
+        }
+
+        // Move piece
+        function movePiece(dx, dy) {
+            if (!checkCollision(gameState.currentPiece, dx, dy)) {
+                gameState.currentPiece.x += dx;
+                gameState.currentPiece.y += dy;
+                renderBoard();
+                return true;
+            }
+            return false;
+        }
+
+        // Rotate current piece
+        function rotate() {
+            const rotated = rotatePiece(gameState.currentPiece);
+            rotated.x = gameState.currentPiece.x;
+            rotated.y = gameState.currentPiece.y;
+
+            if (!checkCollision(rotated)) {
+                gameState.currentPiece = rotated;
+                renderBoard();
+            }
+        }
+
+        // Hard drop
+        function hardDrop() {
+            while (movePiece(0, 1)) {}
+            lockPiece();
+        }
+
+        // Lock piece and spawn new one
+        function lockPiece() {
+            mergePiece();
+            clearLines();
+            spawnPiece();
+            renderBoard();
+        }
+
+        // Spawn new piece
+        function spawnPiece() {
+            gameState.currentPiece = gameState.nextPiece || createPiece();
+            gameState.nextPiece = createPiece();
+
+            if (checkCollision(gameState.currentPiece)) {
+                endGame();
+            }
+        }
+
+        // Game loop
+        function gameLoop() {
+            if (gameState.paused || gameState.gameOver) return;
+
+            if (!movePiece(0, 1)) {
+                lockPiece();
+            }
+        }
+
+        // Start game
+        function startGame() {
+            gameState = {
+                board: Array(ROWS).fill().map(() => Array(COLS).fill(null)),
+                score: 0,
+                level: 1,
+                lines: 0,
+                currentPiece: null,
+                nextPiece: null,
+                gameOver: false,
+                paused: false,
+                gameLoop: null,
+                scoreHistory: [0]
+            };
+
+            // Reset charts
+            scoreChart.data.labels = [0];
+            scoreChart.data.datasets[0].data = [0];
+            scoreChart.update();
+
+            heightChart.data.datasets[0].data = Array(COLS).fill(0);
+            heightChart.update();
+
+            updateStats();
+            spawnPiece();
+            renderBoard();
+
+            if (gameState.gameLoop) clearInterval(gameState.gameLoop);
+            gameState.gameLoop = setInterval(gameLoop, 1000);
+
+            document.getElementById('game-over').style.display = 'none';
+            document.getElementById('start-btn').style.display = 'none';
+            document.getElementById('pause-btn').style.display = 'inline-block';
+        }
+
+        // End game
+        function endGame() {
+            gameState.gameOver = true;
+            clearInterval(gameState.gameLoop);
+
+            document.getElementById('final-score').textContent = gameState.score;
+            document.getElementById('final-lines').textContent = gameState.lines;
+            document.getElementById('game-over').style.display = 'flex';
+            document.getElementById('pause-btn').style.display = 'none';
+            document.getElementById('start-btn').style.display = 'inline-block';
+        }
+
+        // Toggle pause
+        function togglePause() {
+            gameState.paused = !gameState.paused;
+            document.getElementById('pause-btn').textContent = gameState.paused ? 'Resume' : 'Pause';
+        }
+
+        // Event listeners
+        document.addEventListener('keydown', (e) => {
+            if (gameState.gameOver || gameState.paused) return;
+
+            switch(e.key) {
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    movePiece(-1, 0);
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    movePiece(1, 0);
+                    break;
+                case 'ArrowDown':
+                    e.preventDefault();
+                    movePiece(0, 1);
+                    break;
+                case 'ArrowUp':
+                    e.preventDefault();
+                    rotate();
+                    break;
+                case ' ':
+                    e.preventDefault();
+                    hardDrop();
+                    break;
+            }
+        });
+
+        document.getElementById('start-btn').addEventListener('click', startGame);
+        document.getElementById('pause-btn').addEventListener('click', togglePause);
+        document.getElementById('restart-btn').addEventListener('click', startGame);
+
+        // Initialize empty board
+        renderBoard();
+    </script>
+</body>
+</html>
