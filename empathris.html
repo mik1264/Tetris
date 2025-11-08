@@ -509,16 +509,22 @@
         }
 
         function drawGuidance() {
-            // Find optimal placement
-            let bestY = gameState.piece.y;
-            while (!collides(gameState.piece, 0, 1)) {
-                bestY++;
-                gameState.piece.y++;
-            }
-            gameState.piece.y -= (bestY - gameState.piece.y);
+            // Save current position
+            const originalY = gameState.piece.y;
 
-            // Draw ghost piece
-            ctx.globalAlpha = 0.3;
+            // Find optimal placement
+            let bestY = originalY;
+            while (!collides(gameState.piece, 0, 1)) {
+                gameState.piece.y++;
+                bestY = gameState.piece.y;
+            }
+
+            // Restore original position
+            gameState.piece.y = originalY;
+
+            // Draw ghost piece with golden glow
+            ctx.globalAlpha = 0.4;
+            ctx.fillStyle = '#ffd700';
             ctx.strokeStyle = '#ffd700';
             ctx.lineWidth = 2;
             gameState.piece.shape.forEach((row, y) => {
@@ -528,6 +534,12 @@
                             (gameState.piece.x + x) * BLOCK_SIZE,
                             (bestY + y) * BLOCK_SIZE,
                             BLOCK_SIZE - 1, BLOCK_SIZE - 1
+                        );
+                        // Add subtle fill
+                        ctx.fillRect(
+                            (gameState.piece.x + x) * BLOCK_SIZE + 2,
+                            (bestY + y) * BLOCK_SIZE + 2,
+                            BLOCK_SIZE - 5, BLOCK_SIZE - 5
                         );
                     }
                 });
@@ -620,10 +632,11 @@
                 gameState.piece = gameState.nextPiece || createPiece();
                 gameState.nextPiece = createPiece();
 
-                // Happy emotion: chance to split piece
-                if (gameState.currentEmotion === 'happy' && Math.random() < 0.3) {
+                // Happy emotion: chance to split piece (only if not already split)
+                if (gameState.currentEmotion === 'happy' && Math.random() < 0.25 && !gameState.piece.isSplit) {
                     gameState.piece.isSplit = true;
-                    showMessage('😄 Happy split! Smaller pieces!');
+                    // Make the piece slightly smaller for visual feedback
+                    showMessage('😄 Happy split! Smaller, easier-to-place pieces!');
                 }
 
                 if (collides(gameState.piece)) {

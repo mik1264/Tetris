@@ -266,7 +266,7 @@
             </div>
         </div>
 
-        <div class="message" id="message">Use 1/2/3 to switch timelines. SPACE to Time Splice!</div>
+        <div class="message" id="message">Use 1/2/3 to switch timelines. Press S for Time Splice!</div>
 
         <div class="buttons">
             <button id="startBtn">Start Game</button>
@@ -281,11 +281,12 @@
             <li><kbd>←</kbd> <kbd>→</kbd> Move piece in active timeline</li>
             <li><kbd>↑</kbd> Rotate piece</li>
             <li><kbd>↓</kbd> Soft drop</li>
-            <li><kbd>Space</kbd> Hard drop (or activate Time Splice when charged)</li>
+            <li><kbd>Space</kbd> Hard drop</li>
+            <li><kbd>S</kbd> Activate Time Splice (3 uses per game)</li>
             <li><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> Switch between Past, Present, Future timelines</li>
             <li><strong>Temporal Cascade:</strong> Clearing a line in PAST causes blocks in PRESENT to shift down!</li>
             <li><strong>Future Echo:</strong> See ghostly previews of upcoming pieces in FUTURE timeline</li>
-            <li><strong>Time Splice:</strong> Merge all three timelines for 10 seconds (3 uses per game)</li>
+            <li><strong>Time Splice:</strong> Press S to merge all three timelines for 10 seconds</li>
             <li><strong>Paradox Penalty:</strong> Random garbage appears if you create impossible temporal states</li>
         </ul>
     </div>
@@ -349,7 +350,7 @@
         const message = document.getElementById('message');
 
         function createBoard() {
-            return Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+            return Array.from({ length: ROWS }, () => Array(COLS).fill(null));
         }
 
         function createPiece() {
@@ -470,9 +471,9 @@
             const timeline = timelines[timelineIdx];
 
             for (let y = ROWS - 1; y >= 0; y--) {
-                if (timeline.board[y].every(cell => cell !== 0)) {
+                if (timeline.board[y].every(cell => cell !== null)) {
                     timeline.board.splice(y, 1);
-                    timeline.board.unshift(Array(COLS).fill(0));
+                    timeline.board.unshift(Array(COLS).fill(null));
                     linesCleared++;
                     y++;
                 }
@@ -495,11 +496,17 @@
         function shiftTimeline(timelineIdx, amount) {
             const timeline = timelines[timelineIdx];
             for (let i = 0; i < amount; i++) {
-                // Shift all blocks down by one
-                for (let y = ROWS - 1; y > 0; y--) {
-                    timeline.board[y] = [...timeline.board[y - 1]];
+                // Add garbage line at top (with a gap for fairness)
+                const garbageRow = Array(COLS).fill(null);
+                const gapPos = Math.floor(Math.random() * COLS);
+                for (let x = 0; x < COLS; x++) {
+                    if (x !== gapPos) {
+                        garbageRow[x] = '#555'; // Darker color for temporal garbage
+                    }
                 }
-                timeline.board[0] = Array(COLS).fill(0);
+                // Remove bottom row and add garbage at top
+                timeline.board.pop();
+                timeline.board.unshift(garbageRow);
             }
 
             // Check for paradox (blocks appearing without cause)
@@ -712,10 +719,13 @@
                     break;
                 case ' ':
                     e.preventDefault();
+                    timelines_to_control.forEach(idx => hardDrop(idx));
+                    break;
+                case 's':
+                case 'S':
+                    e.preventDefault();
                     if (!gameState.splicing && gameState.splicesLeft > 0) {
                         activateTimeSplice();
-                    } else {
-                        timelines_to_control.forEach(idx => hardDrop(idx));
                     }
                     break;
                 case '1':

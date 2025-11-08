@@ -602,10 +602,16 @@
                         y++;
                     }
                 } else if (phil === 'nihilism') {
-                    // Lines don't clear, score doesn't increase
+                    // Lines don't clear, score doesn't increase - but we track attempts
                     if (isFilled) {
                         linesCleared++;
-                        gameState.wisdom++; // Wisdom = endurance
+                        gameState.wisdom++; // Wisdom = endurance in face of meaninglessness
+                        // Visual feedback that something happened even though nothing changed
+                        const filledRow = [...gameState.board[y]];
+                        // Flash the line briefly
+                        setTimeout(() => {
+                            showMessage(`Line ${linesCleared} completed... but does it matter? Endurance: ${gameState.wisdom}`);
+                        }, 100);
                     }
                 } else if (phil === 'utilitarianism') {
                     if (isFilled) {
@@ -616,6 +622,15 @@
                         gameState.board.splice(y, 1);
                         gameState.board.unshift(Array(COLS).fill(null));
                         linesCleared++;
+                        y++;
+                    }
+                } else if (phil === 'existentialism') {
+                    // Player defines their own meaning
+                    if (isFilled) {
+                        gameState.board.splice(y, 1);
+                        gameState.board.unshift(Array(COLS).fill(null));
+                        linesCleared++;
+                        gameState.wisdom++;
                         y++;
                     }
                 } else if (phil === 'buddhism') {

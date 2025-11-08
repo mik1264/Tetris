@@ -580,17 +580,20 @@
             // Draw current piece
             if (gameState.piece) {
                 if (gameState.piece.superposition) {
-                    // Draw superposition as multiple overlapping shapes
-                    ctx.globalAlpha = 0.15;
+                    // Draw superposition as multiple overlapping shapes with shimmer effect
+                    const shimmer = Math.sin(Date.now() / 150) * 0.1 + 0.2;
+                    ctx.globalAlpha = shimmer;
                     SHAPE_NAMES.forEach((shapeName, idx) => {
                         const shape = SHAPES[shapeName];
+                        const probability = gameState.piece.probabilities[shapeName] / 100;
                         ctx.fillStyle = COLORS[idx];
+                        ctx.globalAlpha = shimmer * probability; // Opacity based on probability
 
                         shape.forEach((row, y) => {
                             row.forEach((value, x) => {
                                 if (value) {
-                                    const offsetX = (Math.sin(Date.now() / 200 + idx) * 0.5);
-                                    const offsetY = (Math.cos(Date.now() / 200 + idx) * 0.5);
+                                    const offsetX = (Math.sin(Date.now() / 200 + idx) * 0.3);
+                                    const offsetY = (Math.cos(Date.now() / 200 + idx) * 0.3);
                                     ctx.fillRect(
                                         (gameState.piece.x + x + offsetX) * BLOCK_SIZE,
                                         (gameState.piece.y + y + offsetY) * BLOCK_SIZE,
@@ -602,15 +605,21 @@
                     });
                     ctx.globalAlpha = 1.0;
 
-                    // Draw quantum glow
-                    ctx.strokeStyle = '#00ff9f';
-                    ctx.lineWidth = 2;
+                    // Draw quantum glow with pulsing effect
+                    const glowIntensity = (Math.sin(Date.now() / 100) + 1) / 2;
+                    ctx.strokeStyle = `rgba(0, 255, 159, ${0.5 + glowIntensity * 0.5})`;
+                    ctx.lineWidth = 3;
                     ctx.strokeRect(
                         gameState.piece.x * BLOCK_SIZE - 5,
                         gameState.piece.y * BLOCK_SIZE - 5,
                         4 * BLOCK_SIZE + 10,
                         4 * BLOCK_SIZE + 10
                     );
+
+                    // Draw "?" symbol to indicate uncertainty
+                    ctx.fillStyle = '#00ff9f';
+                    ctx.font = 'bold 24px Arial';
+                    ctx.fillText('?', gameState.piece.x * BLOCK_SIZE + 30, gameState.piece.y * BLOCK_SIZE + 30);
                 } else {
                     // Draw collapsed piece
                     gameState.piece.shape.forEach((row, y) => {

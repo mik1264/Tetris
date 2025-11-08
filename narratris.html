@@ -531,6 +531,7 @@
             // Check adjacent pieces on board
             const px = gameState.piece.x;
             const py = gameState.piece.y;
+            let interactionFound = false;
 
             for (let y = 0; y < gameState.piece.shape.length; y++) {
                 for (let x = 0; x < gameState.piece.shape[y].length; x++) {
@@ -538,10 +539,12 @@
                         const boardY = py + y;
                         const boardX = px + x;
 
-                        // Check all adjacent cells
+                        // Check all adjacent cells (including diagonals for richer interactions)
                         const adjacent = [
                             [boardX - 1, boardY], [boardX + 1, boardY],
-                            [boardX, boardY - 1], [boardX, boardY + 1]
+                            [boardX, boardY - 1], [boardX, boardY + 1],
+                            [boardX - 1, boardY - 1], [boardX + 1, boardY - 1],
+                            [boardX - 1, boardY + 1], [boardX + 1, boardY + 1]
                         ];
 
                         adjacent.forEach(([ax, ay]) => {
@@ -555,11 +558,17 @@
                                     const event = STORY_EVENTS[pair];
                                     addStoryEvent(event.text);
                                     gameState.storyBranches[event.branch]++;
+                                    gameState.score += 50; // Bonus for story progression
+                                    interactionFound = true;
                                 }
                             }
                         });
                     }
                 }
+            }
+
+            if (interactionFound) {
+                updateStats();
             }
         }
 
