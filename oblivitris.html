@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OBLIVITRIS - Memory-Based Invisible Matrix Tetris</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #0f0;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        #matrix-rain {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            opacity: 0.15;
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            text-shadow: 0 0 10px #0f0, 0 0 20px #0f0;
+            margin-bottom: 20px;
+            letter-spacing: 4px;
+        }
+
+        .game-layout {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .panel {
+            background: rgba(0, 20, 0, 0.9);
+            border: 2px solid #0f0;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat {
+            background: rgba(0, 30, 0, 0.6);
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #0a0;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            opacity: 0.7;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            text-shadow: 0 0 5px #0f0;
+        }
+
+        .memory-panel {
+            width: 250px;
+        }
+
+        .sonar-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(0, 40, 0, 0.6);
+            border: 1px solid #0f0;
+            border-radius: 5px;
+        }
+
+        .sonar-button {
+            width: 100%;
+            background: rgba(0, 80, 0, 0.8);
+            color: #0f0;
+            border: 2px solid #0f0;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 1.1rem;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-top: 10px;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+
+        .sonar-button:hover:not(.disabled) {
+            background: rgba(0, 150, 0, 0.9);
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
+            transform: scale(1.05);
+        }
+
+        .sonar-button.disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .sonar-button.active {
+            background: rgba(0, 255, 0, 0.5);
+            animation: sonar-pulse 0.3s;
+        }
+
+        @keyframes sonar-pulse {
+            0%, 100% { box-shadow: 0 0 10px rgba(0, 255, 0, 0.5); }
+            50% { box-shadow: 0 0 40px rgba(0, 255, 0, 1); }
+        }
+
+        .fade-indicator {
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(0, 30, 0, 0.5);
+            border-radius: 5px;
+            font-size: 0.9rem;
+        }
+
+        .fade-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(0, 50, 0, 0.5);
+            border-radius: 4px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+
+        .fade-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff00, #ff0000);
+            transition: width 0.3s;
+        }
+
+        .memory-help {
+            margin-top: 20px;
+            font-size: 0.85rem;
+            opacity: 0.7;
+            line-height: 1.6;
+        }
+
+        canvas {
+            border: 2px solid #0a0;
+            background: #000;
+            box-shadow: inset 0 0 20px rgba(0, 255, 0, 0.1);
+        }
+
+        .controls {
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(0, 30, 0, 0.6);
+            border-radius: 5px;
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .sonar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(0, 255, 0, 0.3) 0%, transparent 70%);
+            z-index: 50;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .sonar-overlay.active {
+            opacity: 1;
+        }
+
+        .message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 20, 0, 0.98);
+            border: 3px solid #0f0;
+            padding: 40px;
+            border-radius: 15px;
+            z-index: 1000;
+            text-align: center;
+            box-shadow: 0 0 40px rgba(0, 255, 0, 0.6);
+            display: none;
+            max-width: 500px;
+        }
+
+        .message.show {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+            to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        }
+
+        button {
+            background: rgba(0, 50, 0, 0.8);
+            color: #0f0;
+            border: 2px solid #0f0;
+            padding: 10px 25px;
+            font-family: 'Courier New', monospace;
+            font-size: 1rem;
+            cursor: pointer;
+            border-radius: 5px;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: rgba(0, 100, 0, 0.9);
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
+        }
+
+        .achievement {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 150, 0, 0.9);
+            border: 2px solid #0ff;
+            color: #0ff;
+            padding: 15px 30px;
+            border-radius: 10px;
+            z-index: 100;
+            display: none;
+            font-size: 1.1rem;
+            font-weight: bold;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.6);
+        }
+
+        .achievement.show {
+            display: block;
+            animation: slideDown 0.5s;
+        }
+
+        @keyframes slideDown {
+            from { transform: translateX(-50%) translateY(-100px); opacity: 0; }
+            to { transform: translateX(-50%) translateY(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="matrix-rain"></canvas>
+    <div class="sonar-overlay" id="sonar-overlay"></div>
+    <div class="achievement" id="achievement"></div>
+
+    <div class="container">
+        <h1>👁️ OBLIVITRIS 👁️</h1>
+
+        <div class="game-layout">
+            <!-- Memory Panel -->
+            <div class="panel memory-panel">
+                <h3 style="margin-bottom: 15px;">MEMORY SYSTEM</h3>
+
+                <div class="sonar-section">
+                    <div style="font-size: 0.9rem; margin-bottom: 5px;">Sonar Pulses</div>
+                    <div style="font-size: 2rem; font-weight: bold; text-shadow: 0 0 10px #0f0;" id="sonar-count">3</div>
+                    <button class="sonar-button" id="sonar-btn" onclick="activateSonar()">
+                        [S] SONAR PULSE
+                    </button>
+                    <div style="font-size: 0.8rem; opacity: 0.7; margin-top: 8px;">
+                        Reveals all hidden blocks for 1 second
+                    </div>
+                </div>
+
+                <div class="fade-indicator">
+                    <div>Memory Decay Speed</div>
+                    <div class="fade-bar">
+                        <div class="fade-fill" id="fade-speed" style="width: 20%"></div>
+                    </div>
+                    <div style="font-size: 0.8rem; margin-top: 5px;" id="fade-text">
+                        Full fade: 10s
+                    </div>
+                </div>
+
+                <div class="memory-help">
+                    <strong>Memory Challenge:</strong><br>
+                    • Pieces visible for 3s<br>
+                    • Fade to 50% at 6s<br>
+                    • Completely invisible at 10s<br>
+                    • Last 5 pieces show as ghosts<br>
+                    • Perfect memory = bonus points!
+                </div>
+            </div>
+
+            <!-- Game Panel -->
+            <div class="panel">
+                <div class="stats">
+                    <div class="stat">
+                        <div class="stat-label">SCORE</div>
+                        <div class="stat-value" id="score">0</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">MEMORY BONUS</div>
+                        <div class="stat-value" id="memory-bonus">0</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">LEVEL</div>
+                        <div class="stat-value" id="level">1</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">LINES</div>
+                        <div class="stat-value" id="lines">0</div>
+                    </div>
+                </div>
+
+                <canvas id="canvas" width="300" height="600"></canvas>
+
+                <div class="controls">
+                    ← → Move | ↑ Rotate | ↓ Fast Drop | SPACE Hard Drop | S Sonar<br>
+                    <small>Remember where you placed blocks. They will fade away...</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="message" id="game-over-msg">
+        <h2 style="font-size: 2rem; margin-bottom: 15px;">MEMORY FAILED</h2>
+        <p id="final-score"></p>
+        <p style="margin-top: 10px; font-size: 0.9rem; opacity: 0.8;" id="archaeologist"></p>
+        <button onclick="location.reload()">RETRY</button>
+    </div>
+
+    <script>
+        // Matrix rain
+        const rainCanvas = document.getElementById('matrix-rain');
+        const rainCtx = rainCanvas.getContext('2d');
+        rainCanvas.width = window.innerWidth;
+        rainCanvas.height = window.innerHeight;
+
+        const columns = Math.floor(rainCanvas.width / 20);
+        const drops = Array(columns).fill(1);
+
+        function drawMatrixRain() {
+            rainCtx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+            rainCtx.fillRect(0, 0, rainCanvas.width, rainCanvas.height);
+            rainCtx.fillStyle = '#0f0';
+            rainCtx.font = '15px monospace';
+
+            for (let i = 0; i < drops.length; i++) {
+                const text = String.fromCharCode(0x30A0 + Math.random() * 96);
+                rainCtx.fillText(text, i * 20, drops[i] * 20);
+                if (drops[i] * 20 > rainCanvas.height && Math.random() > 0.975) {
+                    drops[i] = 0;
+                }
+                drops[i]++;
+            }
+        }
+
+        setInterval(drawMatrixRain, 33);
+
+        // Game constants
+        const COLS = 10;
+        const ROWS = 20;
+        const BLOCK_SIZE = 30;
+
+        const SHAPES = [
+            [[1,1,1,1]], // I
+            [[1,1],[1,1]], // O
+            [[0,1,0],[1,1,1]], // T
+            [[1,1,0],[0,1,1]], // S
+            [[0,1,1],[1,1,0]], // Z
+            [[1,0,0],[1,1,1]], // L
+            [[0,0,1],[1,1,1]]  // J
+        ];
+
+        // Game state
+        let gameState = {
+            score: 0,
+            level: 1,
+            lines: 0,
+            memoryBonus: 0,
+            sonarCount: 3,
+            sonarUsed: 0,
+            gameOver: false,
+            fadeSpeed: 10000, // ms for full fade
+            linesWithoutSonar: 0
+        };
+
+        // Block age tracking
+        let board = Array(ROWS).fill(null).map(() => Array(COLS).fill(0));
+        let blockAge = Array(ROWS).fill(null).map(() => Array(COLS).fill(0));
+        let recentPlacements = [];
+
+        let currentPiece = null;
+        let pieceX = 0;
+        let pieceY = 0;
+        let lastUpdate = 0;
+        let gameSpeed = 600;
+        let sonarActive = false;
+
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        function init() {
+            newPiece();
+            gameLoop();
+
+            // Age blocks over time
+            setInterval(ageBlocks, 100);
+
+            // Increase difficulty
+            setInterval(() => {
+                if (gameState.fadeSpeed > 3000) {
+                    gameState.fadeSpeed -= 100;
+                    updateFadeIndicator();
+                }
+            }, 30000); // Every 30 seconds
+        }
+
+        function ageBlocks() {
+            const now = Date.now();
+            for (let row = 0; row < ROWS; row++) {
+                for (let col = 0; col < COLS; col++) {
+                    if (board[row][col] && blockAge[row][col] > 0) {
+                        blockAge[row][col] = now - blockAge[row][col];
+                    }
+                }
+            }
+
+            // Age recent placements
+            recentPlacements = recentPlacements.filter(p => {
+                return (Date.now() - p.time) < 15000; // Keep for 15 seconds
+            });
+        }
+
+        function newPiece() {
+            currentPiece = SHAPES[Math.floor(Math.random() * SHAPES.length)];
+            pieceX = Math.floor(COLS / 2) - Math.floor(currentPiece[0].length / 2);
+            pieceY = 0;
+
+            if (collides(currentPiece, pieceX, pieceY)) {
+                gameState.gameOver = true;
+                showGameOver();
+            }
+        }
+
+        function collides(piece, x, y) {
+            for (let row = 0; row < piece.length; row++) {
+                for (let col = 0; col < piece[row].length; col++) {
+                    if (piece[row][col] &&
+                        (y + row >= ROWS || x + col < 0 || x + col >= COLS ||
+                         (y + row >= 0 && board[y + row][x + col]))) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        function merge() {
+            const now = Date.now();
+            const placement = [];
+
+            for (let row = 0; row < currentPiece.length; row++) {
+                for (let col = 0; col < currentPiece[row].length; col++) {
+                    if (currentPiece[row][col]) {
+                        if (pieceY + row >= 0) {
+                            board[pieceY + row][pieceX + col] = 1;
+                            blockAge[pieceY + row][pieceX + col] = now;
+                            placement.push({ x: pieceX + col, y: pieceY + row });
+                        }
+                    }
+                }
+            }
+
+            recentPlacements.unshift({ blocks: placement, time: now });
+            if (recentPlacements.length > 5) {
+                recentPlacements.pop();
+            }
+        }
+
+        function clearLines() {
+            let linesCleared = 0;
+
+            for (let row = ROWS - 1; row >= 0; row--) {
+                if (board[row].every(cell => cell === 1)) {
+                    board.splice(row, 1);
+                    board.unshift(Array(COLS).fill(0));
+                    blockAge.splice(row, 1);
+                    blockAge.unshift(Array(COLS).fill(0));
+                    linesCleared++;
+                    row++;
+                }
+            }
+
+            if (linesCleared > 0) {
+                gameState.lines += linesCleared;
+                gameState.linesWithoutSonar += linesCleared;
+
+                // Archaeologist bonus
+                if (gameState.linesWithoutSonar >= 5) {
+                    gameState.memoryBonus += 500;
+                    showAchievement('🏛️ ARCHAEOLOGIST! +500 Memory Bonus');
+                    gameState.linesWithoutSonar = 0;
+                }
+
+                gameState.score += linesCleared * 100 * gameState.level;
+                gameState.level = Math.floor(gameState.lines / 10) + 1;
+                updateStats();
+            }
+        }
+
+        function activateSonar() {
+            if (gameState.sonarCount <= 0 || sonarActive) return;
+
+            gameState.sonarCount--;
+            gameState.sonarUsed++;
+            gameState.linesWithoutSonar = 0; // Reset archaeologist counter
+            sonarActive = true;
+
+            document.getElementById('sonar-overlay').classList.add('active');
+            document.getElementById('sonar-btn').classList.add('active');
+
+            setTimeout(() => {
+                sonarActive = false;
+                document.getElementById('sonar-overlay').classList.remove('active');
+                document.getElementById('sonar-btn').classList.remove('active');
+            }, 1000);
+
+            updateSonarUI();
+        }
+
+        function updateSonarUI() {
+            document.getElementById('sonar-count').textContent = gameState.sonarCount;
+            const btn = document.getElementById('sonar-btn');
+
+            if (gameState.sonarCount <= 0) {
+                btn.classList.add('disabled');
+                btn.textContent = 'NO PULSES LEFT';
+            }
+        }
+
+        function updateFadeIndicator() {
+            const fadeSeconds = gameState.fadeSpeed / 1000;
+            const progress = Math.max(0, Math.min(100, 100 - (fadeSeconds / 10 * 100)));
+
+            document.getElementById('fade-speed').style.width = progress + '%';
+            document.getElementById('fade-text').textContent = `Full fade: ${fadeSeconds.toFixed(1)}s`;
+        }
+
+        function showAchievement(text) {
+            const achievement = document.getElementById('achievement');
+            achievement.textContent = text;
+            achievement.classList.add('show');
+
+            setTimeout(() => {
+                achievement.classList.remove('show');
+            }, 3000);
+        }
+
+        function gameLoop(timestamp = 0) {
+            if (gameState.gameOver) return;
+
+            if (timestamp - lastUpdate > gameSpeed) {
+                pieceY++;
+
+                if (collides(currentPiece, pieceX, pieceY)) {
+                    pieceY--;
+                    merge();
+                    clearLines();
+                    newPiece();
+                }
+
+                lastUpdate = timestamp;
+            }
+
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function draw() {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const now = Date.now();
+
+            // Draw board with fading
+            for (let row = 0; row < ROWS; row++) {
+                for (let col = 0; col < COLS; col++) {
+                    if (board[row][col]) {
+                        const age = now - blockAge[row][col];
+                        let opacity = 1;
+
+                        if (!sonarActive) {
+                            if (age < 3000) {
+                                opacity = 1; // Fully visible
+                            } else if (age < 6000) {
+                                opacity = 1 - ((age - 3000) / 3000) * 0.5; // Fade to 50%
+                            } else if (age < gameState.fadeSpeed) {
+                                opacity = 0.5 - ((age - 6000) / (gameState.fadeSpeed - 6000)) * 0.5;
+                            } else {
+                                opacity = 0; // Invisible
+                            }
+                        }
+
+                        if (opacity > 0 || sonarActive) {
+                            ctx.fillStyle = `rgba(0, 255, 0, ${sonarActive ? 1 : opacity})`;
+                            ctx.fillRect(col * BLOCK_SIZE, row * BLOCK_SIZE,
+                                        BLOCK_SIZE - 1, BLOCK_SIZE - 1);
+                        }
+                    }
+                }
+            }
+
+            // Draw ghost memory of recent placements
+            if (!sonarActive) {
+                ctx.fillStyle = 'rgba(0, 255, 255, 0.15)';
+                recentPlacements.forEach(placement => {
+                    placement.blocks.forEach(block => {
+                        ctx.fillRect(block.x * BLOCK_SIZE, block.y * BLOCK_SIZE,
+                                    BLOCK_SIZE - 1, BLOCK_SIZE - 1);
+                    });
+                });
+            }
+
+            // Draw current piece (always visible)
+            if (currentPiece) {
+                ctx.fillStyle = '#00ff00';
+
+                for (let row = 0; row < currentPiece.length; row++) {
+                    for (let col = 0; col < currentPiece[row].length; col++) {
+                        if (currentPiece[row][col]) {
+                            ctx.fillRect((pieceX + col) * BLOCK_SIZE,
+                                        (pieceY + row) * BLOCK_SIZE,
+                                        BLOCK_SIZE - 1, BLOCK_SIZE - 1);
+                        }
+                    }
+                }
+            }
+        }
+
+        function rotatePiece() {
+            const rotated = currentPiece[0].map((_, i) =>
+                currentPiece.map(row => row[i]).reverse());
+
+            if (!collides(rotated, pieceX, pieceY)) {
+                currentPiece = rotated;
+            }
+        }
+
+        function movePiece(dx) {
+            pieceX += dx;
+            if (collides(currentPiece, pieceX, pieceY)) {
+                pieceX -= dx;
+            }
+        }
+
+        function dropPiece() {
+            while (!collides(currentPiece, pieceX, pieceY + 1)) {
+                pieceY++;
+            }
+        }
+
+        function updateStats() {
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('level').textContent = gameState.level;
+            document.getElementById('lines').textContent = gameState.lines;
+            document.getElementById('memory-bonus').textContent = gameState.memoryBonus;
+        }
+
+        function showGameOver() {
+            const archaeologistMsg = gameState.sonarUsed === 0 ?
+                '🏆 PERFECT MEMORY! No sonar pulses used!' :
+                `Sonar pulses used: ${gameState.sonarUsed}`;
+
+            document.getElementById('final-score').textContent =
+                `Score: ${gameState.score} | Memory Bonus: ${gameState.memoryBonus} | Lines: ${gameState.lines}`;
+            document.getElementById('archaeologist').textContent = archaeologistMsg;
+            document.getElementById('game-over-msg').classList.add('show');
+        }
+
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            if (gameState.gameOver) return;
+
+            switch(e.key) {
+                case 'ArrowLeft':
+                    movePiece(-1);
+                    break;
+                case 'ArrowRight':
+                    movePiece(1);
+                    break;
+                case 'ArrowUp':
+                    rotatePiece();
+                    break;
+                case 'ArrowDown':
+                    pieceY++;
+                    if (collides(currentPiece, pieceX, pieceY)) {
+                        pieceY--;
+                    }
+                    break;
+                case ' ':
+                    e.preventDefault();
+                    dropPiece();
+                    break;
+                case 's':
+                case 'S':
+                    activateSonar();
+                    break;
+            }
+        });
+
+        init();
+        updateFadeIndicator();
+    </script>
+</body>
+</html>
