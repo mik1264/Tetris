@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Tetris Repository - Complete Game Gallery</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #7f8c8d;
+            margin-bottom: 30px;
+            font-size: 1.2em;
+        }
+
+        .branch-section {
+            margin-bottom: 40px;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 5px solid #667eea;
+        }
+
+        .branch-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            cursor: pointer;
+        }
+
+        .branch-header:hover {
+            opacity: 0.8;
+        }
+
+        .branch-name {
+            font-size: 1.5em;
+            color: #2c3e50;
+            font-weight: bold;
+            flex-grow: 1;
+        }
+
+        .branch-stats {
+            background: #667eea;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+        }
+
+        .games-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .game-card {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .game-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+
+        .game-title {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .game-description {
+            color: #7f8c8d;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+            line-height: 1.4;
+        }
+
+        .game-tech {
+            display: inline-block;
+            background: #e1e8ed;
+            padding: 3px 8px;
+            border-radius: 5px;
+            font-size: 0.8em;
+            margin-right: 5px;
+            margin-bottom: 5px;
+        }
+
+        .tech-vanilla { background: #ffeaa7; }
+        .tech-p5js { background: #fab1a0; }
+        .tech-threejs { background: #74b9ff; }
+        .tech-d3js { background: #a29bfe; }
+        .tech-chartjs { background: #55efc4; }
+
+        .play-button {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 5px;
+            text-decoration: none;
+            margin-top: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .play-button:hover {
+            background: #764ba2;
+            transform: scale(1.05);
+        }
+
+        .category-filter {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .filter-btn {
+            background: #e1e8ed;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Courier New', monospace;
+        }
+
+        .filter-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .filter-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .branch-instruction {
+            background: #fff3cd;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            border-left: 4px solid #ffc107;
+        }
+
+        .instruction-code {
+            background: #f8f9fa;
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            display: inline-block;
+            margin: 5px 0;
+        }
+
+        .stats-overview {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .new-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #e74c3c;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 0.7em;
+            font-weight: bold;
+        }
+
+        .unique-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #27ae60;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 0.7em;
+            font-weight: bold;
+        }
+
+        .collapsible {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+
+        .collapsible.expanded {
+            max-height: 3000px;
+            transition: max-height 0.5s ease-in;
+        }
+
+        .toggle-arrow {
+            display: inline-block;
+            margin-right: 10px;
+            transition: transform 0.3s ease;
+        }
+
+        .toggle-arrow.expanded {
+            transform: rotate(90deg);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 Tetris Repository Gallery</h1>
+        <p class="subtitle">Complete Collection of All Tetris Variants Across All Branches</p>
+
+        <div class="stats-overview">
+            <div class="stat-card">
+                <div class="stat-number">13</div>
+                <div class="stat-label">Total Branches</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">40+</div>
+                <div class="stat-label">Unique Games</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">5</div>
+                <div class="stat-label">Technologies</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">10</div>
+                <div class="stat-label">Never-Before-Seen</div>
+            </div>
+        </div>
+
+        <div class="category-filter">
+            <button class="filter-btn active" onclick="filterGames('all')">All Games</button>
+            <button class="filter-btn" onclick="filterGames('philosophical')">Philosophical</button>
+            <button class="filter-btn" onclick="filterGames('innovative')">Innovative Gameplay</button>
+            <button class="filter-btn" onclick="filterGames('visual')">Visual/Artistic</button>
+            <button class="filter-btn" onclick="filterGames('framework')">Framework Demos</button>
+            <button class="filter-btn" onclick="filterGames('unique')">Unique Only</button>
+        </div>
+
+        <!-- Main Branch -->
+        <div class="branch-section" data-branch="main">
+            <div class="branch-header" onclick="toggleBranch(this)">
+                <span class="toggle-arrow expanded">▶</span>
+                <div class="branch-name">main</div>
+                <div class="branch-stats">7 games • Philosophical</div>
+            </div>
+            <div class="branch-instruction">
+                To play these games: <code class="instruction-code">git checkout main</code>
+            </div>
+            <div class="games-grid collapsible expanded">
+                <div class="game-card" data-category="philosophical">
+                    <div class="game-title">Classic Tetris</div>
+                    <div class="game-description">The original implementation with clean vanilla JavaScript</div>
+                    <span class="game-tech tech-vanilla">Vanilla JS</span>
+                    <br><a href="index.html" class="play-button">Play Game</a>
+                </div>
+                <div class="game-card" data-category="philosophical">
+                    <div class="game-title">Language Tetris</div>
+                    <div class="game-description">Wittgenstein's language games meet classic Tetris</div>
+                    <span class="game-tech tech-vanilla">Vanilla JS</span>
+                    <br><a href="language-tetris.html" class="play-button">Play Game</a>
+                </div>
+                <div class="game-card" data-category="philosophical">
+                    <div class="game-title">Builder's Apprentice</div>
+                    <div class="game-description">Construction through language rules and meaning</div>
+                    <span class="game-tech tech-vanilla">Vanilla JS</span>
+                    <br><a href="builders-apprentice.html" class="play-button">Play Game</a>
+                </div>
+                <div class="game-card" data-category="philosophical">
+                    <div class="game-title">Context Shift</div>
+                    <div class="game-description">Meaning changes with context - philosophical puzzle</div>
+                    <span class="game-tech tech-vanilla">Vanilla JS</span>
+                    <br><a href="context-shift.html" class="play-button">Play Game</a>
+                </div>
+                <div class="game-card" data-category="philosophical">
+                    <div class="game-title">Family Resemblance</div>
+                    <div class="game-description">Pattern recognition based on Wittgenstein's concepts</div>
+                    <span class="game-tech tech-vanilla">Vanilla JS</span>
+                    <br><a href="family-resemblance.html" class="play-button">Play Game</a>
+                </div>
+                <div class="game-card" data-category="philosophical">
+                    <div class="game-title">Lost in Translation</div>
+                    <div class="game-description">Explore translation and interpretation challenges</div>
+                    <span class="game-tech tech-vanilla">Vanilla JS</span>
+                    <br><a href="lost-in-translation.html" class="play-button">Play Game</a>
+                </div>
+                <div class="game-card" data-category="philosophical">
+                    <div class="game-title">Wittgenstein Game</div>
+                    <div class="game-description">Core philosophical concepts in gameplay form</div>
+                    <span class="game-tech tech-vanilla">Vanilla JS</span>
+                    <br><a href="wittgenstein-game.html" class="play-button">Play Game</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Opus Innovations Branch -->
+        <div class="branch-section" data-branch="opus-tetris-innovations-all-10-twists">
+            <div class="branch-header" onclick="toggleBranch(this)">
+                <span class="toggle-arrow expanded">▶</span>
+                <div class="branch-name">opus-tetris-innovations-all-10-twists</div>
+                <div class="branch-stats">10 new games • Revolutionary</div>
+            </div>
+            <div class="branch-instruction">
+                To play these games: <code class="instruction-code">git checkout opus-tetris-innovations-all-10-twists</code>
+            </div>
+            <div class="games-grid collapsible expanded">
+                <div class="game-card" data-category="innovative">
+                    <span class="unique-badge">UNIQUE</span>
+                    <div class="game-title">Oblivitris</div>
+                    <div class="game-description">Memory-based invisible Tetris - pieces fade after 3 seconds</div>
+                    <span class="game-tech tech-vanilla">Vanilla JS</span>
+                    <br><a href="oblivitris.html" class="play-button">Play Game</a>
+                </div>
+                <div class="game-card" data-category="innovative">
+                    <span class="unique-badge">UNIQUE</span>
+                    <div class="game-title">Philosophtris</div>
+                    <div class="game-description">7 philosophical systems as gameplay rulesets</div>
+                    <span class="game-tech tech-vanilla">Vanilla JS</span>
+                    <br><a href="philosophtris.html" class="play-button">Play Game</a>
+                </div>
+                <div class="game-card" data-category="innovative">
+                    <span class="unique-badge">UNIQUE</span>
+                    <div class="game-title">Quantris</div>
+                    <div class="game-description">Quantum superposition - pieces exist as probability clouds</div>
+                    <span class="game-tech tech-vanilla">Vanilla JS</span>
+                    <br><a href="quantris.html" class="play-button">Play Game</a>
+                </div>
+                <div class="game-card" data-category="innovative">
+                    <span class="unique-badge">UNIQUE</span>
+                    <div class="game-title">Chronotris</div>
+                    <div class="game-description">Three parallel timelines with temporal cascades</div>
+                    <span class="game-tech tech-vanilla">Vanilla JS</span>
+                    <br><a href="chronotris.html" class="play-button">Play Game</a>
+                </div>
+                <div class="game-card" data-category="innovative">
+                    <span class="unique-badge">UNIQUE</span>
+                    <div class="game-title">Narratris</div>
+                    <div class="game-description">Story-driven with character interactions</div>
+                    <span class="game-tech tech-vanilla">Vanilla JS</span>
+                    <br><a href="narratris.html" class="play-button">Play Game</a>
+                </div>
+                <div class="game-card" data-category="innovative">
+                    <span class="unique-badge">UNIQUE</span>
+                    <div class="game-title">Ecotris</div>
+                    <div class="game-description">Ecosystem simulation with food chains</div>
+                    <span class="game-tech tech-vanilla">Vanilla JS</span>
+                    <br><a href="ecotris.html" class="play-button">Play Game</a>
+                </div>
+                <div class="game-card" data-category="innovative">
+                    <span class="unique-badge">UNIQUE</span>
+                    <div class="game-title">Symphtetris</div>
+                    <div class="game-description">Musical composition through piece placement</div>
+                    <span class="game-tech tech-vanilla">Vanilla JS</span>
+                    <br><a href="symphtetris.html" class="play-button">Play Game</a>
+                </div>
+                <div class="game-card" data-category="innovative">
+                    <span class="unique-badge">UNIQUE</span>
+                    <div class="game-title">Architris</div>
+                    <div class="game-description">Structural engineering with physics simulation</div>
+                    <span class="game-tech tech-vanilla">Vanilla JS</span>
+                    <br><a href="architris.html" class="play-button">Play Game</a>
+                </div>
+                <div class="game-card" data-category="innovative">
+                    <span class="unique-badge">UNIQUE</span>
+                    <div class="game-title">Empathris</div>
+                    <div class="game-description">Emotion-responsive adaptive gameplay</div>
+                    <span class="game-tech tech-vanilla">Vanilla JS</span>
+                    <br><a href="empathris.html" class="play-button">Play Game</a>
+                </div>
+                <div class="game-card" data-category="innovative">
+                    <span class="unique-badge">UNIQUE</span>
+                    <div class="game-title">Diplomtetris</div>
+                    <div class="game-description">Negotiation-based with AI opponents</div>
+                    <span class="game-tech tech-vanilla">Vanilla JS</span>
+                    <br><a href="diplomtetris.html" class="play-button">Play Game</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Framework Demonstrations Branch -->
+        <div class="branch-section" data-branch="claude/tetris-three-frameworks-011CUw5PPScGGo6kfYnkurem">
+            <div class="branch-header" onclick="toggleBranch(this)">
+                <span class="toggle-arrow">▶</span>
+                <div class="branch-name">tetris-three-frameworks</div>
+                <div class="branch-stats">9 games • Technical Demos</div>
+            </div>
+            <div class="branch-instruction">
+                To play these games: <code class="instruction-code">git checkout claude/tetris-three-frameworks-011CUw5PPScGGo6kfYnkurem</code>
+            </div>
+            <div class="games-grid collapsible">
+                <div class="game-card" data-category="framework">
+                    <div class="game-title">Three.js Classic 3D</div>
+                    <div class="game-description">Classic Tetris in full 3D with Three.js</div>
+                    <span class="game-tech tech-threejs">Three.js</span>
+                    <br><a href="threejs-tetris-classic.html" class="play-button">Play Game</a>
+                </div>
+                <div class="game-card" data-category="framework">
+                    <div class="game-title">Three.js Isometric</div>
+                    <div class="game-description">Isometric 3D view with dynamic shadows</div>
+                    <span class="game-tech tech-threejs">Three.js</span>
+                    <br><a href="threejs-tetris-isometric.html" class="play-button">Play Game</a>
+                </div>
+                <div class="game-card" data-category="framework">
+                    <div class="game-title">Three.js Particles</div>
+                    <div class="game-description">Particle effects system in 3D</div>
+                    <span class="game-tech tech-threejs">Three.js</span>
+                    <br><a href="threejs-tetris-particles.html" class="play-button">Play Game</a>
+                </div>
+                <div class="game-card" data-category="framework">
+                    <div class="game-title">D3.js Classic</div>
+                    <div class="game-description">Data-driven rendering with D3</div>
+                    <span class="game-tech tech-d3js">D3.js</span>
+                    <br><a href="d3-tetris-classic.html" class="play-button">Play Game</a>
+                </div>
+                <div class="game-card" data-category="framework">
+                    <div class="game-title">D3.js Data Viz</div>
+                    <div class="game-description">Tetris as data visualization</div>
+                    <span class="game-tech tech-d3js">D3.js</span>
+                    <br><a href="d3-tetris-dataviz.html" class="play-button">Play Game</a>
+                </div>
+                <div class="game-card" data-category="framework">
+                    <div class="game-title">D3.js Transitions</div>
+                    <div class="game-description">Smooth D3 transition effects</div>
+                    <span class="game-tech tech-d3js">D3.js</span>
+                    <br><a href="d3-tetris-transitions.html" class="play-button">Play Game</a>
+                </div>
+                <div class="game-card" data-category="framework">
+                    <div class="game-title">Chart.js Bars</div>
+                    <div class="game-description">Tetris using bar charts</div>
+                    <span class="game-tech tech-chartjs">Chart.js</span>
+                    <br><a href="chartjs-tetris-bars.html" class="play-button">Play Game</a>
+                </div>
+                <div class="game-card" data-category="framework">
+                    <div class="game-title">Chart.js Creative</div>
+                    <div class="game-description">Creative charting approach</div>
+                    <span class="game-tech tech-chartjs">Chart.js</span>
+                    <br><a href="chartjs-tetris-creative.html" class="play-button">Play Game</a>
+                </div>
+                <div class="game-card" data-category="framework">
+                    <div class="game-title">Chart.js Hybrid</div>
+                    <div class="game-description">Hybrid chart/game experience</div>
+                    <span class="game-tech tech-chartjs">Chart.js</span>
+                    <br><a href="chartjs-tetris-hybrid.html" class="play-button">Play Game</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- p5.js Creative Variations Branch -->
+        <div class="branch-section" data-branch="claude/tetris-variations-p5js-011CUw4txLy4MssDqwoxYSSj">
+            <div class="branch-header" onclick="toggleBranch(this)">
+                <span class="toggle-arrow">▶</span>
+                <div class="branch-name">tetris-variations-p5js</div>
+                <div class="branch-stats">10 games • Artistic</div>
+            </div>
+            <div class="branch-instruction">
+                To play these games: <code class="instruction-code">git checkout claude/tetris-variations-p5js-011CUw4txLy4MssDqwoxYSSj</code>
+            </div>
+            <div class="games-grid collapsible">
+                <div class="game-card" data-category="visual">
+                    <div class="game-title">Fractal Tetris</div>
+                    <div class="game-description">Mathematical fractal pattern generation</div>
+                    <span class="game-tech tech-p5js">p5.js</span>
+                    <br><a href="fractal-tetris.html" class="play-button">Play Game</a>
+                </div>
+                <div class="game-card" data-category="visual">
+                    <div class="game-title">Glitch Tetris</div>
+                    <div class="game-description">Glitch art aesthetics and effects</div>
+                    <span class="game-tech tech-p5js">p5.js</span>
+                    <br><a href="glitch-tetris.html" class="play-button">Play Game</a>
+                </div>
+                <div class="game-card" data-category="visual">
+                    <div class="game-title">Gravity Tetris</div>
+                    <div class="game-description">Realistic physics simulation</div>
+                    <span class="game-tech tech-p5js">p5.js</span>
+                    <br><a href="gravity-tetris.html" class="play-button">Play Game</a>
+                </div>
+                <div class="game-card" data-category="visual">
+                    <div class="game-title">Liquid Tetris</div>
+                    <div class="game-description">Fluid dynamics simulation</div>
+                    <span class="game-tech tech-p5js">p5.js</span>
+                    <br><a href="liquid-tetris.html" class="play-button">Play Game</a>
+                </div>
+                <div class="game-card" data-category="visual">
+                    <div class="game-title">Mirror Tetris</div>
+                    <div class="game-description">Symmetry and reflection mechanics</div>
+                    <span class="game-tech tech-p5js">p5.js</span>
+                    <br><a href="mirror-tetris.html" class="play-button">Play Game</a>
+                </div>
+                <div class="game-card" data-category="visual">
+                    <div class="game-title">Particle Tetris</div>
+                    <div class="game-description">Advanced particle systems</div>
+                    <span class="game-tech tech-p5js">p5.js</span>
+                    <br><a href="particle-tetris.html" class="play-button">Play Game</a>
+                </div>
+                <div class="game-card" data-category="visual">
+                    <div class="game-title">Rainbow Tetris</div>
+                    <div class="game-description">Dynamic color effects</div>
+                    <span class="game-tech tech-p5js">p5.js</span>
+                    <br><a href="rainbow-tetris.html" class="play-button">Play Game</a>
+                </div>
+                <div class="game-card" data-category="visual">
+                    <div class="game-title">Sound Reactive Tetris</div>
+                    <div class="game-description">Audio-responsive gameplay</div>
+                    <span class="game-tech tech-p5js">p5.js</span>
+                    <br><a href="sound-reactive-tetris.html" class="play-button">Play Game</a>
+                </div>
+                <div class="game-card" data-category="visual">
+                    <div class="game-title">Spiral Tetris</div>
+                    <div class="game-description">Spiral pattern mechanics</div>
+                    <span class="game-tech tech-p5js">p5.js</span>
+                    <br><a href="spiral-tetris.html" class="play-button">Play Game</a>
+                </div>
+                <div class="game-card" data-category="visual">
+                    <div class="game-title">Wave Tetris</div>
+                    <div class="game-description">Wave animation effects</div>
+                    <span class="game-tech tech-p5js">p5.js</span>
+                    <br><a href="wave-tetris.html" class="play-button">Play Game</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Matrix Theme Branch -->
+        <div class="branch-section" data-branch="claude/matrix-tetris-twists-011CUw2KNfWfdtSUshMJUDqa">
+            <div class="branch-header" onclick="toggleBranch(this)">
+                <span class="toggle-arrow">▶</span>
+                <div class="branch-name">matrix-tetris-twists</div>
+                <div class="branch-stats">1 game • Themed</div>
+            </div>
+            <div class="branch-instruction">
+                To play this game: <code class="instruction-code">git checkout claude/matrix-tetris-twists-011CUw2KNfWfdtSUshMJUDqa</code>
+            </div>
+            <div class="games-grid collapsible">
+                <div class="game-card" data-category="themed">
+                    <span class="unique-badge">UNIQUE</span>
+                    <div class="game-title">Matrix Tetris</div>
+                    <div class="game-description">Full Matrix movie theme with falling code rain</div>
+                    <span class="game-tech tech-vanilla">Vanilla JS</span>
+                    <br><a href="matrix-tetris.html" class="play-button">Play Game</a>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        function toggleBranch(header) {
+            const arrow = header.querySelector('.toggle-arrow');
+            const grid = header.parentElement.querySelector('.games-grid');
+
+            arrow.classList.toggle('expanded');
+            grid.classList.toggle('expanded');
+        }
+
+        function filterGames(category) {
+            const buttons = document.querySelectorAll('.filter-btn');
+            const cards = document.querySelectorAll('.game-card');
+
+            // Update button states
+            buttons.forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.textContent.toLowerCase().includes(category) ||
+                    (category === 'all' && btn.textContent === 'All Games')) {
+                    btn.classList.add('active');
+                }
+            });
+
+            // Filter cards
+            cards.forEach(card => {
+                if (category === 'all') {
+                    card.style.display = 'block';
+                } else if (category === 'unique') {
+                    card.style.display = card.querySelector('.unique-badge') ? 'block' : 'none';
+                } else if (category === 'themed') {
+                    card.style.display = card.dataset.category === 'themed' ? 'block' : 'none';
+                } else {
+                    card.style.display = card.dataset.category === category ? 'block' : 'none';
+                }
+            });
+
+            // Expand relevant branches
+            if (category !== 'all') {
+                document.querySelectorAll('.branch-section').forEach(section => {
+                    const hasVisibleCards = Array.from(section.querySelectorAll('.game-card'))
+                        .some(card => card.style.display !== 'none');
+
+                    const grid = section.querySelector('.games-grid');
+                    const arrow = section.querySelector('.toggle-arrow');
+
+                    if (hasVisibleCards) {
+                        grid.classList.add('expanded');
+                        arrow.classList.add('expanded');
+                    }
+                });
+            }
+        }
+    </script>
+</body>
+</html>
