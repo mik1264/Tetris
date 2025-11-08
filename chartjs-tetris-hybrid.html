@@ -522,9 +522,14 @@
                 }
             }
             if (linesCleared > 0) {
+                const oldLevel = gameState.level;
                 gameState.lines += linesCleared;
                 gameState.score += [0, 100, 300, 500, 800][linesCleared] * gameState.level;
                 gameState.level = Math.floor(gameState.lines / 10) + 1;
+                if (gameState.level > oldLevel && gameState.gameLoop) {
+                    clearInterval(gameState.gameLoop);
+                    gameState.gameLoop = setInterval(gameLoop, Math.max(150, 1000 - (gameState.level - 1) * 80));
+                }
                 updateStats();
                 updateCharts();
             }
@@ -555,6 +560,17 @@
             if (!checkCollision(rotated, gameState.position)) {
                 gameState.currentPiece = rotated;
                 drawBoard();
+                return;
+            }
+            const kicks = [{x:-1,y:0},{x:1,y:0},{x:-2,y:0},{x:2,y:0},{x:0,y:-1}];
+            for (const kick of kicks) {
+                const testPos = {x: gameState.position.x + kick.x, y: gameState.position.y + kick.y};
+                if (!checkCollision(rotated, testPos)) {
+                    gameState.currentPiece = rotated;
+                    gameState.position = testPos;
+                    drawBoard();
+                    return;
+                }
             }
         }
 

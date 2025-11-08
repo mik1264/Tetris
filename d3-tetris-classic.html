@@ -159,6 +159,32 @@
             margin-bottom: 20px;
         }
 
+        .pause-overlay {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(102, 126, 234, 0.95);
+            color: white;
+            padding: 30px 60px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            font-size: 2em;
+            font-weight: bold;
+            z-index: 999;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        .pause-overlay.show {
+            display: block;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.05); }
+        }
+
         .game-over p {
             font-size: 1.3em;
             margin: 10px 0;
@@ -220,6 +246,10 @@
             <p><strong>Space</strong> - Hard drop</p>
             <p><strong>P</strong> - Pause game</p>
         </div>
+    </div>
+
+    <div class="pause-overlay" id="pause-overlay">
+        ⏸️ PAUSED
     </div>
 
     <div class="game-over" id="game-over">
@@ -443,10 +473,25 @@
             }
 
             if (linesCleared > 0) {
+                const oldLevel = gameState.level;
                 gameState.lines += linesCleared;
                 gameState.score += [0, 100, 300, 500, 800][linesCleared] * gameState.level;
                 gameState.level = Math.floor(gameState.lines / 10) + 1;
+
+                // Speed up game when level increases
+                if (gameState.level > oldLevel) {
+                    updateGameSpeed();
+                }
                 updateStats();
+            }
+        }
+
+        // Update game speed based on level
+        function updateGameSpeed() {
+            if (gameState.gameLoop) {
+                clearInterval(gameState.gameLoop);
+                const speed = Math.max(100, 1000 - (gameState.level - 1) * 80);
+                gameState.gameLoop = setInterval(gameLoop, speed);
             }
         }
 
@@ -478,12 +523,37 @@
             return false;
         }
 
-        // Rotate current piece
+        // Rotate current piece with wall kicks
         function rotate() {
             const rotated = rotatePiece(gameState.currentPiece);
+
+            // Try basic rotation
             if (!checkCollision(rotated, gameState.position)) {
                 gameState.currentPiece = rotated;
                 drawCurrentPiece();
+                return;
+            }
+
+            // Try wall kicks: left, right, up
+            const kicks = [
+                { x: -1, y: 0 },  // Try left
+                { x: 1, y: 0 },   // Try right
+                { x: -2, y: 0 },  // Try left more (for I piece)
+                { x: 2, y: 0 },   // Try right more (for I piece)
+                { x: 0, y: -1 }   // Try up
+            ];
+
+            for (const kick of kicks) {
+                const testPos = {
+                    x: gameState.position.x + kick.x,
+                    y: gameState.position.y + kick.y
+                };
+                if (!checkCollision(rotated, testPos)) {
+                    gameState.currentPiece = rotated;
+                    gameState.position = testPos;
+                    drawCurrentPiece();
+                    return;
+                }
             }
         }
 
@@ -583,6 +653,7 @@
                 case 'P':
                     e.preventDefault();
                     gameState.paused = !gameState.paused;
+                    d3.select('#pause-overlay').classed('show', gameState.paused);
                     break;
             }
         });

@@ -649,6 +649,7 @@
                 }
             }
             if (linesCleared > 0) {
+                const oldLevel = gameState.level;
                 gameState.lines += linesCleared;
                 gameState.score += [0, 100, 300, 500, 800][linesCleared] * gameState.level;
                 gameState.level = Math.floor(gameState.lines / 10) + 1;
@@ -656,6 +657,13 @@
                 // Update history
                 gameState.scoreHistory.push(gameState.score);
                 gameState.linesHistory.push(gameState.lines);
+
+                // Speed up when level increases
+                if (gameState.level > oldLevel && gameState.gameLoop) {
+                    clearInterval(gameState.gameLoop);
+                    const speed = Math.max(200, 1000 - (gameState.level - 1) * 80);
+                    gameState.gameLoop = setInterval(gameLoop, speed);
+                }
 
                 updateAllCharts();
             }
@@ -686,6 +694,18 @@
             if (!checkCollision(rotated, gameState.position)) {
                 gameState.currentPiece = rotated;
                 drawCurrentPiece();
+                return;
+            }
+            // Wall kicks
+            const kicks = [{x:-1,y:0},{x:1,y:0},{x:-2,y:0},{x:2,y:0},{x:0,y:-1}];
+            for (const kick of kicks) {
+                const testPos = {x: gameState.position.x + kick.x, y: gameState.position.y + kick.y};
+                if (!checkCollision(rotated, testPos)) {
+                    gameState.currentPiece = rotated;
+                    gameState.position = testPos;
+                    drawCurrentPiece();
+                    return;
+                }
             }
         }
 
