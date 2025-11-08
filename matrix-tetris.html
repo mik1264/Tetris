@@ -81,6 +81,28 @@
 
         #tetris {
             cursor: crosshair;
+            position: relative;
+        }
+
+        #tetris.bullet-time {
+            border-color: #00aaff;
+            box-shadow: 0 0 40px rgba(0, 170, 255, 0.8);
+        }
+
+        #tetris.the-one-active {
+            border-color: #ffff00;
+            box-shadow: 0 0 40px rgba(255, 255, 0, 0.8);
+        }
+
+        #tetris.gravity-paused {
+            border-color: #ff00ff;
+            box-shadow: 0 0 40px rgba(255, 0, 255, 0.8);
+            animation: pulse 0.5s infinite alternate;
+        }
+
+        @keyframes pulse {
+            from { transform: scale(1); }
+            to { transform: scale(1.02); }
         }
 
         .side-panel {
@@ -142,6 +164,13 @@
             margin-top: 5px;
         }
 
+        .power-label {
+            font-size: 0.9em;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
         .power-meter {
             width: 100%;
             height: 20px;
@@ -150,6 +179,7 @@
             border-radius: 3px;
             overflow: hidden;
             margin-top: 5px;
+            position: relative;
         }
 
         .power-fill {
@@ -157,6 +187,20 @@
             background: linear-gradient(90deg, #00ff00, #00aa00);
             transition: width 0.3s;
             box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+        }
+
+        .power-fill.bullet {
+            background: linear-gradient(90deg, #00aaff, #0066ff);
+        }
+
+        .power-fill.the-one {
+            background: linear-gradient(90deg, #ffff00, #ffaa00);
+        }
+
+        .next-piece-canvas {
+            border: 2px solid #00ff00;
+            background: #000;
+            margin-top: 10px;
         }
 
         .controls {
@@ -176,6 +220,75 @@
         .controls p {
             margin: 4px 0;
             color: #00ff00;
+        }
+
+        .active-powers {
+            background: rgba(0, 50, 0, 0.9);
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #00ff00;
+            font-size: 0.85em;
+            min-height: 60px;
+        }
+
+        .active-powers h4 {
+            color: #00ff00;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+        }
+
+        .power-indicator {
+            display: inline-block;
+            padding: 3px 8px;
+            margin: 2px;
+            background: rgba(0, 255, 0, 0.2);
+            border: 1px solid #00ff00;
+            border-radius: 3px;
+            font-size: 0.8em;
+            animation: glow 1s infinite alternate;
+        }
+
+        @keyframes glow {
+            from { box-shadow: 0 0 5px rgba(0, 255, 0, 0.5); }
+            to { box-shadow: 0 0 15px rgba(0, 255, 0, 0.9); }
+        }
+
+        .power-indicator.bullet {
+            background: rgba(0, 170, 255, 0.2);
+            border-color: #00aaff;
+            color: #00aaff;
+        }
+
+        .power-indicator.one {
+            background: rgba(255, 255, 0, 0.2);
+            border-color: #ffff00;
+            color: #ffff00;
+        }
+
+        .power-indicator.gravity {
+            background: rgba(255, 0, 255, 0.2);
+            border-color: #ff00ff;
+            color: #ff00ff;
+        }
+
+        .pause-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: #00ff00;
+            padding: 20px 40px;
+            border: 2px solid #00ff00;
+            border-radius: 5px;
+            font-size: 2em;
+            display: none;
+            z-index: 100;
+            text-shadow: 0 0 10px #00ff00;
+        }
+
+        .pause-overlay.show {
+            display: block;
         }
 
         button {
@@ -296,16 +409,6 @@
             100% { transform: translate(0); }
         }
 
-        .unlocked {
-            color: #00ff00;
-            text-shadow: 0 0 10px #00ff00;
-        }
-
-        .locked {
-            color: #005500;
-            opacity: 0.5;
-        }
-
         .intro-screen {
             max-width: 700px;
             line-height: 1.8;
@@ -326,6 +429,11 @@
             background: rgba(0, 30, 0, 0.5);
             border-left: 3px solid #00ff00;
             border-radius: 3px;
+        }
+
+        @keyframes power-flash {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
         }
     </style>
 </head>
@@ -396,7 +504,10 @@
             <p class="subtitle">Follow the white rabbit...</p>
 
             <div class="game-area">
-                <canvas id="tetris" width="300" height="600"></canvas>
+                <div style="position: relative;">
+                    <canvas id="tetris" width="300" height="600"></canvas>
+                    <div class="pause-overlay" id="pauseOverlay">PAUSED</div>
+                </div>
 
                 <div class="side-panel">
                     <div class="twist-status" id="twistStatus">
@@ -419,8 +530,18 @@
                         <div class="lines" id="lines">0</div>
                     </div>
 
+                    <div class="info-box">
+                        <h3>Next Piece</h3>
+                        <canvas id="nextPiece" class="next-piece-canvas" width="120" height="120"></canvas>
+                    </div>
+
+                    <div class="active-powers" id="activePowers">
+                        <h4>ACTIVE POWERS:</h4>
+                        <div id="powersList">None</div>
+                    </div>
+
                     <div class="power-bar" id="powerBar" style="display: none;">
-                        <div style="font-size: 0.9em; margin-bottom: 5px;">POWER</div>
+                        <div class="power-label" id="powerLabel">POWER</div>
                         <div class="power-meter">
                             <div class="power-fill" id="powerFill" style="width: 100%;"></div>
                         </div>
@@ -500,6 +621,8 @@
         // Tetris Game
         const canvas = document.getElementById('tetris');
         const ctx = canvas.getContext('2d');
+        const nextCanvas = document.getElementById('nextPiece');
+        const nextCtx = nextCanvas.getContext('2d');
 
         const COLS = 10;
         const ROWS = 20;
@@ -542,6 +665,7 @@
         // Matrix twists state
         let currentTwist = 0;
         let glitchMode = false;
+        let glitchIntensity = 0.05;
         let pillChoice = null;
         let bulletTimeActive = false;
         let bulletTimeCharges = 3;
@@ -552,19 +676,20 @@
         let constructMode = false;
         let systemOverride = false;
         let gravityPaused = false;
+        let architectMode = false;
 
         const TWISTS = [
             { level: 0, name: "ENTERING THE MATRIX", desc: "Reality loading...", control: "" },
             { level: 1, name: "GLITCH VISION", desc: "The code is showing through", control: "" },
             { level: 2, name: "RED/BLUE PILL", desc: "Choose your reality", control: "" },
-            { level: 3, name: "BULLET TIME", desc: "Slow down the Matrix", control: "B - Bullet Time" },
+            { level: 3, name: "BULLET TIME", desc: "Slow down the Matrix", control: "B - Bullet Time (3 charges)" },
             { level: 4, name: "CODE VISION", desc: "See the future as code", control: "" },
             { level: 5, name: "AGENT SMITH", desc: "The system fights back", control: "" },
             { level: 6, name: "DÉJÀ VU", desc: "A glitch in the Matrix", control: "" },
-            { level: 7, name: "THE ONE", desc: "You can fly", control: "O - Phase Through" },
+            { level: 7, name: "THE ONE", desc: "You can fly", control: "O - Phase Through (3 charges)" },
             { level: 8, name: "CONSTRUCT MODE", desc: "Rebuild reality", control: "Click - Delete Blocks" },
             { level: 9, name: "SYSTEM OVERRIDE", desc: "Total control", control: "S - Toggle Gravity" },
-            { level: 10, name: "THE ARCHITECT", desc: "You are the One", control: "Full Powers" }
+            { level: 10, name: "THE ARCHITECT", desc: "You are the One", control: "All Powers + Delete Lines (C)" }
         ];
 
         function startGame() {
@@ -576,28 +701,33 @@
             board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
         }
 
-        function drawBlock(x, y, color) {
+        function drawBlock(x, y, color, context = ctx, alpha = 1) {
+            context.save();
+
             // Glitch effect for level 1+
-            if (glitchMode && Math.random() > 0.95) {
-                ctx.fillStyle = Math.random() > 0.5 ? '#ff0000' : '#0000ff';
+            if (glitchMode && context === ctx && Math.random() > (1 - glitchIntensity)) {
+                context.fillStyle = Math.random() > 0.5 ? '#ff0000' : '#0000ff';
             } else {
-                ctx.fillStyle = color;
+                context.fillStyle = color;
             }
 
-            ctx.fillRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
-            ctx.strokeStyle = '#003300';
-            ctx.lineWidth = 1;
-            ctx.strokeRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+            if (alpha < 1) {
+                context.globalAlpha = alpha;
+            }
 
-            // Matrix glow
-            ctx.shadowColor = color;
-            ctx.shadowBlur = 5;
+            context.fillRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+            context.strokeStyle = '#003300';
+            context.lineWidth = 1;
+            context.strokeRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+
+            context.restore();
         }
 
         function drawBoard() {
             ctx.fillStyle = '#000';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+            // Draw placed blocks
             for (let row = 0; row < ROWS; row++) {
                 for (let col = 0; col < COLS; col++) {
                     if (board[row][col]) {
@@ -606,12 +736,69 @@
                 }
             }
 
+            // Draw ghost piece
+            if (currentPiece && !theOneMode) {
+                const ghostY = getGhostY();
+                ctx.save();
+                ctx.globalAlpha = 0.3;
+                currentPiece.shape.forEach((row, y) => {
+                    row.forEach((value, x) => {
+                        if (value) {
+                            drawBlock(currentPiece.x + x, ghostY + y, currentPiece.color);
+                        }
+                    });
+                });
+                ctx.restore();
+            }
+
             // Code vision overlay for level 4+
             if (codeVisionActive && nextPiece) {
-                ctx.fillStyle = 'rgba(0, 255, 0, 0.3)';
-                ctx.font = '10px monospace';
-                ctx.fillText(`NEXT: ${nextPiece.type}`, 10, 20);
+                ctx.save();
+                ctx.fillStyle = 'rgba(0, 255, 0, 0.8)';
+                ctx.font = '12px monospace';
+                ctx.shadowColor = '#00ff00';
+                ctx.shadowBlur = 10;
+
+                // Draw matrix-style code overlay
+                for (let i = 0; i < 10; i++) {
+                    const char = matrixChars[Math.floor(Math.random() * matrixChars.length)];
+                    ctx.fillText(char, Math.random() * 280, Math.random() * 580);
+                }
+
+                ctx.fillStyle = 'rgba(0, 255, 0, 1)';
+                ctx.font = 'bold 14px monospace';
+                ctx.fillText(`INCOMING: ${nextPiece.type}`, 10, 20);
+
+                ctx.restore();
             }
+
+            // Architect mode overlay
+            if (architectMode) {
+                ctx.save();
+                ctx.strokeStyle = 'rgba(255, 255, 0, 0.3)';
+                ctx.lineWidth = 1;
+                for (let x = 0; x <= COLS; x++) {
+                    ctx.beginPath();
+                    ctx.moveTo(x * BLOCK_SIZE, 0);
+                    ctx.lineTo(x * BLOCK_SIZE, canvas.height);
+                    ctx.stroke();
+                }
+                for (let y = 0; y <= ROWS; y++) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, y * BLOCK_SIZE);
+                    ctx.lineTo(canvas.width, y * BLOCK_SIZE);
+                    ctx.stroke();
+                }
+                ctx.restore();
+            }
+        }
+
+        function getGhostY() {
+            let ghostY = currentPiece.y;
+            while (!checkCollision(currentPiece, 0, ghostY - currentPiece.y + 1)) {
+                ghostY++;
+            }
+            return ghostY;
         }
 
         function createPiece() {
@@ -634,6 +821,24 @@
                     }
                 });
             });
+        }
+
+        function drawNextPiece() {
+            nextCtx.fillStyle = '#000';
+            nextCtx.fillRect(0, 0, nextCanvas.width, nextCanvas.height);
+
+            if (nextPiece) {
+                const offsetX = (4 - nextPiece.shape[0].length) / 2;
+                const offsetY = (4 - nextPiece.shape.length) / 2;
+
+                nextPiece.shape.forEach((row, y) => {
+                    row.forEach((value, x) => {
+                        if (value) {
+                            drawBlock(x + offsetX, y + offsetY, nextPiece.color, nextCtx);
+                        }
+                    });
+                });
+            }
         }
 
         function checkCollision(piece, offsetX = 0, offsetY = 0) {
@@ -740,6 +945,7 @@
             switch(lvl) {
                 case 1: // Glitch Vision
                     glitchMode = true;
+                    glitchIntensity = 0.15;
                     break;
                 case 2: // Red/Blue Pill
                     if (!pillChoice) {
@@ -749,10 +955,12 @@
                     break;
                 case 3: // Bullet Time
                     document.getElementById('powerBar').style.display = 'block';
+                    document.getElementById('powerLabel').textContent = 'BULLET TIME';
                     updatePowerBar();
                     break;
                 case 4: // Code Vision
                     codeVisionActive = true;
+                    glitchIntensity = 0.25;
                     break;
                 case 5: // Agent Smith
                     startAgentSmith();
@@ -762,6 +970,8 @@
                     break;
                 case 7: // The One
                     theOneCharges = 3;
+                    document.getElementById('powerLabel').textContent = 'THE ONE';
+                    document.getElementById('powerFill').className = 'power-fill the-one';
                     updatePowerBar();
                     break;
                 case 8: // Construct Mode
@@ -770,7 +980,29 @@
                 case 9: // System Override
                     systemOverride = true;
                     break;
+                case 10: // Architect
+                    architectMode = true;
+                    bulletTimeCharges = 99;
+                    theOneCharges = 99;
+                    updatePowerBar();
+                    break;
             }
+
+            updateActivePowers();
+        }
+
+        function updateActivePowers() {
+            let powers = [];
+
+            if (glitchMode) powers.push('<span class="power-indicator">GLITCH VISION</span>');
+            if (bulletTimeActive) powers.push('<span class="power-indicator bullet">BULLET TIME ACTIVE</span>');
+            if (codeVisionActive) powers.push('<span class="power-indicator">CODE VISION</span>');
+            if (theOneMode) powers.push('<span class="power-indicator one">THE ONE ACTIVE</span>');
+            if (constructMode) powers.push('<span class="power-indicator">CONSTRUCT MODE</span>');
+            if (gravityPaused) powers.push('<span class="power-indicator gravity">GRAVITY PAUSED</span>');
+            if (architectMode) powers.push('<span class="power-indicator one">ARCHITECT MODE</span>');
+
+            document.getElementById('powersList').innerHTML = powers.length > 0 ? powers.join(' ') : 'None';
         }
 
         function choosePill(color) {
@@ -788,12 +1020,17 @@
                 const oldInterval = dropInterval;
                 dropInterval = dropInterval * 3;
 
+                canvas.classList.add('bullet-time');
+
                 setTimeout(() => {
                     bulletTimeActive = false;
                     dropInterval = oldInterval;
+                    canvas.classList.remove('bullet-time');
+                    updateActivePowers();
                 }, 5000);
 
                 updatePowerBar();
+                updateActivePowers();
             }
         }
 
@@ -802,11 +1039,16 @@
                 theOneMode = true;
                 theOneCharges--;
 
+                canvas.classList.add('the-one-active');
+
                 setTimeout(() => {
                     theOneMode = false;
+                    canvas.classList.remove('the-one-active');
+                    updateActivePowers();
                 }, 5000);
 
                 updatePowerBar();
+                updateActivePowers();
             }
         }
 
@@ -814,9 +1056,12 @@
             if (level >= 3 && level < 7) {
                 const percent = (bulletTimeCharges / 3) * 100;
                 document.getElementById('powerFill').style.width = percent + '%';
+                document.getElementById('powerFill').className = 'power-fill bullet';
             } else if (level >= 7) {
-                const percent = (theOneCharges / 3) * 100;
+                const maxCharges = architectMode ? 99 : 3;
+                const percent = (theOneCharges / maxCharges) * 100;
                 document.getElementById('powerFill').style.width = percent + '%';
+                document.getElementById('powerFill').className = 'power-fill the-one';
             }
         }
 
@@ -826,33 +1071,69 @@
             agentSmithInterval = setInterval(() => {
                 if (!gameRunning || isPaused) return;
 
-                // Random block corruption
-                const row = Math.floor(Math.random() * (ROWS - 5)) + 5;
-                const col = Math.floor(Math.random() * COLS);
+                // More aggressive - 3 corruptions
+                for (let i = 0; i < 3; i++) {
+                    const row = Math.floor(Math.random() * (ROWS - 5)) + 5;
+                    const col = Math.floor(Math.random() * COLS);
 
-                if (!board[row][col]) {
-                    board[row][col] = '#ff0000'; // Red corrupted block
+                    if (!board[row][col]) {
+                        board[row][col] = '#ff0000'; // Red corrupted block
+                    }
                 }
-            }, 10000);
+            }, 5000); // Faster - every 5 seconds
         }
 
         function triggerDejaVu() {
             // Save board state
             const savedBoard = board.map(row => [...row]);
 
-            setTimeout(() => {
-                // Brief glitch effect
-                for (let i = 0; i < 3; i++) {
-                    setTimeout(() => {
-                        board = savedBoard.map(row => [...row]);
-                    }, i * 200);
+            // Create glitch effect
+            let glitchCount = 0;
+            const glitchEffect = setInterval(() => {
+                if (glitchCount % 2 === 0) {
+                    // Shift board slightly
+                    const tempBoard = board.map(row => [...row]);
+                    for (let row = 0; row < ROWS - 1; row++) {
+                        board[row] = tempBoard[row + 1];
+                    }
+                    board[ROWS - 1] = tempBoard[0];
+                } else {
+                    // Restore
+                    board = savedBoard.map(row => [...row]);
                 }
-            }, 3000);
+
+                glitchCount++;
+                if (glitchCount >= 6) {
+                    clearInterval(glitchEffect);
+                    board = savedBoard.map(row => [...row]);
+                }
+            }, 100);
         }
 
         function toggleGravity() {
             if (systemOverride) {
                 gravityPaused = !gravityPaused;
+                if (gravityPaused) {
+                    canvas.classList.add('gravity-paused');
+                } else {
+                    canvas.classList.remove('gravity-paused');
+                }
+                updateActivePowers();
+            }
+        }
+
+        function clearFullLine() {
+            if (architectMode) {
+                // Find and clear the bottom-most full or partial line
+                for (let row = ROWS - 1; row >= 0; row--) {
+                    if (board[row].some(cell => cell !== 0)) {
+                        board.splice(row, 1);
+                        board.unshift(Array(COLS).fill(0));
+                        score += 50;
+                        updateScore();
+                        break;
+                    }
+                }
             }
         }
 
@@ -912,6 +1193,7 @@
             clearLines();
             currentPiece = nextPiece || createPiece();
             nextPiece = createPiece();
+            drawNextPiece();
 
             if (checkCollision(currentPiece)) {
                 gameOver();
@@ -951,7 +1233,14 @@
         }
 
         function update(time = 0) {
-            if (!gameRunning || isPaused) return;
+            if (!gameRunning) return;
+
+            if (isPaused) {
+                document.getElementById('pauseOverlay').classList.add('show');
+                return;
+            } else {
+                document.getElementById('pauseOverlay').classList.remove('show');
+            }
 
             const deltaTime = time - lastTime;
             lastTime = time;
@@ -985,10 +1274,16 @@
                 bulletTimeCharges = 3;
                 theOneCharges = 3;
                 glitchMode = false;
+                glitchIntensity = 0.05;
                 codeVisionActive = false;
                 constructMode = false;
                 systemOverride = false;
                 gravityPaused = false;
+                architectMode = false;
+                bulletTimeActive = false;
+                theOneMode = false;
+
+                canvas.classList.remove('bullet-time', 'the-one-active', 'gravity-paused');
 
                 if (agentSmithInterval) {
                     clearInterval(agentSmithInterval);
@@ -999,6 +1294,7 @@
                 activateTwist(0);
                 nextPiece = createPiece();
                 currentPiece = createPiece();
+                drawNextPiece();
 
                 document.getElementById('gameOver').classList.remove('show');
                 document.getElementById('startBtn').textContent = 'Restart Matrix';
@@ -1065,6 +1361,11 @@
                     e.preventDefault();
                     toggleGravity();
                     break;
+                case 'c':
+                case 'C':
+                    e.preventDefault();
+                    clearFullLine();
+                    break;
             }
         });
 
@@ -1078,6 +1379,8 @@
 
             if (x >= 0 && x < COLS && y >= 0 && y < ROWS) {
                 board[y][x] = 0;
+                score += 5;
+                updateScore();
             }
         });
 
