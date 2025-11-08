@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chart.js Tetris - Creative Bubbles</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 25px;
+            padding: 35px;
+            box-shadow: 0 25px 70px rgba(0, 0, 0, 0.3);
+            max-width: 1200px;
+        }
+
+        h1 {
+            text-align: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+            font-size: 3em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #764ba2;
+            margin-bottom: 25px;
+            font-size: 1.3em;
+            font-style: italic;
+        }
+
+        .game-area {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            margin-top: 25px;
+        }
+
+        .chart-wrapper {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        #main-chart {
+            width: 600px !important;
+            height: 600px !important;
+        }
+
+        .side-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            width: 300px;
+        }
+
+        .panel-section {
+            background: linear-gradient(135deg, #f5f7ff 0%, #e8ebff 100%);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .panel-section h3 {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+            text-align: center;
+        }
+
+        .stat {
+            display: flex;
+            justify-content: space-between;
+            margin: 12px 0;
+            font-size: 1.2em;
+        }
+
+        .stat-value {
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        #density-chart {
+            width: 260px !important;
+            height: 150px !important;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 35px;
+            font-size: 1.3em;
+            border-radius: 30px;
+            cursor: pointer;
+            margin: 10px 0;
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
+        }
+
+        .controls {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-top: 25px;
+            text-align: center;
+        }
+
+        .game-over {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 50px;
+            border-radius: 25px;
+            box-shadow: 0 25px 70px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            z-index: 1000;
+        }
+
+        .game-over.show {
+            display: block;
+        }
+
+        .game-over h2 {
+            color: #667eea;
+            font-size: 3em;
+            margin-bottom: 25px;
+        }
+
+        .info-badge {
+            background: #667eea;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            display: inline-block;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🫧 Chart.js Tetris - Bubbles</h1>
+        <p class="subtitle">Tetris Visualized as Interactive Bubble Chart</p>
+
+        <div class="game-area">
+            <div class="chart-wrapper">
+                <canvas id="main-chart"></canvas>
+                <div style="text-align: center;">
+                    <span class="info-badge">Each bubble = 1 block</span>
+                </div>
+            </div>
+
+            <div class="side-panel">
+                <div class="panel-section">
+                    <h3>📊 Statistics</h3>
+                    <div class="stat">
+                        <span>Score:</span>
+                        <span class="stat-value" id="score">0</span>
+                    </div>
+                    <div class="stat">
+                        <span>Level:</span>
+                        <span class="stat-value" id="level">1</span>
+                    </div>
+                    <div class="stat">
+                        <span>Lines:</span>
+                        <span class="stat-value" id="lines">0</span>
+                    </div>
+                    <div class="stat">
+                        <span>Blocks:</span>
+                        <span class="stat-value" id="blocks">0</span>
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <h3>📈 Board Density</h3>
+                    <canvas id="density-chart"></canvas>
+                </div>
+
+                <div class="panel-section">
+                    <h3>🎯 Current Piece</h3>
+                    <div class="stat">
+                        <span>Type:</span>
+                        <span class="stat-value" id="piece-type">-</span>
+                    </div>
+                    <div class="stat">
+                        <span>Size:</span>
+                        <span class="stat-value" id="piece-size">0</span>
+                    </div>
+                </div>
+
+                <button id="start-btn">Start Bubble Tetris</button>
+            </div>
+        </div>
+
+        <div class="controls">
+            <h3>🎮 Controls</h3>
+            <p><strong>←/→</strong> Move | <strong>↑</strong> Rotate | <strong>↓</strong> Drop | <strong>Space</strong> Hard Drop | <strong>P</strong> Pause</p>
+        </div>
+    </div>
+
+    <div class="game-over" id="game-over">
+        <h2>Game Over!</h2>
+        <p style="font-size: 1.5em; margin: 20px 0;">Final Score: <span id="final-score">0</span></p>
+        <p style="font-size: 1.2em;">Total Blocks: <span id="final-blocks">0</span></p>
+        <button onclick="location.reload()">Play Again</button>
+    </div>
+
+    <script>
+        const BOARD_WIDTH = 10;
+        const BOARD_HEIGHT = 20;
+        const BUBBLE_SIZE = 15;
+
+        const COLOR_MAP = {
+            I: { bg: 'rgba(0, 240, 240, 0.7)', border: 'rgb(0, 200, 200)' },
+            O: { bg: 'rgba(240, 240, 0, 0.7)', border: 'rgb(200, 200, 0)' },
+            T: { bg: 'rgba(160, 0, 240, 0.7)', border: 'rgb(130, 0, 200)' },
+            S: { bg: 'rgba(0, 240, 0, 0.7)', border: 'rgb(0, 200, 0)' },
+            Z: { bg: 'rgba(240, 0, 0, 0.7)', border: 'rgb(200, 0, 0)' },
+            J: { bg: 'rgba(0, 0, 240, 0.7)', border: 'rgb(0, 0, 200)' },
+            L: { bg: 'rgba(240, 160, 0, 0.7)', border: 'rgb(200, 130, 0)' }
+        };
+
+        const SHAPES = {
+            I: [[1,1,1,1]], O: [[1,1],[1,1]], T: [[0,1,0],[1,1,1]],
+            S: [[0,1,1],[1,1,0]], Z: [[1,1,0],[0,1,1]],
+            J: [[1,0,0],[1,1,1]], L: [[0,0,1],[1,1,1]]
+        };
+
+        let gameState = {
+            board: Array(BOARD_HEIGHT).fill().map(() => Array(BOARD_WIDTH).fill(null)),
+            currentPiece: null,
+            nextPiece: null,
+            position: { x: 0, y: 0 },
+            score: 0,
+            lines: 0,
+            level: 1,
+            blockCount: 0,
+            gameOver: false,
+            paused: false,
+            gameLoop: null
+        };
+
+        // Main bubble chart
+        const mainCtx = document.getElementById('main-chart').getContext('2d');
+        let mainChart;
+
+        // Density chart
+        const densityCtx = document.getElementById('density-chart').getContext('2d');
+        let densityChart;
+
+        function initCharts() {
+            // Main bubble chart
+            mainChart = new Chart(mainCtx, {
+                type: 'bubble',
+                data: {
+                    datasets: []
+                },
+                options: {
+                    responsive: false,
+                    maintainAspectRatio: true,
+                    scales: {
+                        x: {
+                            min: 0,
+                            max: BOARD_WIDTH,
+                            ticks: { stepSize: 1 },
+                            grid: { color: 'rgba(0, 0, 0, 0.1)' }
+                        },
+                        y: {
+                            min: 0,
+                            max: BOARD_HEIGHT,
+                            ticks: { stepSize: 2 },
+                            grid: { color: 'rgba(0, 0, 0, 0.1)' }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { enabled: false }
+                    },
+                    animation: {
+                        duration: 100
+                    }
+                }
+            });
+
+            // Density chart
+            densityChart = new Chart(densityCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Density %',
+                        data: [],
+                        borderColor: 'rgb(102, 126, 234)',
+                        backgroundColor: 'rgba(102, 126, 234, 0.2)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: { callback: value => value + '%' }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+
+        function updateMainChart() {
+            const datasets = [];
+
+            // Board blocks
+            const boardBubbles = [];
+            for (let y = 0; y < BOARD_HEIGHT; y++) {
+                for (let x = 0; x < BOARD_WIDTH; x++) {
+                    if (gameState.board[y][x]) {
+                        boardBubbles.push({
+                            x: x + 0.5,
+                            y: BOARD_HEIGHT - y - 0.5,
+                            r: BUBBLE_SIZE
+                        });
+                    }
+                }
+            }
+
+            if (boardBubbles.length > 0) {
+                const firstColor = COLOR_MAP[Object.keys(COLOR_MAP)[0]];
+                datasets.push({
+                    label: 'Board',
+                    data: boardBubbles,
+                    backgroundColor: 'rgba(100, 100, 100, 0.6)',
+                    borderColor: 'rgb(80, 80, 80)',
+                    borderWidth: 2
+                });
+            }
+
+            // Current piece
+            if (gameState.currentPiece) {
+                const { shape, type } = gameState.currentPiece;
+                const { x, y } = gameState.position;
+                const pieceBubbles = [];
+
+                shape.forEach((row, dy) => {
+                    row.forEach((cell, dx) => {
+                        if (cell) {
+                            pieceBubbles.push({
+                                x: (x + dx) + 0.5,
+                                y: BOARD_HEIGHT - (y + dy) - 0.5,
+                                r: BUBBLE_SIZE
+                            });
+                        }
+                    });
+                });
+
+                if (pieceBubbles.length > 0) {
+                    const colors = COLOR_MAP[type];
+                    datasets.push({
+                        label: 'Current',
+                        data: pieceBubbles,
+                        backgroundColor: colors.bg,
+                        borderColor: colors.border,
+                        borderWidth: 3
+                    });
+                }
+            }
+
+            mainChart.data.datasets = datasets;
+            mainChart.update('none');
+        }
+
+        function updateDensityChart() {
+            const density = (gameState.blockCount / (BOARD_WIDTH * BOARD_HEIGHT)) * 100;
+
+            if (densityChart.data.labels.length >= 20) {
+                densityChart.data.labels.shift();
+                densityChart.data.datasets[0].data.shift();
+            }
+
+            densityChart.data.labels.push('');
+            densityChart.data.datasets[0].data.push(density.toFixed(1));
+            densityChart.update('none');
+        }
+
+        function createPiece() {
+            const pieces = Object.keys(SHAPES);
+            const type = pieces[Math.floor(Math.random() * pieces.length)];
+            return { type: type, shape: SHAPES[type] };
+        }
+
+        function countPieceBlocks(shape) {
+            return shape.flat().filter(cell => cell).length;
+        }
+
+        function checkCollision(piece, pos) {
+            const { shape } = piece;
+            const { x, y } = pos;
+            for (let dy = 0; dy < shape.length; dy++) {
+                for (let dx = 0; dx < shape[dy].length; dx++) {
+                    if (shape[dy][dx]) {
+                        const newX = x + dx, newY = y + dy;
+                        if (newX < 0 || newX >= BOARD_WIDTH || newY >= BOARD_HEIGHT) return true;
+                        if (newY >= 0 && gameState.board[newY][newX]) return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        function rotatePiece(piece) {
+            const rotated = piece.shape[0].map((_, i) =>
+                piece.shape.map(row => row[i]).reverse()
+            );
+            return { ...piece, shape: rotated };
+        }
+
+        function lockPiece() {
+            const { shape, type } = gameState.currentPiece;
+            const { x, y } = gameState.position;
+
+            let blocksAdded = 0;
+            shape.forEach((row, dy) => {
+                row.forEach((cell, dx) => {
+                    if (cell && y + dy >= 0) {
+                        gameState.board[y + dy][x + dx] = type;
+                        blocksAdded++;
+                    }
+                });
+            });
+
+            gameState.blockCount += blocksAdded;
+            clearLines();
+            spawnPiece();
+            updateStats();
+        }
+
+        function clearLines() {
+            let linesCleared = 0;
+            for (let y = BOARD_HEIGHT - 1; y >= 0; y--) {
+                if (gameState.board[y].every(cell => cell !== null)) {
+                    gameState.blockCount -= BOARD_WIDTH;
+                    gameState.board.splice(y, 1);
+                    gameState.board.unshift(Array(BOARD_WIDTH).fill(null));
+                    linesCleared++;
+                    y++;
+                }
+            }
+
+            if (linesCleared > 0) {
+                gameState.lines += linesCleared;
+                gameState.score += [0, 100, 300, 500, 800][linesCleared] * gameState.level;
+                gameState.level = Math.floor(gameState.lines / 10) + 1;
+                updateStats();
+                updateDensityChart();
+            }
+        }
+
+        function spawnPiece() {
+            gameState.currentPiece = gameState.nextPiece || createPiece();
+            gameState.nextPiece = createPiece();
+            gameState.position = {
+                x: Math.floor(BOARD_WIDTH / 2) - Math.floor(gameState.currentPiece.shape[0].length / 2),
+                y: 0
+            };
+
+            if (checkCollision(gameState.currentPiece, gameState.position)) {
+                endGame();
+            }
+
+            updatePieceInfo();
+        }
+
+        function movePiece(dx, dy) {
+            const newPos = { x: gameState.position.x + dx, y: gameState.position.y + dy };
+            if (!checkCollision(gameState.currentPiece, newPos)) {
+                gameState.position = newPos;
+                updateMainChart();
+                return true;
+            }
+            return false;
+        }
+
+        function rotate() {
+            const rotated = rotatePiece(gameState.currentPiece);
+            if (!checkCollision(rotated, gameState.position)) {
+                gameState.currentPiece = rotated;
+                updateMainChart();
+                updatePieceInfo();
+            }
+        }
+
+        function hardDrop() {
+            while (movePiece(0, 1)) {}
+            lockPiece();
+            gameState.score += 20;
+            updateStats();
+        }
+
+        function gameLoop() {
+            if (gameState.paused || gameState.gameOver) return;
+            if (!movePiece(0, 1)) {
+                lockPiece();
+            }
+            updateMainChart();
+        }
+
+        function updateStats() {
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('level').textContent = gameState.level;
+            document.getElementById('lines').textContent = gameState.lines;
+            document.getElementById('blocks').textContent = gameState.blockCount;
+        }
+
+        function updatePieceInfo() {
+            if (gameState.currentPiece) {
+                document.getElementById('piece-type').textContent = gameState.currentPiece.type;
+                document.getElementById('piece-size').textContent = countPieceBlocks(gameState.currentPiece.shape);
+            }
+        }
+
+        function endGame() {
+            gameState.gameOver = true;
+            clearInterval(gameState.gameLoop);
+            document.getElementById('final-score').textContent = gameState.score;
+            document.getElementById('final-blocks').textContent = gameState.blockCount;
+            document.getElementById('game-over').classList.add('show');
+        }
+
+        function startGame() {
+            gameState = {
+                board: Array(BOARD_HEIGHT).fill().map(() => Array(BOARD_WIDTH).fill(null)),
+                currentPiece: null,
+                nextPiece: null,
+                position: { x: 0, y: 0 },
+                score: 0, lines: 0, level: 1, blockCount: 0,
+                gameOver: false, paused: false, gameLoop: null
+            };
+
+            // Reset density chart
+            densityChart.data.labels = [];
+            densityChart.data.datasets[0].data = [];
+            densityChart.update();
+
+            spawnPiece();
+            updateMainChart();
+            updateStats();
+
+            const speed = Math.max(300, 1000 - (gameState.level - 1) * 100);
+            gameState.gameLoop = setInterval(gameLoop, speed);
+
+            document.getElementById('start-btn').textContent = 'Restart Game';
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (gameState.gameOver) return;
+            switch(e.key) {
+                case 'ArrowLeft': e.preventDefault(); movePiece(-1, 0); break;
+                case 'ArrowRight': e.preventDefault(); movePiece(1, 0); break;
+                case 'ArrowDown':
+                    e.preventDefault();
+                    if (movePiece(0, 1)) {
+                        gameState.score += 1;
+                        updateStats();
+                    }
+                    break;
+                case 'ArrowUp': e.preventDefault(); rotate(); break;
+                case ' ': e.preventDefault(); hardDrop(); break;
+                case 'p': case 'P': e.preventDefault(); gameState.paused = !gameState.paused; break;
+            }
+        });
+
+        document.getElementById('start-btn').addEventListener('click', () => {
+            if (gameState.gameLoop) clearInterval(gameState.gameLoop);
+            document.getElementById('game-over').classList.remove('show');
+            startGame();
+        });
+
+        initCharts();
+    </script>
+</body>
+</html>

@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Language Games Tetris</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .game-container {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.2em;
+        }
+
+        .subtitle {
+            color: #666;
+            font-style: italic;
+            margin-bottom: 20px;
+        }
+
+        .game-area {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        canvas {
+            border: 3px solid #333;
+            background: #000;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .side-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            min-width: 250px;
+        }
+
+        .info-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #333;
+        }
+
+        .info-box h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .score, .level, .lines {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .language-game-mode {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .mode-description {
+            font-size: 0.85em;
+            margin-top: 5px;
+            font-weight: normal;
+            font-style: italic;
+        }
+
+        .word-matches {
+            background: #fff9e6;
+            padding: 12px;
+            border-radius: 8px;
+            border: 2px solid #ffd93d;
+            font-size: 0.9em;
+        }
+
+        .word-matches h4 {
+            color: #d4a20a;
+            margin-bottom: 8px;
+            font-size: 0.95em;
+        }
+
+        .match-item {
+            background: white;
+            padding: 5px 8px;
+            margin: 3px 0;
+            border-radius: 4px;
+            border-left: 3px solid #667eea;
+        }
+
+        .controls {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 10px;
+            border: 2px solid #333;
+            text-align: left;
+            font-size: 0.85em;
+        }
+
+        .controls h3 {
+            color: #667eea;
+            margin-bottom: 8px;
+        }
+
+        .controls p {
+            margin: 4px 0;
+            color: #555;
+        }
+
+        button {
+            margin-top: 15px;
+            padding: 12px 30px;
+            font-size: 1.1em;
+            font-weight: bold;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 10px rgba(102, 126, 234, 0.3);
+        }
+
+        button:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(118, 75, 162, 0.4);
+        }
+
+        .game-over {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            color: white;
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            display: none;
+            z-index: 1000;
+            max-width: 500px;
+        }
+
+        .game-over.show {
+            display: block;
+        }
+
+        .game-over h2 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            color: #ff6b6b;
+        }
+
+        .game-over p {
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+
+        .philosophical-insight {
+            background: rgba(102, 126, 234, 0.2);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border: 2px solid #667eea;
+        }
+
+        .philosophical-insight h4 {
+            color: #667eea;
+            margin-bottom: 8px;
+        }
+
+        .intro-screen {
+            max-width: 600px;
+            line-height: 1.8;
+        }
+
+        .intro-screen.hidden {
+            display: none;
+        }
+
+        .quote {
+            background: rgba(102, 126, 234, 0.1);
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin: 20px 0;
+            font-style: italic;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <!-- Intro Screen -->
+        <div class="intro-screen" id="introScreen">
+            <h1>🎮🧠 Language Games Tetris</h1>
+            <p class="subtitle">Where Wittgenstein meets falling blocks</p>
+
+            <div class="quote">
+                "The meaning of a word is its use in the language—even in Tetris!"
+            </div>
+
+            <div style="text-align: left; margin: 20px 0;">
+                <h3 style="color: #667eea; margin-bottom: 10px;">How to Play:</h3>
+                <p>This is Tetris... but with a philosophical twist! </p>
+                <br>
+                <p><strong>Each level represents a different "language game":</strong></p>
+                <ul style="margin-left: 20px; margin-top: 10px;">
+                    <li><strong>Builder's Game:</strong> Blocks are building materials (Block, Slab, Beam)</li>
+                    <li><strong>Poet's Game:</strong> Pieces represent emotions and imagery</li>
+                    <li><strong>Market Game:</strong> Same shapes, different contexts and meanings</li>
+                    <li><strong>Scientist's Game:</strong> Precise technical terminology</li>
+                </ul>
+                <br>
+                <p><strong>The Twist:</strong> When you clear lines with matching "word families" or contexts, you score bonus philosophical points! The same Tetris pieces mean different things in different language games.</p>
+                <br>
+                <p><strong>Watch for:</strong> Family resemblances—pieces that share properties but aren't identical in meaning!</p>
+            </div>
+
+            <div class="philosophical-insight">
+                <h4>Wittgenstein's Insight in Tetris Form:</h4>
+                <p>Just as a Tetris I-block can be placed horizontally or vertically, words function differently in different contexts. The "game" determines the meaning!</p>
+            </div>
+
+            <button onclick="startGame()">Begin Philosophical Tetris</button>
+        </div>
+
+        <!-- Main Game -->
+        <div id="mainGame" style="display: none;">
+            <h1>Language Games Tetris</h1>
+            <p class="subtitle">Philosophical Block-Stacking</p>
+
+            <div class="game-area">
+                <canvas id="tetris" width="300" height="600"></canvas>
+
+                <div class="side-panel">
+                    <div class="language-game-mode" id="gameMode">
+                        🏗️ Builder's Language Game
+                        <div class="mode-description">Blocks as building materials</div>
+                    </div>
+
+                    <div class="info-box">
+                        <h3>Score</h3>
+                        <div class="score" id="score">0</div>
+                    </div>
+
+                    <div class="info-box">
+                        <h3>Language Game</h3>
+                        <div class="level" id="level">1</div>
+                    </div>
+
+                    <div class="info-box">
+                        <h3>Lines Cleared</h3>
+                        <div class="lines" id="lines">0</div>
+                    </div>
+
+                    <div class="word-matches" id="wordMatches">
+                        <h4>Current Pieces:</h4>
+                        <div id="pieceWords"></div>
+                    </div>
+
+                    <div class="controls">
+                        <h3>Controls</h3>
+                        <p><strong>←/→</strong> Move</p>
+                        <p><strong>↓</strong> Soft Drop</p>
+                        <p><strong>↑</strong> Rotate</p>
+                        <p><strong>Space</strong> Hard Drop</p>
+                        <p><strong>P</strong> Pause</p>
+                    </div>
+                </div>
+            </div>
+
+            <button id="startBtn" onclick="toggleGame()">Start Game</button>
+        </div>
+    </div>
+
+    <div class="game-over" id="gameOver">
+        <h2>Game Over</h2>
+        <p>Final Score: <span id="finalScore">0</span></p>
+        <p>Language Games Mastered: <span id="gamesCompleted">0</span></p>
+
+        <div class="philosophical-insight">
+            <h4>Philosophical Achievement Unlocked:</h4>
+            <p id="philosophicalRank">Language Game Novice</p>
+            <p style="font-size: 0.9em; margin-top: 10px;" id="finalInsight"></p>
+        </div>
+
+        <button id="restartBtn" onclick="location.reload()">Play Again</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('tetris');
+        const ctx = canvas.getContext('2d');
+
+        const COLS = 10;
+        const ROWS = 20;
+        const BLOCK_SIZE = 30;
+
+        // Language Games - each level has different conceptual labels
+        const LANGUAGE_GAMES = [
+            {
+                name: "🏗️ Builder's Language Game",
+                description: "Blocks as building materials",
+                words: {
+                    'I': 'Beam',
+                    'O': 'Block',
+                    'T': 'Joint',
+                    'S': 'Slab',
+                    'Z': 'Slab',
+                    'J': 'Pillar',
+                    'L': 'Pillar'
+                },
+                insight: "In the builder's practice, these words are commands for action, not abstract labels."
+            },
+            {
+                name: "📜 Poet's Language Game",
+                description: "Pieces as emotional expressions",
+                words: {
+                    'I': 'Longing',
+                    'O': 'Wholeness',
+                    'T': 'Balance',
+                    'S': 'Flow',
+                    'Z': 'Flow',
+                    'J': 'Reaching',
+                    'L': 'Reaching'
+                },
+                insight: "Poetry uses words metaphorically—same shapes, but now they evoke feelings."
+            },
+            {
+                name: "🏪 Market Language Game",
+                description: "Pieces as marketplace items",
+                words: {
+                    'I': 'Baguette',
+                    'O': 'Apple',
+                    'T': 'Scale',
+                    'S': 'Ribbon',
+                    'Z': 'Ribbon',
+                    'J': 'Hook',
+                    'L': 'Hook'
+                },
+                insight: "In commerce, the same forms take on transactional meanings."
+            },
+            {
+                name: "🔬 Scientist's Language Game",
+                description: "Pieces as technical terms",
+                words: {
+                    'I': 'Linear',
+                    'O': 'Unit',
+                    'T': 'Junction',
+                    'S': 'Helix',
+                    'Z': 'Helix',
+                    'J': 'Vector',
+                    'L': 'Vector'
+                },
+                insight: "Scientific language strives for precision, but it's still use in practice."
+            }
+        ];
+
+        // Tetromino shapes (same as regular Tetris)
+        const SHAPES = {
+            'I': [[1, 1, 1, 1]],
+            'O': [[1, 1], [1, 1]],
+            'T': [[0, 1, 0], [1, 1, 1]],
+            'S': [[0, 1, 1], [1, 1, 0]],
+            'Z': [[1, 1, 0], [0, 1, 1]],
+            'J': [[1, 0, 0], [1, 1, 1]],
+            'L': [[0, 0, 1], [1, 1, 1]]
+        };
+
+        const COLORS = {
+            'I': '#00f0f0',
+            'O': '#f0f000',
+            'T': '#a000f0',
+            'S': '#00f000',
+            'Z': '#f00000',
+            'J': '#0000f0',
+            'L': '#f0a000'
+        };
+
+        let board = [];
+        let currentPiece = null;
+        let score = 0;
+        let level = 0; // Represents current language game
+        let lines = 0;
+        let gameLoop = null;
+        let dropCounter = 0;
+        let dropInterval = 1000;
+        let lastTime = 0;
+        let isPaused = false;
+        let gameRunning = false;
+        let pieceTypes = []; // Track recent pieces
+
+        function startGame() {
+            document.getElementById('introScreen').classList.add('hidden');
+            document.getElementById('mainGame').style.display = 'block';
+        }
+
+        function createBoard() {
+            board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+        }
+
+        function drawBlock(x, y, color) {
+            ctx.fillStyle = color;
+            ctx.fillRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+        }
+
+        function drawBoard() {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            for (let row = 0; row < ROWS; row++) {
+                for (let col = 0; col < COLS; col++) {
+                    if (board[row][col]) {
+                        drawBlock(col, row, board[row][col]);
+                    }
+                }
+            }
+        }
+
+        function createPiece() {
+            const pieces = Object.keys(SHAPES);
+            const type = pieces[Math.floor(Math.random() * pieces.length)];
+
+            pieceTypes.push(type);
+            if (pieceTypes.length > 5) pieceTypes.shift();
+
+            updatePieceWords();
+
+            return {
+                shape: SHAPES[type],
+                color: COLORS[type],
+                x: Math.floor(COLS / 2) - Math.floor(SHAPES[type][0].length / 2),
+                y: 0,
+                type: type
+            };
+        }
+
+        function updatePieceWords() {
+            const currentGame = LANGUAGE_GAMES[level];
+            const wordsContainer = document.getElementById('pieceWords');
+
+            const uniqueTypes = [...new Set(pieceTypes)];
+            const words = uniqueTypes.map(type => {
+                return `<div class="match-item">${currentGame.words[type]}</div>`;
+            }).join('');
+
+            wordsContainer.innerHTML = words || '<div style="color: #999;">Playing...</div>';
+        }
+
+        function drawPiece(piece) {
+            piece.shape.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value) {
+                        drawBlock(piece.x + x, piece.y + y, piece.color);
+                    }
+                });
+            });
+        }
+
+        function checkCollision(piece, offsetX = 0, offsetY = 0) {
+            for (let y = 0; y < piece.shape.length; y++) {
+                for (let x = 0; x < piece.shape[y].length; x++) {
+                    if (piece.shape[y][x]) {
+                        const newX = piece.x + x + offsetX;
+                        const newY = piece.y + y + offsetY;
+
+                        if (newX < 0 || newX >= COLS || newY >= ROWS) {
+                            return true;
+                        }
+
+                        if (newY >= 0 && board[newY][newX]) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        function mergePiece() {
+            currentPiece.shape.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value) {
+                        const boardY = currentPiece.y + y;
+                        const boardX = currentPiece.x + x;
+                        if (boardY >= 0) {
+                            board[boardY][boardX] = currentPiece.color;
+                        }
+                    }
+                });
+            });
+        }
+
+        function clearLines() {
+            let linesCleared = 0;
+
+            for (let row = ROWS - 1; row >= 0; row--) {
+                if (board[row].every(cell => cell !== 0)) {
+                    board.splice(row, 1);
+                    board.unshift(Array(COLS).fill(0));
+                    linesCleared++;
+                    row++;
+                }
+            }
+
+            if (linesCleared > 0) {
+                lines += linesCleared;
+
+                // Philosophical bonus for understanding context
+                const bonusMultiplier = 1 + (level * 0.5);
+                score += [0, 40, 100, 300, 1200][linesCleared] * bonusMultiplier;
+
+                // Progress through language games
+                const newLevel = Math.min(Math.floor(lines / 10), LANGUAGE_GAMES.length - 1);
+                if (newLevel !== level) {
+                    level = newLevel;
+                    updateLanguageGame();
+                }
+
+                dropInterval = Math.max(100, 1000 - (lines / 2) * 50);
+                updateScore();
+            }
+        }
+
+        function updateLanguageGame() {
+            const game = LANGUAGE_GAMES[level];
+            document.getElementById('gameMode').innerHTML = `
+                ${game.name}
+                <div class="mode-description">${game.description}</div>
+            `;
+            updatePieceWords();
+        }
+
+        function rotate(piece) {
+            const newShape = piece.shape[0].map((_, i) =>
+                piece.shape.map(row => row[i]).reverse()
+            );
+
+            const rotated = { ...piece, shape: newShape };
+
+            if (!checkCollision(rotated)) {
+                return rotated;
+            }
+
+            // Wall kick
+            for (let offset of [1, -1, 2, -2]) {
+                rotated.x = piece.x + offset;
+                if (!checkCollision(rotated)) {
+                    return rotated;
+                }
+            }
+
+            return piece;
+        }
+
+        function move(direction) {
+            if (!currentPiece || isPaused) return;
+
+            if (direction === 'left' && !checkCollision(currentPiece, -1, 0)) {
+                currentPiece.x--;
+            } else if (direction === 'right' && !checkCollision(currentPiece, 1, 0)) {
+                currentPiece.x++;
+            } else if (direction === 'down') {
+                if (!checkCollision(currentPiece, 0, 1)) {
+                    currentPiece.y++;
+                    score += 1;
+                    updateScore();
+                } else {
+                    placePiece();
+                }
+            }
+        }
+
+        function hardDrop() {
+            if (!currentPiece || isPaused) return;
+
+            while (!checkCollision(currentPiece, 0, 1)) {
+                currentPiece.y++;
+                score += 2;
+            }
+            updateScore();
+            placePiece();
+        }
+
+        function placePiece() {
+            mergePiece();
+            clearLines();
+            currentPiece = createPiece();
+
+            if (checkCollision(currentPiece)) {
+                gameOver();
+            }
+        }
+
+        function updateScore() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('level').textContent = level + 1;
+            document.getElementById('lines').textContent = lines;
+        }
+
+        function gameOver() {
+            gameRunning = false;
+            cancelAnimationFrame(gameLoop);
+
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('gamesCompleted').textContent = (level + 1);
+
+            // Philosophical ranking
+            let rank = 'Language Game Novice';
+            let insight = 'You\'ve begun to see how context shapes meaning!';
+
+            if (level >= 3) {
+                rank = 'Wittgenstein Master';
+                insight = 'You\'ve experienced all four language games—same Tetris pieces, four different meanings!';
+            } else if (level >= 2) {
+                rank = 'Contextual Thinker';
+                insight = 'You understand that meaning shifts across forms of life!';
+            } else if (level >= 1) {
+                rank = 'Language Game Apprentice';
+                insight = 'You\'ve seen how the same shapes take on new meanings in different games!';
+            }
+
+            document.getElementById('philosophicalRank').textContent = rank;
+            document.getElementById('finalInsight').textContent = insight;
+            document.getElementById('gameOver').classList.add('show');
+        }
+
+        function update(time = 0) {
+            if (!gameRunning || isPaused) return;
+
+            const deltaTime = time - lastTime;
+            lastTime = time;
+            dropCounter += deltaTime;
+
+            if (dropCounter > dropInterval) {
+                move('down');
+                dropCounter = 0;
+            }
+
+            drawBoard();
+            if (currentPiece) {
+                drawPiece(currentPiece);
+            }
+
+            gameLoop = requestAnimationFrame(update);
+        }
+
+        function toggleGame() {
+            if (!gameRunning) {
+                createBoard();
+                score = 0;
+                level = 0;
+                lines = 0;
+                dropCounter = 0;
+                dropInterval = 1000;
+                isPaused = false;
+                gameRunning = true;
+                pieceTypes = [];
+
+                updateScore();
+                updateLanguageGame();
+                currentPiece = createPiece();
+
+                document.getElementById('gameOver').classList.remove('show');
+                document.getElementById('startBtn').textContent = 'Restart Game';
+
+                lastTime = 0;
+                update();
+            } else {
+                gameRunning = false;
+                cancelAnimationFrame(gameLoop);
+                createBoard();
+                drawBoard();
+                document.getElementById('startBtn').textContent = 'Start Game';
+            }
+        }
+
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            if (!gameRunning) return;
+
+            switch(e.key) {
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    move('left');
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    move('right');
+                    break;
+                case 'ArrowDown':
+                    e.preventDefault();
+                    move('down');
+                    break;
+                case 'ArrowUp':
+                    e.preventDefault();
+                    if (currentPiece && !isPaused) {
+                        currentPiece = rotate(currentPiece);
+                    }
+                    break;
+                case ' ':
+                    e.preventDefault();
+                    hardDrop();
+                    break;
+                case 'p':
+                case 'P':
+                    e.preventDefault();
+                    isPaused = !isPaused;
+                    if (!isPaused) {
+                        lastTime = performance.now();
+                        update(lastTime);
+                    }
+                    break;
+            }
+        });
+
+        // Initial draw
+        createBoard();
+        drawBoard();
+    </script>
+</body>
+</html>

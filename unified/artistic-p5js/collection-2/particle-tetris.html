@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Particle Tetris - p5.js Variation</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            font-family: 'Arial', sans-serif;
+        }
+        #canvas-container {
+            box-shadow: 0 20px 60px rgba(255,255,255,0.1);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        h1 {
+            margin: 0 0 10px 0;
+            font-size: 2em;
+        }
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            background: rgba(0,0,0,0.5);
+            padding: 15px 25px;
+            border-radius: 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="info">
+        <h1>✨ Particle Tetris</h1>
+        <p>Score: <span id="score">0</span></p>
+        <p>Lines: <span id="lines">0</span></p>
+        <p>Level: <span id="level">1</span></p>
+    </div>
+    <div class="controls">
+        <strong>Controls:</strong> Arrow Keys to move/rotate | Space to drop | P to pause
+    </div>
+    <script>
+        const COLS = 10;
+        const ROWS = 20;
+        const BLOCK_SIZE = 30;
+
+        let grid = [];
+        let currentPiece;
+        let gameOver = false;
+        let paused = false;
+        let score = 0;
+        let lines = 0;
+        let level = 1;
+        let dropCounter = 0;
+        let dropInterval = 1000;
+        let lastTime = 0;
+        let particles = [];
+
+        const SHAPES = [
+            [[1,1,1,1]], // I
+            [[1,1],[1,1]], // O
+            [[0,1,0],[1,1,1]], // T
+            [[1,0,0],[1,1,1]], // L
+            [[0,0,1],[1,1,1]], // J
+            [[0,1,1],[1,1,0]], // S
+            [[1,1,0],[0,1,1]]  // Z
+        ];
+
+        const COLORS = [
+            [0, 255, 255],    // Cyan
+            [255, 255, 0],    // Yellow
+            [255, 0, 255],    // Magenta
+            [255, 128, 0],    // Orange
+            [0, 0, 255],      // Blue
+            [0, 255, 0],      // Green
+            [255, 0, 0]       // Red
+        ];
+
+        class Particle {
+            constructor(x, y, col) {
+                this.pos = createVector(x, y);
+                this.vel = p5.Vector.random2D().mult(random(0.5, 2));
+                this.acc = createVector(0, 0.1);
+                this.col = col;
+                this.alpha = 255;
+                this.size = random(2, 6);
+                this.lifespan = 255;
+            }
+
+            update() {
+                this.vel.add(this.acc);
+                this.pos.add(this.vel);
+                this.alpha -= 3;
+                this.lifespan -= 3;
+            }
+
+            display() {
+                push();
+                noStroke();
+                fill(this.col[0], this.col[1], this.col[2], this.alpha);
+                circle(this.pos.x, this.pos.y, this.size);
+                pop();
+            }
+
+            isDead() {
+                return this.lifespan <= 0;
+            }
+        }
+
+        class BlockParticles {
+            constructor(x, y, col) {
+                this.x = x;
+                this.y = y;
+                this.col = col;
+                this.particles = [];
+                this.generateParticles();
+            }
+
+            generateParticles() {
+                const centerX = this.x + BLOCK_SIZE / 2;
+                const centerY = this.y + BLOCK_SIZE / 2;
+                for (let i = 0; i < 20; i++) {
+                    const angle = random(TWO_PI);
+                    const radius = random(BLOCK_SIZE / 3);
+                    const px = centerX + cos(angle) * radius;
+                    const py = centerY + sin(angle) * radius;
+                    this.particles.push({
+                        x: px,
+                        y: py,
+                        vx: random(-0.5, 0.5),
+                        vy: random(-0.5, 0.5),
+                        size: random(1, 3),
+                        offset: random(TWO_PI)
+                    });
+                }
+            }
+
+            display() {
+                push();
+                // Draw block outline
+                stroke(this.col[0], this.col[1], this.col[2], 100);
+                strokeWeight(1);
+                noFill();
+                rect(this.x, this.y, BLOCK_SIZE, BLOCK_SIZE);
+
+                // Draw swirling particles
+                const time = frameCount * 0.05;
+                for (let p of this.particles) {
+                    const swirl = sin(time + p.offset) * 2;
+                    const px = p.x + p.vx * swirl;
+                    const py = p.y + p.vy * swirl;
+
+                    noStroke();
+                    fill(this.col[0], this.col[1], this.col[2], 200);
+                    circle(px, py, p.size);
+
+                    // Glow
+                    fill(this.col[0], this.col[1], this.col[2], 50);
+                    circle(px, py, p.size * 2);
+                }
+                pop();
+            }
+        }
+
+        class Piece {
+            constructor() {
+                this.shape = random(SHAPES);
+                this.x = Math.floor(COLS / 2) - Math.floor(this.shape[0].length / 2);
+                this.y = 0;
+                this.col = random(COLORS);
+                this.blockParticles = [];
+                this.generateBlockParticles();
+            }
+
+            generateBlockParticles() {
+                this.blockParticles = [];
+                for (let row = 0; row < this.shape.length; row++) {
+                    for (let col = 0; col < this.shape[row].length; col++) {
+                        if (this.shape[row][col]) {
+                            const px = (this.x + col) * BLOCK_SIZE;
+                            const py = (this.y + row) * BLOCK_SIZE;
+                            this.blockParticles.push(new BlockParticles(px, py, this.col));
+                        }
+                    }
+                }
+            }
+
+            updateBlockParticles() {
+                this.blockParticles = [];
+                for (let row = 0; row < this.shape.length; row++) {
+                    for (let col = 0; col < this.shape[row].length; col++) {
+                        if (this.shape[row][col]) {
+                            const px = (this.x + col) * BLOCK_SIZE;
+                            const py = (this.y + row) * BLOCK_SIZE;
+                            this.blockParticles.push(new BlockParticles(px, py, this.col));
+                        }
+                    }
+                }
+            }
+
+            draw() {
+                for (let bp of this.blockParticles) {
+                    bp.display();
+                }
+            }
+
+            move(dx, dy) {
+                this.x += dx;
+                this.y += dy;
+                if (this.collision()) {
+                    this.x -= dx;
+                    this.y -= dy;
+                    return false;
+                }
+                this.updateBlockParticles();
+                return true;
+            }
+
+            rotate() {
+                const newShape = this.shape[0].map((_, i) =>
+                    this.shape.map(row => row[i]).reverse()
+                );
+                const oldShape = this.shape;
+                this.shape = newShape;
+                if (this.collision()) {
+                    this.shape = oldShape;
+                } else {
+                    this.updateBlockParticles();
+                }
+            }
+
+            collision() {
+                for (let row = 0; row < this.shape.length; row++) {
+                    for (let col = 0; col < this.shape[row].length; col++) {
+                        if (this.shape[row][col]) {
+                            let newX = this.x + col;
+                            let newY = this.y + row;
+                            if (newX < 0 || newX >= COLS || newY >= ROWS) {
+                                return true;
+                            }
+                            if (newY >= 0 && grid[newY][newX]) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+                return false;
+            }
+
+            lock() {
+                for (let row = 0; row < this.shape.length; row++) {
+                    for (let col = 0; col < this.shape[row].length; col++) {
+                        if (this.shape[row][col]) {
+                            let newY = this.y + row;
+                            let newX = this.x + col;
+                            if (newY >= 0) {
+                                grid[newY][newX] = this.col;
+                            }
+                        }
+                    }
+                }
+            }
+
+            explode() {
+                for (let row = 0; row < this.shape.length; row++) {
+                    for (let col = 0; col < this.shape[row].length; col++) {
+                        if (this.shape[row][col]) {
+                            const px = (this.x + col) * BLOCK_SIZE + BLOCK_SIZE / 2;
+                            const py = (this.y + row) * BLOCK_SIZE + BLOCK_SIZE / 2;
+                            for (let i = 0; i < 15; i++) {
+                                particles.push(new Particle(px, py, this.col));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        function setup() {
+            let canvas = createCanvas(COLS * BLOCK_SIZE, ROWS * BLOCK_SIZE);
+            canvas.parent('canvas-container');
+
+            for (let i = 0; i < ROWS; i++) {
+                grid[i] = Array(COLS).fill(0);
+            }
+
+            currentPiece = new Piece();
+            frameRate(60);
+        }
+
+        function draw() {
+            if (!gameOver && !paused) {
+                let now = millis();
+                let deltaTime = now - lastTime;
+                lastTime = now;
+
+                dropCounter += deltaTime;
+                if (dropCounter > dropInterval) {
+                    if (!currentPiece.move(0, 1)) {
+                        currentPiece.lock();
+                        clearLines();
+                        currentPiece = new Piece();
+                        if (currentPiece.collision()) {
+                            gameOver = true;
+                        }
+                    }
+                    dropCounter = 0;
+                }
+            }
+
+            // Draw background
+            background(10, 10, 30);
+
+            // Update and draw particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update();
+                particles[i].display();
+                if (particles[i].isDead()) {
+                    particles.splice(i, 1);
+                }
+            }
+
+            // Draw grid with particles
+            for (let row = 0; row < ROWS; row++) {
+                for (let col = 0; col < COLS; col++) {
+                    if (grid[row][col]) {
+                        const bp = new BlockParticles(
+                            col * BLOCK_SIZE,
+                            row * BLOCK_SIZE,
+                            grid[row][col]
+                        );
+                        bp.display();
+                    } else {
+                        stroke(50, 50, 80);
+                        strokeWeight(1);
+                        noFill();
+                        rect(col * BLOCK_SIZE, row * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+                    }
+                }
+            }
+
+            // Draw current piece
+            if (!gameOver && currentPiece) {
+                currentPiece.draw();
+            }
+
+            // Game over overlay
+            if (gameOver) {
+                fill(0, 0, 0, 200);
+                rect(0, height/2 - 50, width, 100);
+                fill(255);
+                textAlign(CENTER, CENTER);
+                textSize(32);
+                text('GAME OVER', width/2, height/2 - 20);
+                textSize(16);
+                text('Press R to restart', width/2, height/2 + 20);
+            }
+
+            if (paused) {
+                fill(0, 0, 0, 150);
+                rect(0, height/2 - 40, width, 80);
+                fill(255);
+                textAlign(CENTER, CENTER);
+                textSize(32);
+                text('PAUSED', width/2, height/2);
+            }
+        }
+
+        function clearLines() {
+            let linesCleared = 0;
+            for (let row = ROWS - 1; row >= 0; row--) {
+                if (grid[row].every(cell => cell !== 0)) {
+                    // Explode particles for cleared line
+                    for (let col = 0; col < COLS; col++) {
+                        for (let i = 0; i < 30; i++) {
+                            particles.push(new Particle(
+                                col * BLOCK_SIZE + BLOCK_SIZE / 2,
+                                row * BLOCK_SIZE + BLOCK_SIZE / 2,
+                                grid[row][col]
+                            ));
+                        }
+                    }
+
+                    grid.splice(row, 1);
+                    grid.unshift(Array(COLS).fill(0));
+                    linesCleared++;
+                    row++;
+                }
+            }
+            if (linesCleared > 0) {
+                lines += linesCleared;
+                score += linesCleared * linesCleared * 100 * level;
+                level = Math.floor(lines / 10) + 1;
+                dropInterval = Math.max(100, 1000 - (level - 1) * 100);
+
+                document.getElementById('score').textContent = score;
+                document.getElementById('lines').textContent = lines;
+                document.getElementById('level').textContent = level;
+            }
+        }
+
+        function keyPressed() {
+            if (gameOver && key === 'r') {
+                resetGame();
+                return;
+            }
+
+            if (key === 'p' || key === 'P') {
+                paused = !paused;
+                return;
+            }
+
+            if (paused || gameOver) return;
+
+            if (keyCode === LEFT_ARROW) {
+                currentPiece.move(-1, 0);
+            } else if (keyCode === RIGHT_ARROW) {
+                currentPiece.move(1, 0);
+            } else if (keyCode === DOWN_ARROW) {
+                if (currentPiece.move(0, 1)) {
+                    score += 1;
+                    document.getElementById('score').textContent = score;
+                }
+            } else if (keyCode === UP_ARROW) {
+                currentPiece.rotate();
+            } else if (key === ' ') {
+                while (currentPiece.move(0, 1)) {
+                    score += 2;
+                }
+                currentPiece.explode();
+                document.getElementById('score').textContent = score;
+            }
+        }
+
+        function resetGame() {
+            grid = [];
+            for (let i = 0; i < ROWS; i++) {
+                grid[i] = Array(COLS).fill(0);
+            }
+            currentPiece = new Piece();
+            gameOver = false;
+            paused = false;
+            score = 0;
+            lines = 0;
+            level = 1;
+            dropCounter = 0;
+            dropInterval = 1000;
+            particles = [];
+
+            document.getElementById('score').textContent = score;
+            document.getElementById('lines').textContent = lines;
+            document.getElementById('level').textContent = level;
+        }
+    </script>
+</body>
+</html>

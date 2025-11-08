@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EMPATHRIS - Emotion-Responsive Matrix Tetris</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #0f0;
+            overflow-x: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        #matrix-rain {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            opacity: 0.15;
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            max-width: 1200px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            text-shadow: 0 0 10px #0f0, 0 0 20px #0f0;
+            margin-bottom: 20px;
+            letter-spacing: 4px;
+        }
+
+        .game-layout {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .emotion-panel {
+            background: rgba(0, 20, 0, 0.9);
+            border: 2px solid #0f0;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+        }
+
+        .emotion-display {
+            font-size: 4rem;
+            margin: 20px 0;
+            text-shadow: 0 0 10px #0f0;
+        }
+
+        .emotion-name {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .emotion-effects {
+            text-align: left;
+            font-size: 0.9rem;
+            margin-top: 15px;
+            opacity: 0.8;
+            line-height: 1.6;
+        }
+
+        .emotion-meter {
+            margin: 15px 0;
+        }
+
+        .meter-label {
+            font-size: 0.8rem;
+            margin-bottom: 5px;
+        }
+
+        .meter-bar {
+            width: 100%;
+            height: 20px;
+            background: rgba(0, 50, 0, 0.5);
+            border: 1px solid #0f0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .meter-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff00, #00ff66);
+            transition: width 0.3s;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+        }
+
+        .game-area {
+            background: rgba(0, 20, 0, 0.9);
+            border: 2px solid #0f0;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+        }
+
+        canvas {
+            border: 2px solid #0a0;
+            background: #000;
+            box-shadow: inset 0 0 20px rgba(0, 255, 0, 0.1);
+            display: block;
+            margin: 0 auto;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .stat {
+            background: rgba(0, 30, 0, 0.6);
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #0a0;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            text-shadow: 0 0 5px #0f0;
+        }
+
+        .controls {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(0, 30, 0, 0.6);
+            border-radius: 5px;
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .emotion-buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .emotion-btn {
+            background: rgba(0, 50, 0, 0.8);
+            border: 1px solid #0f0;
+            color: #0f0;
+            padding: 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .emotion-btn:hover {
+            background: rgba(0, 100, 0, 0.9);
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
+        }
+
+        .emotion-btn.active {
+            background: rgba(0, 150, 0, 0.9);
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.7);
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .combo-display {
+            margin: 15px 0;
+            padding: 15px;
+            background: rgba(0, 100, 0, 0.3);
+            border: 2px solid #0f0;
+            border-radius: 10px;
+            font-size: 1.2rem;
+            display: none;
+        }
+
+        .combo-display.show {
+            display: block;
+            animation: glow 0.5s infinite;
+        }
+
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 10px rgba(0, 255, 0, 0.5); }
+            50% { box-shadow: 0 0 25px rgba(0, 255, 0, 0.9); }
+        }
+
+        button {
+            background: rgba(0, 50, 0, 0.8);
+            color: #0f0;
+            border: 2px solid #0f0;
+            padding: 10px 25px;
+            font-family: 'Courier New', monospace;
+            font-size: 1rem;
+            cursor: pointer;
+            border-radius: 5px;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: rgba(0, 100, 0, 0.9);
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
+        }
+
+        .message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 20, 0, 0.98);
+            border: 3px solid #0f0;
+            padding: 40px;
+            border-radius: 15px;
+            z-index: 1000;
+            text-align: center;
+            box-shadow: 0 0 40px rgba(0, 255, 0, 0.6);
+            display: none;
+            max-width: 500px;
+        }
+
+        .message.show {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+            to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="matrix-rain"></canvas>
+
+    <div class="container">
+        <h1>🧠 EMPATHRIS 🧠</h1>
+
+        <div class="game-layout">
+            <div class="emotion-panel">
+                <h3 style="margin-bottom: 15px;">EMOTIONAL STATE</h3>
+                <div class="emotion-display" id="emotion-icon">😐</div>
+                <div class="emotion-name" id="emotion-name">CALM</div>
+
+                <div class="emotion-meter">
+                    <div class="meter-label">Emotion Duration</div>
+                    <div class="meter-bar">
+                        <div class="meter-fill" id="emotion-progress" style="width: 0%"></div>
+                    </div>
+                    <div style="font-size: 0.8rem; margin-top: 5px;" id="emotion-timer">0s / 60s</div>
+                </div>
+
+                <div class="combo-display" id="combo-display">
+                    🌟 EMOTIONAL COMBO! 🌟<br>
+                    <span id="combo-ability"></span>
+                </div>
+
+                <div class="emotion-effects" id="emotion-effects">
+                    Normal gameplay.<br>
+                    Standard speed and controls.
+                </div>
+
+                <div class="emotion-buttons">
+                    <div class="emotion-btn" onclick="setEmotion('calm')">😌 Calm</div>
+                    <div class="emotion-btn" onclick="setEmotion('frustrated')">😠 Frustrated</div>
+                    <div class="emotion-btn" onclick="setEmotion('happy')">😊 Happy</div>
+                    <div class="emotion-btn" onclick="setEmotion('surprised')">😲 Surprised</div>
+                    <div class="emotion-btn" onclick="setEmotion('focused')">🎯 Focused</div>
+                </div>
+
+                <div style="font-size: 0.8rem; opacity: 0.6; margin-top: 10px;">
+                    Click emotions to simulate detection<br>
+                    (In full version: webcam/HR monitor)
+                </div>
+            </div>
+
+            <div class="game-area">
+                <div class="stats">
+                    <div class="stat">
+                        <div class="stat-label">SCORE</div>
+                        <div class="stat-value" id="score">0</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">LEVEL</div>
+                        <div class="stat-value" id="level">1</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">LINES</div>
+                        <div class="stat-value" id="lines">0</div>
+                    </div>
+                </div>
+
+                <canvas id="canvas" width="300" height="600"></canvas>
+
+                <div class="controls">
+                    ← → Move | ↑ Rotate | ↓ Fast Drop | SPACE Hard Drop
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="message" id="game-over-msg">
+        <h2 style="font-size: 2rem; margin-bottom: 15px;">EMOTIONAL OVERLOAD</h2>
+        <p id="final-score"></p>
+        <p style="margin-top: 10px; font-size: 0.9rem; opacity: 0.8;">
+            Your emotions have overwhelmed the matrix.
+        </p>
+        <button onclick="location.reload()">RESTART</button>
+    </div>
+
+    <script>
+        // Matrix rain effect
+        const rainCanvas = document.getElementById('matrix-rain');
+        const rainCtx = rainCanvas.getContext('2d');
+        rainCanvas.width = window.innerWidth;
+        rainCanvas.height = window.innerHeight;
+
+        const columns = Math.floor(rainCanvas.width / 20);
+        const drops = Array(columns).fill(1);
+
+        function drawMatrixRain() {
+            rainCtx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+            rainCtx.fillRect(0, 0, rainCanvas.width, rainCanvas.height);
+            rainCtx.fillStyle = '#0f0';
+            rainCtx.font = '15px monospace';
+
+            for (let i = 0; i < drops.length; i++) {
+                const text = String.fromCharCode(0x30A0 + Math.random() * 96);
+                rainCtx.fillText(text, i * 20, drops[i] * 20);
+                if (drops[i] * 20 > rainCanvas.height && Math.random() > 0.975) {
+                    drops[i] = 0;
+                }
+                drops[i]++;
+            }
+        }
+
+        setInterval(drawMatrixRain, 33);
+
+        // Game constants
+        const COLS = 10;
+        const ROWS = 20;
+        const BLOCK_SIZE = 30;
+
+        const SHAPES = [
+            [[1,1,1,1]], // I
+            [[1,1],[1,1]], // O
+            [[0,1,0],[1,1,1]], // T
+            [[1,1,0],[0,1,1]], // S
+            [[0,1,1],[1,1,0]], // Z
+            [[1,0,0],[1,1,1]], // L
+            [[0,0,1],[1,1,1]]  // J
+        ];
+
+        const EMOTIONS = {
+            calm: {
+                icon: '😌',
+                name: 'CALM',
+                effects: 'Normal gameplay.<br>Standard speed and controls.',
+                speed: 500,
+                modifier: (piece) => piece,
+                color: '#00ff00'
+            },
+            frustrated: {
+                icon: '😠',
+                name: 'FRUSTRATED',
+                effects: 'Pieces fall faster!<br>Rotation becomes erratic.',
+                speed: 200,
+                modifier: (piece) => piece,
+                color: '#ff6600'
+            },
+            happy: {
+                icon: '😊',
+                name: 'HAPPY',
+                effects: 'Pieces split into smaller blocks!<br>Easier to fit gaps.',
+                speed: 500,
+                modifier: (piece) => {
+                    // Occasionally split pieces (simplified)
+                    if (Math.random() < 0.3) {
+                        return [[1]]; // Single block
+                    }
+                    return piece;
+                },
+                color: '#ffff00'
+            },
+            surprised: {
+                icon: '😲',
+                name: 'SURPRISED',
+                effects: 'Time slows down!<br>Recovery time granted.',
+                speed: 800,
+                modifier: (piece) => piece,
+                color: '#00ffff'
+            },
+            focused: {
+                icon: '🎯',
+                name: 'FOCUSED',
+                effects: 'Pieces glow with placement hints!<br>Optimal positions suggested.',
+                speed: 500,
+                modifier: (piece) => piece,
+                color: '#00ff66',
+                showHints: true
+            }
+        };
+
+        // Game state
+        let gameState = {
+            score: 0,
+            level: 1,
+            lines: 0,
+            gameOver: false,
+            currentEmotion: 'calm',
+            emotionDuration: 0,
+            comboActive: false,
+            gameSpeed: 500
+        };
+
+        let board = Array(ROWS).fill(null).map(() => Array(COLS).fill(0));
+        let currentPiece = null;
+        let pieceX = 0;
+        let pieceY = 0;
+        let pieceColor = '#00ff00';
+        let lastUpdate = 0;
+
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        function init() {
+            newPiece();
+            setEmotion('calm');
+            gameLoop();
+
+            // Update emotion timer
+            setInterval(() => {
+                if (!gameState.gameOver) {
+                    gameState.emotionDuration++;
+                    updateEmotionProgress();
+
+                    // Check for combo (60 seconds in one emotion)
+                    if (gameState.emotionDuration >= 60 && !gameState.comboActive) {
+                        activateCombo();
+                    }
+                }
+            }, 1000);
+        }
+
+        function newPiece() {
+            const emotion = EMOTIONS[gameState.currentEmotion];
+            let shape = SHAPES[Math.floor(Math.random() * SHAPES.length)];
+
+            // Apply emotion modifier
+            currentPiece = emotion.modifier(shape);
+            pieceColor = emotion.color;
+            pieceX = Math.floor(COLS / 2) - Math.floor(currentPiece[0].length / 2);
+            pieceY = 0;
+
+            if (collides(currentPiece, pieceX, pieceY)) {
+                gameState.gameOver = true;
+                showGameOver();
+            }
+        }
+
+        function collides(piece, x, y) {
+            for (let row = 0; row < piece.length; row++) {
+                for (let col = 0; col < piece[row].length; col++) {
+                    if (piece[row][col] &&
+                        (y + row >= ROWS || x + col < 0 || x + col >= COLS ||
+                         (y + row >= 0 && board[y + row][x + col]))) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        function merge() {
+            for (let row = 0; row < currentPiece.length; row++) {
+                for (let col = 0; col < currentPiece[row].length; col++) {
+                    if (currentPiece[row][col]) {
+                        if (pieceY + row >= 0) {
+                            board[pieceY + row][pieceX + col] = 1;
+                        }
+                    }
+                }
+            }
+        }
+
+        function clearLines() {
+            let linesCleared = 0;
+
+            for (let row = ROWS - 1; row >= 0; row--) {
+                if (board[row].every(cell => cell === 1)) {
+                    board.splice(row, 1);
+                    board.unshift(Array(COLS).fill(0));
+                    linesCleared++;
+                    row++;
+                }
+            }
+
+            if (linesCleared > 0) {
+                gameState.lines += linesCleared;
+                gameState.score += linesCleared * 100 * gameState.level;
+                gameState.level = Math.floor(gameState.lines / 10) + 1;
+                updateStats();
+            }
+        }
+
+        function setEmotion(emotion) {
+            gameState.currentEmotion = emotion;
+            gameState.emotionDuration = 0;
+            gameState.comboActive = false;
+            gameState.gameSpeed = EMOTIONS[emotion].speed;
+
+            const emotionData = EMOTIONS[emotion];
+            document.getElementById('emotion-icon').textContent = emotionData.icon;
+            document.getElementById('emotion-name').textContent = emotionData.name;
+            document.getElementById('emotion-effects').innerHTML = emotionData.effects;
+            document.getElementById('combo-display').classList.remove('show');
+
+            // Update button states
+            document.querySelectorAll('.emotion-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            updateEmotionProgress();
+        }
+
+        function updateEmotionProgress() {
+            const progress = Math.min((gameState.emotionDuration / 60) * 100, 100);
+            document.getElementById('emotion-progress').style.width = progress + '%';
+            document.getElementById('emotion-timer').textContent =
+                `${gameState.emotionDuration}s / 60s`;
+        }
+
+        function activateCombo() {
+            gameState.comboActive = true;
+            const comboDisplay = document.getElementById('combo-display');
+            comboDisplay.classList.add('show');
+
+            let ability = '';
+            switch(gameState.currentEmotion) {
+                case 'calm':
+                    ability = 'ZEN MODE: Bottom row cleared!';
+                    board.pop();
+                    board.unshift(Array(COLS).fill(0));
+                    break;
+                case 'frustrated':
+                    ability = 'RAGE MODE: 2x Score multiplier!';
+                    gameState.score *= 2;
+                    break;
+                case 'happy':
+                    ability = 'JOY MODE: All pieces are singles!';
+                    break;
+                case 'surprised':
+                    ability = 'SHOCK MODE: Time frozen for 10s!';
+                    break;
+                case 'focused':
+                    ability = 'FLOW STATE: Perfect clears only!';
+                    break;
+            }
+
+            document.getElementById('combo-ability').textContent = ability;
+            updateStats();
+        }
+
+        function gameLoop(timestamp = 0) {
+            if (gameState.gameOver) return;
+
+            if (timestamp - lastUpdate > gameState.gameSpeed) {
+                pieceY++;
+
+                if (collides(currentPiece, pieceX, pieceY)) {
+                    pieceY--;
+                    merge();
+                    clearLines();
+                    newPiece();
+                }
+
+                lastUpdate = timestamp;
+            }
+
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function draw() {
+            // Clear canvas
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw board
+            for (let row = 0; row < ROWS; row++) {
+                for (let col = 0; col < COLS; col++) {
+                    if (board[row][col]) {
+                        ctx.fillStyle = EMOTIONS[gameState.currentEmotion].color;
+                        ctx.fillRect(col * BLOCK_SIZE, row * BLOCK_SIZE,
+                                    BLOCK_SIZE - 1, BLOCK_SIZE - 1);
+                    }
+                }
+            }
+
+            // Draw current piece
+            if (currentPiece) {
+                ctx.fillStyle = pieceColor;
+
+                // Add glow effect for focused emotion
+                if (gameState.currentEmotion === 'focused') {
+                    ctx.shadowBlur = 20;
+                    ctx.shadowColor = pieceColor;
+                }
+
+                for (let row = 0; row < currentPiece.length; row++) {
+                    for (let col = 0; col < currentPiece[row].length; col++) {
+                        if (currentPiece[row][col]) {
+                            ctx.fillRect((pieceX + col) * BLOCK_SIZE,
+                                        (pieceY + row) * BLOCK_SIZE,
+                                        BLOCK_SIZE - 1, BLOCK_SIZE - 1);
+                        }
+                    }
+                }
+
+                ctx.shadowBlur = 0;
+
+                // Draw ghost piece for focused emotion
+                if (EMOTIONS[gameState.currentEmotion].showHints) {
+                    let ghostY = pieceY;
+                    while (!collides(currentPiece, pieceX, ghostY + 1)) {
+                        ghostY++;
+                    }
+
+                    ctx.fillStyle = 'rgba(0, 255, 102, 0.3)';
+                    for (let row = 0; row < currentPiece.length; row++) {
+                        for (let col = 0; col < currentPiece[row].length; col++) {
+                            if (currentPiece[row][col]) {
+                                ctx.fillRect((pieceX + col) * BLOCK_SIZE,
+                                            (ghostY + row) * BLOCK_SIZE,
+                                            BLOCK_SIZE - 1, BLOCK_SIZE - 1);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        function rotatePiece() {
+            const rotated = currentPiece[0].map((_, i) =>
+                currentPiece.map(row => row[i]).reverse());
+
+            // Add erratic rotation for frustrated emotion
+            if (gameState.currentEmotion === 'frustrated' && Math.random() < 0.3) {
+                // Random extra rotation
+                return;
+            }
+
+            if (!collides(rotated, pieceX, pieceY)) {
+                currentPiece = rotated;
+            }
+        }
+
+        function movePiece(dx) {
+            pieceX += dx;
+            if (collides(currentPiece, pieceX, pieceY)) {
+                pieceX -= dx;
+            }
+        }
+
+        function dropPiece() {
+            while (!collides(currentPiece, pieceX, pieceY + 1)) {
+                pieceY++;
+            }
+        }
+
+        function updateStats() {
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('level').textContent = gameState.level;
+            document.getElementById('lines').textContent = gameState.lines;
+        }
+
+        function showGameOver() {
+            document.getElementById('final-score').textContent =
+                `Final Score: ${gameState.score} | Lines: ${gameState.lines} | Emotion: ${EMOTIONS[gameState.currentEmotion].name}`;
+            document.getElementById('game-over-msg').classList.add('show');
+        }
+
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            if (gameState.gameOver) return;
+
+            switch(e.key) {
+                case 'ArrowLeft':
+                    movePiece(-1);
+                    break;
+                case 'ArrowRight':
+                    movePiece(1);
+                    break;
+                case 'ArrowUp':
+                    rotatePiece();
+                    break;
+                case 'ArrowDown':
+                    pieceY++;
+                    if (collides(currentPiece, pieceX, pieceY)) {
+                        pieceY--;
+                    }
+                    break;
+                case ' ':
+                    e.preventDefault();
+                    dropPiece();
+                    break;
+            }
+        });
+
+        // Initialize game
+        init();
+    </script>
+</body>
+</html>

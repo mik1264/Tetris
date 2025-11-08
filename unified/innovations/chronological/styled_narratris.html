@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NARRATRIS - Story-Driven Tetris</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Georgia, serif;
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 50%, #2c3e50 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #ecf0f1;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 3em;
+            margin-bottom: 10px;
+            color: #f39c12;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+            font-style: italic;
+        }
+
+        .subtitle {
+            text-align: center;
+            font-size: 1.2em;
+            margin-bottom: 20px;
+            color: #e67e22;
+        }
+
+        .game-layout {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .game-board {
+            background: rgba(44, 62, 80, 0.8);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            border: 3px solid #f39c12;
+        }
+
+        canvas {
+            display: block;
+            border: 4px solid #e67e22;
+            border-radius: 8px;
+            background: #1a1a2e;
+        }
+
+        .story-panel {
+            background: rgba(44, 62, 80, 0.9);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            border: 3px solid #f39c12;
+            max-width: 350px;
+        }
+
+        .character-display {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .character-card {
+            background: rgba(243, 156, 18, 0.2);
+            border: 2px solid #f39c12;
+            border-radius: 10px;
+            padding: 10px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .character-card.alive {
+            background: rgba(46, 204, 113, 0.3);
+            border-color: #2ecc71;
+        }
+
+        .character-card.dead {
+            background: rgba(231, 76, 60, 0.3);
+            border-color: #e74c3c;
+            opacity: 0.5;
+        }
+
+        .character-icon {
+            font-size: 2em;
+            margin-bottom: 5px;
+        }
+
+        .character-name {
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+
+        .story-text {
+            background: rgba(0, 0, 0, 0.3);
+            border-left: 4px solid #f39c12;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            font-style: italic;
+            min-height: 120px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .dialogue {
+            margin-bottom: 10px;
+            line-height: 1.6;
+        }
+
+        .speaker {
+            color: #f39c12;
+            font-weight: bold;
+        }
+
+        .stats-panel {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .stat-label {
+            color: #bdc3c7;
+        }
+
+        .stat-value {
+            color: #f39c12;
+            font-weight: bold;
+        }
+
+        .moral-choice {
+            background: rgba(231, 76, 60, 0.3);
+            border: 2px solid #e74c3c;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .choice-text {
+            font-weight: bold;
+            color: #e74c3c;
+            margin-bottom: 5px;
+        }
+
+        .button {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            font-size: 1em;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(243, 156, 18, 0.4);
+            font-family: Georgia, serif;
+        }
+
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(243, 156, 18, 0.6);
+        }
+
+        .button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .controls {
+            text-align: center;
+            margin-top: 15px;
+        }
+
+        .plot-branches {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 10px;
+            font-size: 0.9em;
+        }
+
+        .branch-title {
+            color: #f39c12;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .ending-display {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            display: none;
+        }
+
+        .ending-display.show {
+            display: block;
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .next-piece {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 10px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .next-piece-title {
+            color: #f39c12;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📖 NARRATRIS 📖</h1>
+        <div class="subtitle">Story-Driven Tetris - Every Piece Tells a Tale</div>
+
+        <div class="game-layout">
+            <div class="game-board">
+                <canvas id="canvas" width="240" height="480"></canvas>
+                <div class="controls">
+                    <button class="button" id="startBtn" onclick="startGame()">BEGIN STORY</button>
+                    <button class="button" id="pauseBtn" onclick="togglePause()" disabled>PAUSE</button>
+                </div>
+            </div>
+
+            <div class="story-panel">
+                <h3 style="color: #f39c12; text-align: center; margin-bottom: 15px;">The Seven Souls</h3>
+
+                <div class="character-display" id="characters">
+                    <div class="character-card alive">
+                        <div class="character-icon">🦸</div>
+                        <div class="character-name">Hero</div>
+                    </div>
+                    <div class="character-card alive">
+                        <div class="character-icon">😈</div>
+                        <div class="character-name">Villain</div>
+                    </div>
+                    <div class="character-card alive">
+                        <div class="character-icon">🧙</div>
+                        <div class="character-name">Mentor</div>
+                    </div>
+                    <div class="character-card alive">
+                        <div class="character-icon">⚔️</div>
+                        <div class="character-name">Rival 1</div>
+                    </div>
+                    <div class="character-card alive">
+                        <div class="character-icon">🗡️</div>
+                        <div class="character-name">Rival 2</div>
+                    </div>
+                    <div class="character-card alive">
+                        <div class="character-icon">🛡️</div>
+                        <div class="character-name">Ally 1</div>
+                    </div>
+                    <div class="character-card alive">
+                        <div class="character-icon">🏹</div>
+                        <div class="character-name">Ally 2</div>
+                    </div>
+                </div>
+
+                <div class="next-piece">
+                    <div class="next-piece-title">Next Character:</div>
+                    <div style="font-size: 2em;" id="nextChar">🦸</div>
+                </div>
+
+                <div class="story-text" id="storyText">
+                    <div class="dialogue">Welcome to the Kingdom of Blocks, where seven souls vie for destiny...</div>
+                </div>
+
+                <div class="moral-choice" id="moralChoice" style="display: none;">
+                    <div class="choice-text">Clear this line to sacrifice these characters for points!</div>
+                    <div style="font-size: 0.9em; margin-top: 5px;">Or keep building to preserve them...</div>
+                </div>
+
+                <div class="stats-panel">
+                    <div class="stat-row">
+                        <span class="stat-label">Score:</span>
+                        <span class="stat-value" id="score">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Lines Cleared:</span>
+                        <span class="stat-value" id="lines">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Souls Saved:</span>
+                        <span class="stat-value" id="souls">7</span>
+                    </div>
+                </div>
+
+                <div class="plot-branches">
+                    <div class="branch-title">Story Branch:</div>
+                    <div id="plotBranch">The journey begins...</div>
+                </div>
+
+                <div class="ending-display" id="ending"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const COLS = 12;
+        const ROWS = 24;
+        const BLOCK_SIZE = 20;
+
+        const CHARACTERS = [
+            { name: 'Hero', icon: '🦸', shape: [[1,1,1,1]], color: '#3498db' },      // I
+            { name: 'Villain', icon: '😈', shape: [[1,1],[1,1]], color: '#e74c3c' }, // O
+            { name: 'Mentor', icon: '🧙', shape: [[0,1,0],[1,1,1]], color: '#9b59b6' }, // T
+            { name: 'Rival 1', icon: '⚔️', shape: [[0,1,1],[1,1,0]], color: '#e67e22' }, // S
+            { name: 'Rival 2', icon: '🗡️', shape: [[1,1,0],[0,1,1]], color: '#f39c12' }, // Z
+            { name: 'Ally 1', icon: '🛡️', shape: [[1,0,0],[1,1,1]], color: '#2ecc71' }, // J
+            { name: 'Ally 2', icon: '🏹', shape: [[0,0,1],[1,1,1]], color: '#1abc9c' }  // L
+        ];
+
+        const STORY_EVENTS = {
+            'Hero-Mentor': "The Hero seeks wisdom from the Mentor: 'Teach me the way of blocks...'",
+            'Hero-Villain': "Hero confronts Villain: 'Your reign of chaos ends here!'",
+            'Mentor-Ally 1': "The Mentor blesses the Ally: 'Your shield shall protect the realm.'",
+            'Rival 1-Rival 2': "The Rivals clash: 'Only one of us can claim victory!'",
+            'Hero-Ally 1': "Hero and Ally form a bond: 'Together, we are unstoppable!'",
+            'Villain-Rival 1': "Villain corrupts the Rival: 'Join me, and we shall rule!'",
+        };
+
+        let gameState = {
+            score: 0,
+            lines: 0,
+            running: false,
+            paused: false,
+            board: Array.from({ length: ROWS }, () => Array(COLS).fill(null)),
+            currentPiece: null,
+            currentChar: null,
+            currentX: 0,
+            currentY: 0,
+            aliveCharacters: new Set([0,1,2,3,4,5,6]),
+            storyBranch: 'prologue',
+            interactions: []
+        };
+
+        let ctx, lastTime = 0, dropCounter = 0;
+
+        function init() {
+            ctx = document.getElementById('canvas').getContext('2d');
+        }
+
+        function createPiece() {
+            const charIndex = Math.floor(Math.random() * CHARACTERS.length);
+            const char = CHARACTERS[charIndex];
+            return {
+                shape: JSON.parse(JSON.stringify(char.shape)),
+                color: char.color,
+                charIndex: charIndex
+            };
+        }
+
+        function startGame() {
+            gameState.running = true;
+            gameState.currentPiece = createPiece();
+            gameState.currentX = Math.floor(COLS / 2) - 1;
+            gameState.currentY = 0;
+
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('pauseBtn').disabled = false;
+
+            addStory("The tale unfolds... Seven souls enter the arena of fate.");
+            requestAnimationFrame(gameLoop);
+        }
+
+        function togglePause() {
+            gameState.paused = !gameState.paused;
+            document.getElementById('pauseBtn').textContent = gameState.paused ? 'RESUME' : 'PAUSE';
+            if (!gameState.paused) requestAnimationFrame(gameLoop);
+        }
+
+        function gameLoop(time = 0) {
+            if (!gameState.running || gameState.paused) return;
+
+            const deltaTime = time - lastTime;
+            lastTime = time;
+            dropCounter += deltaTime;
+
+            if (dropCounter > 600) {
+                if (!movePiece(0, 1)) {
+                    lockPiece();
+                    checkInteractions();
+                    clearLines();
+
+                    gameState.currentPiece = createPiece();
+                    gameState.currentX = Math.floor(COLS / 2) - 1;
+                    gameState.currentY = 0;
+
+                    updateNextPiece();
+
+                    if (collision(gameState.currentPiece, gameState.currentX, gameState.currentY)) {
+                        gameOver();
+                        return;
+                    }
+                }
+                dropCounter = 0;
+            }
+
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function movePiece(dx, dy) {
+            const newX = gameState.currentX + dx;
+            const newY = gameState.currentY + dy;
+
+            if (!collision(gameState.currentPiece, newX, newY)) {
+                gameState.currentX = newX;
+                gameState.currentY = newY;
+                return true;
+            }
+            return false;
+        }
+
+        function rotatePiece() {
+            const piece = gameState.currentPiece;
+            const rotated = piece.shape[0].map((_, i) =>
+                piece.shape.map(row => row[i]).reverse()
+            );
+
+            const original = piece.shape;
+            piece.shape = rotated;
+
+            if (collision(piece, gameState.currentX, gameState.currentY)) {
+                piece.shape = original;
+            }
+        }
+
+        function collision(piece, x, y) {
+            for (let row = 0; row < piece.shape.length; row++) {
+                for (let col = 0; col < piece.shape[row].length; col++) {
+                    if (piece.shape[row][col]) {
+                        const newY = y + row;
+                        const newX = x + col;
+                        if (newY >= ROWS || newX < 0 || newX >= COLS ||
+                            (newY >= 0 && gameState.board[newY][newX])) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        function lockPiece() {
+            gameState.currentPiece.shape.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value) {
+                        const boardY = gameState.currentY + y;
+                        const boardX = gameState.currentX + x;
+                        if (boardY >= 0) {
+                            gameState.board[boardY][boardX] = {
+                                color: gameState.currentPiece.color,
+                                charIndex: gameState.currentPiece.charIndex
+                            };
+                        }
+                    }
+                });
+            });
+        }
+
+        function checkInteractions() {
+            // Check if pieces are adjacent and trigger story events
+            for (let y = 0; y < ROWS; y++) {
+                for (let x = 0; x < COLS - 1; x++) {
+                    if (gameState.board[y][x] && gameState.board[y][x + 1]) {
+                        const char1 = CHARACTERS[gameState.board[y][x].charIndex].name;
+                        const char2 = CHARACTERS[gameState.board[y][x + 1].charIndex].name;
+                        const key1 = `${char1}-${char2}`;
+                        const key2 = `${char2}-${char1}`;
+
+                        if (STORY_EVENTS[key1] && !gameState.interactions.includes(key1)) {
+                            addStory(STORY_EVENTS[key1]);
+                            gameState.interactions.push(key1);
+                        } else if (STORY_EVENTS[key2] && !gameState.interactions.includes(key2)) {
+                            addStory(STORY_EVENTS[key2]);
+                            gameState.interactions.push(key2);
+                        }
+                    }
+                }
+            }
+        }
+
+        function clearLines() {
+            let linesCleared = 0;
+            const deadCharacters = new Set();
+
+            for (let row = ROWS - 1; row >= 0; row--) {
+                if (gameState.board[row].every(cell => cell !== null)) {
+                    // Track which characters died
+                    gameState.board[row].forEach(cell => {
+                        if (cell) deadCharacters.add(cell.charIndex);
+                    });
+
+                    gameState.board.splice(row, 1);
+                    gameState.board.unshift(Array(COLS).fill(null));
+                    linesCleared++;
+                    row++;
+                }
+            }
+
+            if (linesCleared > 0) {
+                gameState.lines += linesCleared;
+                gameState.score += linesCleared * 100;
+
+                // Update alive characters
+                deadCharacters.forEach(charIndex => {
+                    gameState.aliveCharacters.delete(charIndex);
+                    const char = CHARACTERS[charIndex];
+                    addStory(`💀 ${char.name} has perished in the clearing of lines...`, true);
+                    markCharacterDead(charIndex);
+                });
+
+                updateUI();
+                checkEnding();
+            }
+        }
+
+        function markCharacterDead(charIndex) {
+            const cards = document.querySelectorAll('.character-card');
+            cards[charIndex].classList.remove('alive');
+            cards[charIndex].classList.add('dead');
+        }
+
+        function addStory(text, important = false) {
+            const storyDiv = document.getElementById('storyText');
+            const dialogue = document.createElement('div');
+            dialogue.className = 'dialogue';
+            dialogue.textContent = important ? '⚠️ ' + text : text;
+            if (important) dialogue.style.color = '#e74c3c';
+            storyDiv.appendChild(dialogue);
+            storyDiv.scrollTop = storyDiv.scrollHeight;
+        }
+
+        function updateNextPiece() {
+            const nextChar = CHARACTERS[Math.floor(Math.random() * CHARACTERS.length)];
+            document.getElementById('nextChar').textContent = nextChar.icon;
+        }
+
+        function updateUI() {
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('lines').textContent = gameState.lines;
+            document.getElementById('souls').textContent = gameState.aliveCharacters.size;
+
+            // Update plot branch
+            let branch = 'The journey continues...';
+            if (!gameState.aliveCharacters.has(0)) branch = 'Dark path: Hero fallen';
+            else if (!gameState.aliveCharacters.has(1)) branch = 'Light path: Villain defeated';
+            else if (gameState.aliveCharacters.size <= 3) branch = 'Desperate times...';
+            document.getElementById('plotBranch').textContent = branch;
+        }
+
+        function checkEnding() {
+            if (gameState.aliveCharacters.size === 0) {
+                showEnding('🌑 EXTINCTION ENDING: All souls perished. The kingdom falls to darkness.');
+            } else if (gameState.aliveCharacters.size === 7 && gameState.lines >= 20) {
+                showEnding('🌟 PERFECT HARMONY: All seven souls survived! The kingdom prospers in unity!');
+            }
+        }
+
+        function showEnding(text) {
+            const endingDiv = document.getElementById('ending');
+            endingDiv.textContent = text;
+            endingDiv.classList.add('show');
+        }
+
+        function render() {
+            ctx.fillStyle = '#1a1a2e';
+            ctx.fillRect(0, 0, COLS * BLOCK_SIZE, ROWS * BLOCK_SIZE);
+
+            // Draw board
+            gameState.board.forEach((row, y) => {
+                row.forEach((cell, x) => {
+                    if (cell) {
+                        ctx.fillStyle = cell.color;
+                        ctx.fillRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE - 1, BLOCK_SIZE - 1);
+
+                        // Draw character icon
+                        ctx.font = '12px Arial';
+                        ctx.fillText(CHARACTERS[cell.charIndex].icon,
+                            x * BLOCK_SIZE + 2, y * BLOCK_SIZE + 14);
+                    }
+                });
+            });
+
+            // Draw current piece
+            if (gameState.currentPiece) {
+                ctx.fillStyle = gameState.currentPiece.color;
+                gameState.currentPiece.shape.forEach((row, y) => {
+                    row.forEach((value, x) => {
+                        if (value) {
+                            ctx.fillRect(
+                                (gameState.currentX + x) * BLOCK_SIZE,
+                                (gameState.currentY + y) * BLOCK_SIZE,
+                                BLOCK_SIZE - 1,
+                                BLOCK_SIZE - 1
+                            );
+                        }
+                    });
+                });
+            }
+        }
+
+        function gameOver() {
+            gameState.running = false;
+            addStory(`The story ends... Score: ${gameState.score}, Souls Saved: ${gameState.aliveCharacters.size}`, true);
+
+            if (gameState.aliveCharacters.has(0)) {
+                showEnding('⚔️ HERO\'S SURVIVAL: The Hero lives on, hope remains!');
+            } else {
+                showEnding('💔 TRAGIC END: Even the Hero could not escape fate...');
+            }
+
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('pauseBtn').disabled = true;
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (!gameState.running || gameState.paused) return;
+
+            switch(e.key) {
+                case 'ArrowLeft':
+                    movePiece(-1, 0);
+                    break;
+                case 'ArrowRight':
+                    movePiece(1, 0);
+                    break;
+                case 'ArrowDown':
+                    movePiece(0, 1);
+                    break;
+                case 'ArrowUp':
+                    rotatePiece();
+                    break;
+            }
+            render();
+        });
+
+        window.onload = init;
+    </script>
+</body>
+</html>

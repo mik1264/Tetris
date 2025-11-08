@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DIPLOMTETRIS - Negotiation-Based Matrix Tetris</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #0f0;
+            overflow-x: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        #matrix-rain {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            opacity: 0.15;
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 1400px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            text-shadow: 0 0 10px #f0f, 0 0 20px #f0f;
+            margin-bottom: 20px;
+            text-align: center;
+            color: #f0f;
+        }
+
+        .game-layout {
+            display: grid;
+            grid-template-columns: 300px 1fr 300px;
+            gap: 20px;
+        }
+
+        .panel {
+            background: rgba(20, 0, 20, 0.9);
+            border: 2px solid #f0f;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 0 20px rgba(255, 0, 255, 0.3);
+        }
+
+        h3 {
+            color: #f0f;
+            text-shadow: 0 0 5px #f0f;
+            margin-bottom: 15px;
+        }
+
+        .player {
+            background: rgba(50, 0, 50, 0.5);
+            border: 1px solid #a0a;
+            border-radius: 5px;
+            padding: 12px;
+            margin-bottom: 10px;
+        }
+
+        .player.you {
+            border-color: #0f0;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+        }
+
+        .player-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .player-name {
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .trust-score {
+            font-size: 0.85rem;
+            opacity: 0.8;
+        }
+
+        .piece-queue {
+            background: rgba(50, 0, 50, 0.5);
+            border: 1px solid #a0a;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .queue-pieces {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .queue-piece {
+            background: rgba(80, 0, 80, 0.6);
+            border: 1px solid #f0f;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .queue-piece:hover {
+            background: rgba(150, 0, 150, 0.8);
+            transform: scale(1.1);
+        }
+
+        .queue-piece.premium {
+            border-color: #ff0;
+            box-shadow: 0 0 15px rgba(255, 255, 0, 0.5);
+        }
+
+        .action-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .action-btn {
+            background: rgba(80, 0, 80, 0.8);
+            border: 1px solid #f0f;
+            color: #f0f;
+            padding: 10px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+        }
+
+        .action-btn:hover {
+            background: rgba(150, 0, 150, 0.9);
+            box-shadow: 0 0 15px rgba(255, 0, 255, 0.5);
+        }
+
+        .action-btn.disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        canvas {
+            border: 2px solid #a0a;
+            background: #000;
+            box-shadow: inset 0 0 20px rgba(255, 0, 255, 0.1);
+            display: block;
+            margin: 0 auto;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .stat {
+            background: rgba(50, 0, 50, 0.6);
+            padding: 12px;
+            border-radius: 5px;
+            border: 1px solid #a0a;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            text-shadow: 0 0 5px #f0f;
+            color: #f0f;
+        }
+
+        .trade-offer {
+            background: rgba(60, 0, 60, 0.8);
+            border: 2px solid #f0f;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+
+        .trade-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        button {
+            background: rgba(80, 0, 80, 0.8);
+            color: #f0f;
+            border: 2px solid #f0f;
+            padding: 10px 20px;
+            font-family: 'Courier New', monospace;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 0.9rem;
+        }
+
+        button:hover {
+            background: rgba(150, 0, 150, 0.9);
+            box-shadow: 0 0 15px rgba(255, 0, 255, 0.5);
+        }
+
+        button.accept {
+            border-color: #0f0;
+            color: #0f0;
+        }
+
+        button.reject {
+            border-color: #f00;
+            color: #f00;
+        }
+
+        .message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(20, 0, 20, 0.98);
+            border: 3px solid #f0f;
+            padding: 40px;
+            border-radius: 15px;
+            z-index: 1000;
+            text-align: center;
+            box-shadow: 0 0 40px rgba(255, 0, 255, 0.6);
+            display: none;
+            max-width: 500px;
+        }
+
+        .message.show { display: block; }
+
+        .betrayal-mode {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 0, 0, 0.9);
+            border: 2px solid #f00;
+            color: #fff;
+            padding: 15px 30px;
+            border-radius: 10px;
+            z-index: 100;
+            display: none;
+            font-weight: bold;
+            animation: betrayal-pulse 1s infinite;
+        }
+
+        @keyframes betrayal-pulse {
+            0%, 100% { box-shadow: 0 0 20px rgba(255, 0, 0, 0.5); }
+            50% { box-shadow: 0 0 40px rgba(255, 0, 0, 1); }
+        }
+
+        .betrayal-mode.show { display: block; }
+
+        .log {
+            max-height: 200px;
+            overflow-y: auto;
+            background: rgba(10, 0, 10, 0.5);
+            border: 1px solid #a0a;
+            border-radius: 5px;
+            padding: 10px;
+            font-size: 0.85rem;
+        }
+
+        .log-entry {
+            margin-bottom: 8px;
+            padding: 6px;
+            border-left: 2px solid #f0f;
+            padding-left: 8px;
+        }
+
+        .log-entry.trade { border-left-color: #0ff; color: #0ff; }
+        .log-entry.betrayal { border-left-color: #f00; color: #f88; }
+        .log-entry.alliance { border-left-color: #0f0; color: #0f0; }
+    </style>
+</head>
+<body>
+    <canvas id="matrix-rain"></canvas>
+    <div class="betrayal-mode" id="betrayal-warning">⚠️ BETRAYAL MODE ACTIVE ⚠️</div>
+
+    <div class="container">
+        <h1>🤝 DIPLOMTETRIS 🤝</h1>
+
+        <div class="game-layout">
+            <div class="panel">
+                <h3>PLAYERS</h3>
+                <div id="players-list"></div>
+
+                <div style="margin-top: 20px;">
+                    <h4 style="margin-bottom: 10px; font-size: 1rem;">Your Resources</h4>
+                    <div style="background: rgba(60, 0, 60, 0.6); padding: 12px; border-radius: 5px;">
+                        <div style="font-size: 1.3rem; font-weight: bold;">Points: <span id="your-points" style="color: #ff0;">1000</span></div>
+                        <div style="font-size: 0.9rem; margin-top: 5px; opacity: 0.8;">Use for auctions & sabotage</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="piece-queue">
+                    <div style="font-size: 1rem; margin-bottom: 5px;">🎲 Shared Piece Queue</div>
+                    <div class="queue-pieces" id="queue-pieces"></div>
+                    <div style="font-size: 0.8rem; margin-top: 8px; opacity: 0.7;">Click desirable pieces to bid!</div>
+                </div>
+
+                <div class="stats">
+                    <div class="stat">
+                        <div style="font-size: 0.8rem; opacity: 0.7;">YOUR SCORE</div>
+                        <div class="stat-value" id="score">0</div>
+                    </div>
+                    <div class="stat">
+                        <div style="font-size: 0.8rem; opacity: 0.7;">TRUST</div>
+                        <div class="stat-value" id="trust">100%</div>
+                    </div>
+                </div>
+
+                <canvas id="canvas" width="300" height="400"></canvas>
+
+                <div class="action-buttons">
+                    <div class="action-btn" onclick="proposeAlliance()">🤝 ALLIANCE</div>
+                    <div class="action-btn" onclick="sabotageOpponent()">💣 SABOTAGE</div>
+                    <div class="action-btn" onclick="proposeTrade()">🔄 TRADE</div>
+                    <div class="action-btn" id="betrayal-btn" onclick="betrayAllies()" style="display: none;">
+                        ⚔️ BETRAY
+                    </div>
+                </div>
+
+                <div style="margin-top: 10px; font-size: 0.85rem; opacity: 0.8; text-align: center;">
+                    ← → Move | ↑ Rotate | ↓ Fast | SPACE Drop<br>
+                    <small>Negotiate, trade, ally... or betray!</small>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3>DIPLOMACY</h3>
+                <div id="trade-offers"></div>
+
+                <div style="margin-top: 20px;">
+                    <h4 style="margin-bottom: 10px; font-size: 1rem;">Event Log</h4>
+                    <div class="log" id="event-log">
+                        <div class="log-entry">Game started. Negotiate wisely...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="message" id="game-over-msg">
+        <h2 style="color: #f0f; margin-bottom: 15px;">DIPLOMACY CONCLUDED</h2>
+        <p id="final-score"></p>
+        <button onclick="location.reload()">NEW GAME</button>
+    </div>
+
+    <script>
+        // Matrix rain
+        const rainCanvas = document.getElementById('matrix-rain');
+        const rainCtx = rainCanvas.getContext('2d');
+        rainCanvas.width = window.innerWidth;
+        rainCanvas.height = window.innerHeight;
+
+        const columns = Math.floor(rainCanvas.width / 20);
+        const drops = Array(columns).fill(1);
+
+        function drawMatrixRain() {
+            rainCtx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+            rainCtx.fillRect(0, 0, rainCanvas.width, rainCanvas.height);
+            rainCtx.fillStyle = '#f0f';
+            rainCtx.font = '15px monospace';
+            for (let i = 0; i < drops.length; i++) {
+                const text = String.fromCharCode(0x2665 + Math.random() * 10);
+                rainCtx.fillText(text, i * 20, drops[i] * 20);
+                if (drops[i] * 20 > rainCanvas.height && Math.random() > 0.975) drops[i] = 0;
+                drops[i]++;
+            }
+        }
+        setInterval(drawMatrixRain, 33);
+
+        const SHAPES = {
+            I: '━', O: '▢', T: '⊥', S: '⟍', Z: '⟋', J: '⌐', L: '⌙'
+        };
+
+        const SHAPE_PIECES = {
+            I: [[1,1,1,1]],
+            O: [[1,1],[1,1]],
+            T: [[0,1,0],[1,1,1]],
+            S: [[1,1,0],[0,1,1]],
+            Z: [[0,1,1],[1,1,0]],
+            J: [[1,0,0],[1,1,1]],
+            L: [[0,0,1],[1,1,1]]
+        };
+
+        const AI_NAMES = ['Trinity', 'Morpheus', 'Cypher'];
+
+        let gameState = {
+            score: 0,
+            points: 1000,
+            trust: 100,
+            alliances: [],
+            betrayals: 0,
+            trades: 0,
+            gameTime: 0,
+            betrayalMode: false,
+            gameOver: false
+        };
+
+        let players = [
+            { name: 'YOU', score: 0, points: 1000, trust: 100, isYou: true },
+            { name: 'Trinity', score: 0, points: 1000, trust: 100, isYou: false },
+            { name: 'Morpheus', score: 0, points: 1000, trust: 100, isYou: false },
+            { name: 'Cypher', score: 0, points: 900, trust: 80, isYou: false }
+        ];
+
+        let pieceQueue = [];
+        let board = Array(13).fill(null).map(() => Array(10).fill(0));
+        let currentPiece = null, pieceX = 0, pieceY = 0;
+        let lastUpdate = 0, gameSpeed = 700;
+
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        function init() {
+            regenerateQueue();
+            updatePlayers();
+            newPiece();
+            gameLoop();
+
+            setInterval(() => {
+                gameState.gameTime++;
+                if (gameState.gameTime >= 120 && !gameState.betrayalMode) {
+                    gameState.betrayalMode = true;
+                    document.getElementById('betrayal-btn').style.display = 'block';
+                    document.getElementById('betrayal-warning').classList.add('show');
+                    addLog('⚠️ Final 2 minutes: BETRAYAL MODE unlocked!', 'betrayal');
+                }
+                aiActions();
+            }, 1000);
+        }
+
+        function regenerateQueue() {
+            const types = Object.keys(SHAPES);
+            pieceQueue = Array(5).fill(0).map(() => types[Math.floor(Math.random() * types.length)]);
+            renderQueue();
+        }
+
+        function renderQueue() {
+            const container = document.getElementById('queue-pieces');
+            container.innerHTML = pieceQueue.map((type, i) =>
+                `<div class="queue-piece ${type === 'I' ? 'premium' : ''}" onclick="bidOnPiece(${i}, '${type}')">
+                    ${SHAPES[type]}<br>
+                    <small>${type === 'I' ? '⭐' : ''}</small>
+                </div>`
+            ).join('');
+        }
+
+        function bidOnPiece(index, type) {
+            if (gameState.points < 100) {
+                alert('Not enough points to bid!');
+                return;
+            }
+
+            const bidAmount = type === 'I' ? 200 : 100;
+            gameState.points -= bidAmount;
+
+            addLog(`You won auction for ${type}-piece (-${bidAmount} pts)`, 'trade');
+            updateStats();
+
+            // Remove from queue
+            pieceQueue.splice(index, 1);
+            regenerateQueue();
+        }
+
+        function newPiece() {
+            const types = Object.keys(SHAPE_PIECES);
+            const type = types[Math.floor(Math.random() * types.length)];
+            currentPiece = SHAPE_PIECES[type];
+            pieceX = Math.floor(5 - currentPiece[0].length / 2);
+            pieceY = 0;
+
+            if (collides(currentPiece, pieceX, pieceY)) {
+                gameState.gameOver = true;
+                showGameOver();
+            }
+        }
+
+        function collides(piece, x, y) {
+            for (let row = 0; row < piece.length; row++) {
+                for (let col = 0; col < piece[row].length; col++) {
+                    if (piece[row][col] && (y + row >= 13 || x + col < 0 || x + col >= 10 ||
+                        (y + row >= 0 && board[y + row][x + col]))) return true;
+                }
+            }
+            return false;
+        }
+
+        function merge() {
+            for (let row = 0; row < currentPiece.length; row++) {
+                for (let col = 0; col < currentPiece[row].length; col++) {
+                    if (currentPiece[row][col] && pieceY + row >= 0) {
+                        board[pieceY + row][pieceX + col] = 1;
+                    }
+                }
+            }
+        }
+
+        function clearLines() {
+            let cleared = 0;
+            for (let row = 12; row >= 0; row--) {
+                if (board[row].every(c => c === 1)) {
+                    board.splice(row, 1);
+                    board.unshift(Array(10).fill(0));
+                    cleared++;
+                    row++;
+                }
+            }
+
+            if (cleared > 0) {
+                gameState.score += cleared * 150;
+                gameState.points += cleared * 50;
+                updateStats();
+            }
+        }
+
+        function proposeAlliance() {
+            const partner = players[Math.floor(Math.random() * (players.length - 1)) + 1];
+            gameState.alliances.push(partner.name);
+            addLog(`🤝 Alliance formed with ${partner.name}!`, 'alliance');
+            gameState.trust = Math.min(100, gameState.trust + 10);
+            updateStats();
+        }
+
+        function proposeTrade() {
+            if (gameState.points < 200) {
+                alert('Not enough points to trade!');
+                return;
+            }
+
+            const partner = players[Math.floor(Math.random() * (players.length - 1)) + 1];
+            gameState.points -= 100;
+            gameState.score += 200;
+            gameState.trades++;
+            addLog(`🔄 Trade completed with ${partner.name}`, 'trade');
+            updateStats();
+        }
+
+        function sabotageOpponent() {
+            if (gameState.points < 300) {
+                alert('Sabotage costs 300 points!');
+                return;
+            }
+
+            gameState.points -= 300;
+            gameState.trust -= 20;
+
+            // Add garbage
+            const garbageRow = Array(10).fill(0).map(() => Math.random() < 0.6 ? 1 : 0);
+            board.push(garbageRow);
+            board.shift();
+
+            const target = players[Math.floor(Math.random() * (players.length - 1)) + 1];
+            addLog(`💣 Sabotaged ${target.name}'s board!`, 'betrayal');
+            updateStats();
+        }
+
+        function betrayAllies() {
+            if (gameState.alliances.length === 0) {
+                alert('No alliances to betray!');
+                return;
+            }
+
+            gameState.score += 500 * gameState.alliances.length;
+            gameState.trust = 0;
+            gameState.betrayals += gameState.alliances.length;
+
+            addLog(`⚔️ BETRAYED all ${gameState.alliances.length} allies! +${500 * gameState.alliances.length} pts`, 'betrayal');
+            gameState.alliances = [];
+            updateStats();
+        }
+
+        function aiActions() {
+            // Simulate AI making trades occasionally
+            if (Math.random() < 0.1) {
+                const ai1 = players[Math.floor(Math.random() * (players.length - 1)) + 1];
+                const ai2 = players[Math.floor(Math.random() * (players.length - 1)) + 1];
+                if (ai1 !== ai2) {
+                    addLog(`${ai1.name} traded with ${ai2.name}`, 'trade');
+                    ai1.score += 50;
+                    ai2.score += 50;
+                    updatePlayers();
+                }
+            }
+        }
+
+        function updatePlayers() {
+            const list = document.getElementById('players-list');
+            players[0].score = gameState.score;
+            players[0].trust = gameState.trust;
+
+            list.innerHTML = players.map(p =>
+                `<div class="player ${p.isYou ? 'you' : ''}">
+                    <div class="player-header">
+                        <div class="player-name">${p.name} ${p.isYou ? '(YOU)' : ''}</div>
+                        <div>${p.score} pts</div>
+                    </div>
+                    <div class="trust-score">Trust: ${p.trust}% | Points: ${p.points}</div>
+                </div>`
+            ).join('');
+        }
+
+        function updateStats() {
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('trust').textContent = gameState.trust + '%';
+            document.getElementById('your-points').textContent = gameState.points;
+            updatePlayers();
+        }
+
+        function addLog(text, type = 'log') {
+            const log = document.getElementById('event-log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = text;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        function gameLoop(timestamp = 0) {
+            if (gameState.gameOver) return;
+            if (timestamp - lastUpdate > gameSpeed) {
+                pieceY++;
+                if (collides(currentPiece, pieceX, pieceY)) {
+                    pieceY--;
+                    merge();
+                    clearLines();
+                    newPiece();
+                }
+                lastUpdate = timestamp;
+            }
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function draw() {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, 300, 400);
+
+            for (let row = 0; row < 13; row++) {
+                for (let col = 0; col < 10; col++) {
+                    if (board[row][col]) {
+                        ctx.fillStyle = '#ff00ff';
+                        ctx.fillRect(col * 30, row * 30, 29, 29);
+                    }
+                }
+            }
+
+            if (currentPiece) {
+                ctx.fillStyle = '#ff00ff';
+                for (let row = 0; row < currentPiece.length; row++) {
+                    for (let col = 0; col < currentPiece[row].length; col++) {
+                        if (currentPiece[row][col]) {
+                            ctx.fillRect((pieceX + col) * 30, (pieceY + row) * 30, 29, 29);
+                        }
+                    }
+                }
+            }
+        }
+
+        function rotatePiece() {
+            const rotated = currentPiece[0].map((_, i) => currentPiece.map(row => row[i]).reverse());
+            if (!collides(rotated, pieceX, pieceY)) currentPiece = rotated;
+        }
+
+        function movePiece(dx) {
+            pieceX += dx;
+            if (collides(currentPiece, pieceX, pieceY)) pieceX -= dx;
+        }
+
+        function dropPiece() {
+            while (!collides(currentPiece, pieceX, pieceY + 1)) pieceY++;
+        }
+
+        function showGameOver() {
+            document.getElementById('final-score').textContent =
+                `Score: ${gameState.score} | Trades: ${gameState.trades} | Betrayals: ${gameState.betrayals} | Trust: ${gameState.trust}%`;
+            document.getElementById('game-over-msg').classList.add('show');
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (gameState.gameOver) return;
+            switch(e.key) {
+                case 'ArrowLeft': movePiece(-1); break;
+                case 'ArrowRight': movePiece(1); break;
+                case 'ArrowUp': rotatePiece(); break;
+                case 'ArrowDown': pieceY++; if (collides(currentPiece, pieceX, pieceY)) pieceY--; break;
+                case ' ': e.preventDefault(); dropPiece(); break;
+            }
+        });
+
+        init();
+    </script>
+</body>
+</html>

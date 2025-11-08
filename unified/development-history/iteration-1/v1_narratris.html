@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NARRATRIS - Story-Driven Tetris</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Georgia', serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #243B55 0%, #141E30 100%);
+            overflow-x: auto;
+        }
+
+        .game-container {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 95vw;
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .subtitle {
+            color: #7f8c8d;
+            margin-bottom: 20px;
+            font-style: italic;
+            font-family: Arial, sans-serif;
+        }
+
+        .game-area {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            align-items: flex-start;
+            flex-wrap: wrap;
+        }
+
+        canvas {
+            border: 3px solid #2c3e50;
+            background: #000;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .side-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            min-width: 300px;
+            max-width: 350px;
+        }
+
+        .info-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #2c3e50;
+        }
+
+        .info-box h3 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+            font-family: Arial, sans-serif;
+        }
+
+        .stat {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #333;
+            font-family: Arial, sans-serif;
+        }
+
+        .story-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            border-radius: 10px;
+            color: white;
+            border: 2px solid #2c3e50;
+            min-height: 150px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 0.95em;
+            line-height: 1.6;
+            text-align: left;
+        }
+
+        .story-box h3 {
+            margin-bottom: 10px;
+            font-size: 1.1em;
+            font-family: Arial, sans-serif;
+        }
+
+        .character-legend {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #2c3e50;
+            text-align: left;
+            font-size: 0.85em;
+        }
+
+        .character-legend h3 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-family: Arial, sans-serif;
+        }
+
+        .character-item {
+            display: flex;
+            align-items: center;
+            margin: 8px 0;
+            padding: 5px;
+            background: white;
+            border-radius: 5px;
+        }
+
+        .character-color {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #000;
+            margin-right: 10px;
+            border-radius: 3px;
+        }
+
+        .character-alive {
+            opacity: 1;
+        }
+
+        .character-dead {
+            opacity: 0.3;
+            text-decoration: line-through;
+        }
+
+        .controls {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #2c3e50;
+            text-align: left;
+            font-size: 0.85em;
+        }
+
+        .controls h3 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-family: Arial, sans-serif;
+        }
+
+        .controls p {
+            margin: 5px 0;
+            color: #555;
+            font-family: Arial, sans-serif;
+        }
+
+        button {
+            margin-top: 20px;
+            padding: 12px 30px;
+            font-size: 1.1em;
+            font-weight: bold;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 10px rgba(102, 126, 234, 0.3);
+            font-family: Arial, sans-serif;
+        }
+
+        button:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(118, 75, 162, 0.4);
+        }
+
+        .game-over {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            color: white;
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            display: none;
+            z-index: 1000;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .game-over.show {
+            display: block;
+        }
+
+        .game-over h2 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            color: #667eea;
+        }
+
+        .ending-story {
+            text-align: left;
+            margin: 20px 0;
+            line-height: 1.8;
+            font-size: 1em;
+        }
+
+        .dialogue-notification {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.95);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 10px;
+            font-size: 1em;
+            display: none;
+            z-index: 999;
+            max-width: 500px;
+            border: 3px solid #667eea;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        .dialogue-notification.show {
+            display: block;
+        }
+
+        .dialogue-character {
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        @keyframes slideUp {
+            from {
+                bottom: -100px;
+                opacity: 0;
+            }
+            to {
+                bottom: 20px;
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>📖 NARRATRIS</h1>
+        <p class="subtitle">Story-Driven Tetris: Each piece tells a story</p>
+
+        <div class="game-area">
+            <div>
+                <canvas id="tetris" width="300" height="600"></canvas>
+            </div>
+
+            <div class="side-panel">
+                <div class="info-box">
+                    <h3>Score</h3>
+                    <div class="stat" id="score">0</div>
+                </div>
+
+                <div class="story-box" id="storyBox">
+                    <h3>📜 Story Progress</h3>
+                    <p id="storyText">In the Kingdom of Blocks, seven legendary heroes emerge to save the realm from the Void. Guide their fates through your choices...</p>
+                </div>
+
+                <div class="character-legend">
+                    <h3>Characters (Alive)</h3>
+                    <div id="characterList"></div>
+                </div>
+
+                <div class="controls">
+                    <h3>Controls</h3>
+                    <p><strong>←/→</strong> Move</p>
+                    <p><strong>↓</strong> Soft Drop</p>
+                    <p><strong>↑</strong> Rotate</p>
+                    <p><strong>Space</strong> Hard Drop</p>
+                    <p><strong>P</strong> Pause</p>
+                </div>
+            </div>
+        </div>
+
+        <button id="startBtn">Start Story</button>
+    </div>
+
+    <div class="dialogue-notification" id="dialogue">
+        <div class="dialogue-character" id="dialogueCharacter"></div>
+        <div id="dialogueText"></div>
+    </div>
+
+    <div class="game-over" id="gameOver">
+        <h2>THE END</h2>
+        <div class="ending-story" id="endingStory"></div>
+        <p style="font-size: 1em; margin: 20px 0;">Final Score: <span id="finalScore">0</span></p>
+        <button id="restartBtn">New Story</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('tetris');
+        const ctx = canvas.getContext('2d');
+        const COLS = 10;
+        const ROWS = 20;
+        const BLOCK_SIZE = 30;
+
+        const SHAPES = {
+            'I': [[1, 1, 1, 1]],
+            'O': [[1, 1], [1, 1]],
+            'T': [[0, 1, 0], [1, 1, 1]],
+            'S': [[0, 1, 1], [1, 1, 0]],
+            'Z': [[1, 1, 0], [0, 1, 1]],
+            'J': [[1, 0, 0], [1, 1, 1]],
+            'L': [[0, 0, 1], [1, 1, 1]]
+        };
+
+        const CHARACTERS = {
+            'I': { name: 'Aria the Hero', color: '#00f0f0', role: 'hero', alive: true },
+            'O': { name: 'Mordred the Villain', color: '#f0f000', role: 'villain', alive: true },
+            'T': { name: 'Sage the Mentor', color: '#a000f0', role: 'mentor', alive: true },
+            'S': { name: 'Silas the Rival', color: '#00f000', role: 'rival', alive: true },
+            'Z': { name: 'Zara the Rival', color: '#f00000', role: 'rival', alive: true },
+            'J': { name: 'Jade the Companion', color: '#0000f0', role: 'companion', alive: true },
+            'L': { name: 'Leo the Companion', color: '#f0a000', role: 'companion', alive: true }
+        };
+
+        const DIALOGUES = {
+            'I-O': { char: 'Aria', text: '"Mordred! Your reign of darkness ends now!" The hero confronts the villain.' },
+            'I-T': { char: 'Sage', text: '"Aria, remember: true strength comes from within, not from power alone."' },
+            'I-S': { char: 'Silas', text: '"Aria, one day I will surpass you. Mark my words!"' },
+            'I-Z': { char: 'Zara', text: '"Why must you always be the chosen one, Aria?"' },
+            'O-T': { char: 'Mordred', text: '"Your wisdom means nothing, old fool. Power is all that matters!"' },
+            'T-S': { char: 'Sage', text: '"Young Silas, channel your rivalry into growth, not envy."' },
+            'J-L': { char: 'Jade', text: '"Leo, together we can support Aria\'s quest!"' },
+            'S-Z': { char: 'Silas', text: '"Zara, our rivalry makes us both stronger."' }
+        };
+
+        const STORY_EVENTS = [
+            { lines: 5, text: 'The heroes gather at the Ancient Tower. Their journey begins...' },
+            { lines: 10, text: 'Mordred reveals his plan to shatter the Crystal of Light!' },
+            { lines: 15, text: 'The Sage senses a great disturbance. Dark times approach...' },
+            { lines: 20, text: 'The companions must make a choice: trust or betrayal?' },
+            { lines: 25, text: 'The final confrontation with Mordred draws near!' }
+        ];
+
+        let board = [];
+        let currentPiece = null;
+        let score = 0;
+        let lines = 0;
+        let gameRunning = false;
+        let isPaused = false;
+        let dropCounter = 0;
+        let dropInterval = 1000;
+        let lastTime = 0;
+        let gameLoop = null;
+        let storyProgress = 0;
+        let charactersMet = new Set();
+        let specialCombos = [];
+
+        function createBoard() {
+            board = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+        }
+
+        function createPiece() {
+            const pieces = Object.keys(SHAPES);
+            const type = pieces[Math.floor(Math.random() * pieces.length)];
+            return {
+                shape: SHAPES[type],
+                color: CHARACTERS[type].color,
+                x: Math.floor(COLS / 2) - Math.floor(SHAPES[type][0].length / 2),
+                y: 0,
+                type: type
+            };
+        }
+
+        function drawBlock(x, y, color) {
+            ctx.fillStyle = color;
+            ctx.fillRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+        }
+
+        function drawBoard() {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            for (let row = 0; row < ROWS; row++) {
+                for (let col = 0; col < COLS; col++) {
+                    if (board[row][col]) {
+                        drawBlock(col, row, board[row][col]);
+                    }
+                }
+            }
+        }
+
+        function drawPiece(piece) {
+            piece.shape.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value) {
+                        drawBlock(piece.x + x, piece.y + y, piece.color);
+                    }
+                });
+            });
+        }
+
+        function checkCollision(piece, offsetX = 0, offsetY = 0) {
+            for (let y = 0; y < piece.shape.length; y++) {
+                for (let x = 0; x < piece.shape[y].length; x++) {
+                    if (piece.shape[y][x]) {
+                        const newX = piece.x + x + offsetX;
+                        const newY = piece.y + y + offsetY;
+
+                        if (newX < 0 || newX >= COLS || newY >= ROWS) {
+                            return true;
+                        }
+
+                        if (newY >= 0 && board[newY][newX]) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        function checkAdjacentCharacters() {
+            if (!currentPiece) return;
+
+            const adjacentTypes = new Set();
+
+            currentPiece.shape.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value) {
+                        const boardX = currentPiece.x + x;
+                        const boardY = currentPiece.y + y;
+
+                        // Check all adjacent cells
+                        for (let dy = -1; dy <= 1; dy++) {
+                            for (let dx = -1; dx <= 1; dx++) {
+                                if (dx === 0 && dy === 0) continue;
+
+                                const checkY = boardY + dy;
+                                const checkX = boardX + dx;
+
+                                if (checkY >= 0 && checkY < ROWS && checkX >= 0 && checkX < COLS) {
+                                    if (board[checkY][checkX]) {
+                                        // Find which character this color belongs to
+                                        for (let [type, char] of Object.entries(CHARACTERS)) {
+                                            if (char.color === board[checkY][checkX]) {
+                                                adjacentTypes.add(type);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            });
+
+            // Check for dialogue triggers
+            adjacentTypes.forEach(adjType => {
+                const key1 = `${currentPiece.type}-${adjType}`;
+                const key2 = `${adjType}-${currentPiece.type}`;
+
+                if (DIALOGUES[key1] && !charactersMet.has(key1)) {
+                    showDialogue(DIALOGUES[key1]);
+                    charactersMet.add(key1);
+                } else if (DIALOGUES[key2] && !charactersMet.has(key2)) {
+                    showDialogue(DIALOGUES[key2]);
+                    charactersMet.add(key2);
+                }
+            });
+        }
+
+        function showDialogue(dialogue) {
+            const dialogueBox = document.getElementById('dialogue');
+            document.getElementById('dialogueCharacter').textContent = dialogue.char + ':';
+            document.getElementById('dialogueText').textContent = dialogue.text;
+            dialogueBox.classList.add('show');
+
+            setTimeout(() => {
+                dialogueBox.classList.remove('show');
+            }, 4000);
+        }
+
+        function mergePiece() {
+            currentPiece.shape.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value) {
+                        const boardY = currentPiece.y + y;
+                        const boardX = currentPiece.x + x;
+                        if (boardY >= 0) {
+                            board[boardY][boardX] = currentPiece.color;
+                        }
+                    }
+                });
+            });
+        }
+
+        function clearLines() {
+            let linesCleared = 0;
+            const clearedCharacters = new Set();
+
+            for (let row = ROWS - 1; row >= 0; row--) {
+                if (board[row].every(cell => cell !== null)) {
+                    // Track which characters died
+                    board[row].forEach(color => {
+                        for (let [type, char] of Object.entries(CHARACTERS)) {
+                            if (char.color === color && char.alive) {
+                                clearedCharacters.add(type);
+                            }
+                        }
+                    });
+
+                    board.splice(row, 1);
+                    board.unshift(Array(COLS).fill(null));
+                    linesCleared++;
+                    row++;
+                }
+            }
+
+            if (linesCleared > 0) {
+                lines += linesCleared;
+                score += [0, 40, 100, 300, 1200][linesCleared];
+
+                // Mark characters as dead
+                clearedCharacters.forEach(type => {
+                    CHARACTERS[type].alive = false;
+                    const charName = CHARACTERS[type].name;
+                    setTimeout(() => {
+                        showDialogue({ char: 'Narrator', text: `${charName} has fallen in battle...` });
+                    }, 500);
+                });
+
+                // Check story progress
+                checkStoryProgress();
+
+                updateUI();
+            }
+        }
+
+        function checkStoryProgress() {
+            const event = STORY_EVENTS.find(e => e.lines === lines && e.lines > storyProgress);
+            if (event) {
+                storyProgress = event.lines;
+                document.getElementById('storyText').textContent = event.text;
+            }
+        }
+
+        function rotate(piece) {
+            const newShape = piece.shape[0].map((_, i) =>
+                piece.shape.map(row => row[i]).reverse()
+            );
+
+            const rotated = { ...piece, shape: newShape };
+
+            if (!checkCollision(rotated)) {
+                return rotated;
+            }
+
+            for (let offset of [1, -1, 2, -2]) {
+                rotated.x = piece.x + offset;
+                if (!checkCollision(rotated)) {
+                    return rotated;
+                }
+            }
+
+            return piece;
+        }
+
+        function move(direction) {
+            if (!currentPiece || isPaused) return;
+
+            if (direction === 'left' && !checkCollision(currentPiece, -1, 0)) {
+                currentPiece.x--;
+                checkAdjacentCharacters();
+            } else if (direction === 'right' && !checkCollision(currentPiece, 1, 0)) {
+                currentPiece.x++;
+                checkAdjacentCharacters();
+            } else if (direction === 'down') {
+                if (!checkCollision(currentPiece, 0, 1)) {
+                    currentPiece.y++;
+                    checkAdjacentCharacters();
+                    score += 1;
+                    updateUI();
+                } else {
+                    placePiece();
+                }
+            }
+        }
+
+        function hardDrop() {
+            if (!currentPiece || isPaused) return;
+
+            while (!checkCollision(currentPiece, 0, 1)) {
+                currentPiece.y++;
+                score += 2;
+            }
+            updateUI();
+            placePiece();
+        }
+
+        function placePiece() {
+            mergePiece();
+            clearLines();
+            spawnPiece();
+        }
+
+        function spawnPiece() {
+            currentPiece = createPiece();
+
+            if (checkCollision(currentPiece)) {
+                gameOver();
+            }
+        }
+
+        function updateCharacterList() {
+            const list = document.getElementById('characterList');
+            list.innerHTML = '';
+
+            Object.entries(CHARACTERS).forEach(([type, char]) => {
+                const item = document.createElement('div');
+                item.className = `character-item ${char.alive ? 'character-alive' : 'character-dead'}`;
+
+                const colorBox = document.createElement('div');
+                colorBox.className = 'character-color';
+                colorBox.style.backgroundColor = char.color;
+
+                const name = document.createElement('span');
+                name.textContent = char.name;
+
+                item.appendChild(colorBox);
+                item.appendChild(name);
+                list.appendChild(item);
+            });
+        }
+
+        function getEnding() {
+            const alive = Object.entries(CHARACTERS).filter(([_, char]) => char.alive).map(([type, _]) => type);
+            const aliveCount = alive.length;
+
+            let ending = '';
+
+            if (aliveCount === 7) {
+                ending = '🌟 PERFECT ENDING: All heroes survived! The kingdom celebrates as peace is restored. Aria and her companions are hailed as the legendary Seven who saved the realm.';
+            } else if (aliveCount === 0) {
+                ending = '💀 TRAGIC ENDING: All heroes have fallen. The kingdom falls into eternal darkness. But legends say their spirits will return when hope is needed most...';
+            } else if (CHARACTERS.I.alive && CHARACTERS.O.alive) {
+                ending = '⚔️ ETERNAL CONFLICT: Both Aria and Mordred survived. Their battle continues endlessly, neither good nor evil claiming victory. The realm exists in perpetual twilight.';
+            } else if (CHARACTERS.I.alive && !CHARACTERS.O.alive) {
+                ending = '✨ HEROIC ENDING: Aria defeated Mordred and saved the kingdom! Though some companions were lost, their sacrifice will never be forgotten. A new age of light begins.';
+            } else if (!CHARACTERS.I.alive && CHARACTERS.O.alive) {
+                ending = '🌑 DARK ENDING: With Aria fallen, Mordred claims ultimate victory. The kingdom bows to his dark rule. But whispers of rebellion stir in the shadows...';
+            } else if (CHARACTERS.T.alive) {
+                ending = '📚 WISDOM ENDING: The Sage survived to guide the next generation. Without the original heroes, they train new champions to protect the realm. The cycle begins anew.';
+            } else {
+                ending = `⚖️ BITTERSWEET ENDING: ${aliveCount} heroes survived the ordeal. Scarred but unbroken, they rebuild what was lost, honoring the memory of the fallen.`;
+            }
+
+            return ending;
+        }
+
+        function updateUI() {
+            document.getElementById('score').textContent = score;
+            updateCharacterList();
+        }
+
+        function gameOver() {
+            gameRunning = false;
+            cancelAnimationFrame(gameLoop);
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('endingStory').textContent = getEnding();
+            document.getElementById('gameOver').classList.add('show');
+        }
+
+        function update(time = 0) {
+            if (!gameRunning || isPaused) return;
+
+            const deltaTime = time - lastTime;
+            lastTime = time;
+            dropCounter += deltaTime;
+
+            if (dropCounter > dropInterval) {
+                move('down');
+                dropCounter = 0;
+            }
+
+            drawBoard();
+            if (currentPiece) {
+                drawPiece(currentPiece);
+            }
+
+            gameLoop = requestAnimationFrame(update);
+        }
+
+        function startGame() {
+            // Reset characters
+            Object.values(CHARACTERS).forEach(char => char.alive = true);
+
+            createBoard();
+            score = 0;
+            lines = 0;
+            storyProgress = 0;
+            charactersMet.clear();
+            specialCombos = [];
+            dropCounter = 0;
+            isPaused = false;
+            gameRunning = true;
+
+            document.getElementById('storyText').textContent = 'In the Kingdom of Blocks, seven legendary heroes emerge to save the realm from the Void. Guide their fates through your choices...';
+
+            updateUI();
+            spawnPiece();
+
+            document.getElementById('gameOver').classList.remove('show');
+            document.getElementById('startBtn').textContent = 'Restart Story';
+
+            lastTime = 0;
+            update();
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (!gameRunning) return;
+
+            switch(e.key) {
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    move('left');
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    move('right');
+                    break;
+                case 'ArrowDown':
+                    e.preventDefault();
+                    move('down');
+                    break;
+                case 'ArrowUp':
+                    e.preventDefault();
+                    if (currentPiece && !isPaused) {
+                        currentPiece = rotate(currentPiece);
+                    }
+                    break;
+                case ' ':
+                    e.preventDefault();
+                    hardDrop();
+                    break;
+                case 'p':
+                case 'P':
+                    e.preventDefault();
+                    isPaused = !isPaused;
+                    if (!isPaused) {
+                        lastTime = performance.now();
+                        update(lastTime);
+                    }
+                    break;
+            }
+        });
+
+        document.getElementById('startBtn').addEventListener('click', startGame);
+        document.getElementById('restartBtn').addEventListener('click', startGame);
+
+        drawBoard();
+        updateCharacterList();
+    </script>
+</body>
+</html>

@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SYMPHTETRIS - Musical Composition Matrix Tetris</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #0f0;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        #matrix-rain {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            opacity: 0.15;
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            max-width: 1200px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            text-shadow: 0 0 10px #f0f, 0 0 20px #f0f;
+            margin-bottom: 20px;
+            color: #f0f;
+        }
+
+        .game-layout {
+            display: grid;
+            grid-template-columns: 280px 1fr 280px;
+            gap: 20px;
+        }
+
+        .panel {
+            background: rgba(20, 0, 20, 0.9);
+            border: 2px solid #f0f;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 0 20px rgba(255, 0, 255, 0.3);
+        }
+
+        h3 {
+            color: #f0f;
+            text-shadow: 0 0 5px #f0f;
+            margin-bottom: 15px;
+        }
+
+        .instrument {
+            background: rgba(50, 0, 50, 0.5);
+            border: 1px solid #a0a;
+            border-radius: 5px;
+            padding: 10px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .genre-selector {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .genre-btn {
+            background: rgba(80, 0, 80, 0.6);
+            border: 1px solid #a0a;
+            color: #f0f;
+            padding: 10px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: all 0.3s;
+        }
+
+        .genre-btn:hover, .genre-btn.active {
+            background: rgba(150, 0, 150, 0.9);
+            box-shadow: 0 0 15px rgba(255, 0, 255, 0.5);
+        }
+
+        canvas {
+            border: 2px solid #a0a;
+            background: #000;
+            box-shadow: inset 0 0 20px rgba(255, 0, 255, 0.1);
+            display: block;
+            margin: 0 auto;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .stat {
+            background: rgba(50, 0, 50, 0.6);
+            padding: 12px;
+            border-radius: 5px;
+            border: 1px solid #a0a;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            text-shadow: 0 0 5px #f0f;
+            color: #f0f;
+        }
+
+        button {
+            background: rgba(80, 0, 80, 0.8);
+            color: #f0f;
+            border: 2px solid #f0f;
+            padding: 10px 25px;
+            font-family: 'Courier New', monospace;
+            cursor: pointer;
+            border-radius: 5px;
+            margin: 5px;
+        }
+
+        button:hover {
+            background: rgba(150, 0, 150, 0.9);
+            box-shadow: 0 0 15px rgba(255, 0, 255, 0.5);
+        }
+
+        .message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(20, 0, 20, 0.98);
+            border: 3px solid #f0f;
+            padding: 40px;
+            border-radius: 15px;
+            z-index: 1000;
+            box-shadow: 0 0 40px rgba(255, 0, 255, 0.6);
+            display: none;
+        }
+
+        .message.show { display: block; }
+
+        .harmony-indicator {
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(50, 0, 50, 0.6);
+            border-radius: 5px;
+            border: 1px solid #a0a;
+        }
+
+        .harmony-bar {
+            width: 100%;
+            height: 20px;
+            background: rgba(100, 0, 100, 0.5);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .harmony-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #f00, #ff0, #0f0);
+            transition: width 0.3s;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="matrix-rain"></canvas>
+
+    <div class="container">
+        <h1>🎵 SYMPHTETRIS 🎵</h1>
+
+        <div class="game-layout">
+            <div class="panel">
+                <h3>INSTRUMENTS</h3>
+                <div id="instruments"></div>
+
+                <div class="harmony-indicator">
+                    <div style="font-size: 0.9rem; margin-bottom: 5px;">Harmony Level</div>
+                    <div class="harmony-bar">
+                        <div class="harmony-fill" id="harmony-fill" style="width: 50%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="genre-selector">
+                    <div class="genre-btn active" onclick="setGenre('jazz')">🎺 JAZZ</div>
+                    <div class="genre-btn" onclick="setGenre('classical')">🎻 CLASSICAL</div>
+                    <div class="genre-btn" onclick="setGenre('electronic')">🎹 ELECTRONIC</div>
+                </div>
+
+                <div class="stats">
+                    <div class="stat">
+                        <div style="font-size: 0.8rem; opacity: 0.7;">SCORE</div>
+                        <div class="stat-value" id="score">0</div>
+                    </div>
+                    <div class="stat">
+                        <div style="font-size: 0.8rem; opacity: 0.7;">HARMONY</div>
+                        <div class="stat-value" id="harmony">0</div>
+                    </div>
+                </div>
+
+                <canvas id="canvas" width="300" height="600"></canvas>
+
+                <div style="margin-top: 10px; font-size: 0.9rem; opacity: 0.8;">
+                    ← → Move | ↑ Rotate | ↓ Fast | SPACE Drop<br>
+                    <small>Higher placement = higher pitch. Create harmonious melodies!</small>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3>COMPOSITION</h3>
+                <div style="font-size: 0.85rem; margin-bottom: 15px; opacity: 0.8; line-height: 1.6;">
+                    Each piece is an instrument:<br>
+                    • Vertical: Pitch (high/low)<br>
+                    • Horizontal: Timing<br>
+                    • Harmonious combos = bonus!<br>
+                </div>
+
+                <div class="stats">
+                    <div class="stat">
+                        <div style="font-size: 0.8rem; opacity: 0.7;">CHORDS</div>
+                        <div class="stat-value" id="chords">0</div>
+                    </div>
+                    <div class="stat">
+                        <div style="font-size: 0.8rem; opacity: 0.7;">DISSONANCE</div>
+                        <div class="stat-value" id="dissonance">0</div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 20px; font-size: 0.85rem; opacity: 0.7;">
+                    <strong>Harmonious Pairs:</strong><br>
+                    🎸 Bass + 🎹 Piano<br>
+                    🎺 Brass + 🎻 Violin<br>
+                    🥁 Drums + 🎸 Bass<br>
+                    🎹 Piano + 🎻 Violin
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="message" id="game-over-msg">
+        <h2 style="color: #f0f; margin-bottom: 15px;">SYMPHONY COMPLETE</h2>
+        <p id="final-score"></p>
+        <button onclick="location.reload()">NEW COMPOSITION</button>
+    </div>
+
+    <script>
+        // Matrix rain
+        const rainCanvas = document.getElementById('matrix-rain');
+        const rainCtx = rainCanvas.getContext('2d');
+        rainCanvas.width = window.innerWidth;
+        rainCanvas.height = window.innerHeight;
+
+        const columns = Math.floor(rainCanvas.width / 20);
+        const drops = Array(columns).fill(1);
+
+        function drawMatrixRain() {
+            rainCtx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+            rainCtx.fillRect(0, 0, rainCanvas.width, rainCanvas.height);
+            rainCtx.fillStyle = '#f0f';
+            rainCtx.font = '15px monospace';
+            for (let i = 0; i < drops.length; i++) {
+                const text = String.fromCharCode(0x266A + Math.random() * 6);
+                rainCtx.fillText(text, i * 20, drops[i] * 20);
+                if (drops[i] * 20 > rainCanvas.height && Math.random() > 0.975) drops[i] = 0;
+                drops[i]++;
+            }
+        }
+        setInterval(drawMatrixRain, 33);
+
+        // Audio context
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        const INSTRUMENTS = {
+            I: { name: 'Bass', icon: '🎸', color: '#ff0000', baseFreq: 110, notes: [] },
+            O: { name: 'Drums', icon: '🥁', color: '#ffff00', baseFreq: 0, notes: [] },
+            T: { name: 'Piano', icon: '🎹', color: '#ff00ff', baseFreq: 261.63, notes: [] },
+            S: { name: 'Violin', icon: '🎻', color: '#00ff00', baseFreq: 440, notes: [] },
+            Z: { name: 'Guitar', icon: '🎸', color: '#00ffff', baseFreq: 329.63, notes: [] },
+            J: { name: 'Brass', icon: '🎺', color: '#ff8800', baseFreq: 293.66, notes: [] },
+            L: { name: 'Synth', icon: '🎛️', color: '#8800ff', baseFreq: 523.25, notes: [] }
+        };
+
+        const HARMONIOUS = [['I', 'T'], ['J', 'S'], ['O', 'I'], ['T', 'S']];
+
+        const SHAPES = {
+            I: [[1,1,1,1]],
+            O: [[1,1],[1,1]],
+            T: [[0,1,0],[1,1,1]],
+            S: [[1,1,0],[0,1,1]],
+            Z: [[0,1,1],[1,1,0]],
+            J: [[1,0,0],[1,1,1]],
+            L: [[0,0,1],[1,1,1]]
+        };
+
+        let gameState = { score: 0, harmony: 0, chords: 0, dissonance: 0, genre: 'jazz', gameOver: false };
+        let board = Array(20).fill(null).map(() => Array(10).fill(null));
+        let currentPiece = null, currentType = null, pieceX = 0, pieceY = 0;
+        let lastUpdate = 0, gameSpeed = 600;
+
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        function playNote(freq, row) {
+            if (freq === 0) return; // Drums
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            const pitchMultiplier = Math.pow(2, (20 - row) / 12);
+            osc.frequency.value = freq * pitchMultiplier;
+            osc.type = gameState.genre === 'electronic' ? 'square' : 'sine';
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+            osc.connect(gain);
+            gain.connect(audioCtx.dest
+ination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.3);
+        }
+
+        function init() {
+            updateInstruments();
+            newPiece();
+            gameLoop();
+        }
+
+        function newPiece() {
+            const types = Object.keys(SHAPES);
+            currentType = types[Math.floor(Math.random() * types.length)];
+            currentPiece = SHAPES[currentType];
+            pieceX = Math.floor(5 - currentPiece[0].length / 2);
+            pieceY = 0;
+            if (collides(currentPiece, pieceX, pieceY)) {
+                gameState.gameOver = true;
+                showGameOver();
+            }
+        }
+
+        function collides(piece, x, y) {
+            for (let row = 0; row < piece.length; row++) {
+                for (let col = 0; col < piece[row].length; col++) {
+                    if (piece[row][col] && (y + row >= 20 || x + col < 0 || x + col >= 10 ||
+                        (y + row >= 0 && board[y + row][x + col]))) return true;
+                }
+            }
+            return false;
+        }
+
+        function merge() {
+            for (let row = 0; row < currentPiece.length; row++) {
+                for (let col = 0; col < currentPiece[row].length; col++) {
+                    if (currentPiece[row][col] && pieceY + row >= 0) {
+                        board[pieceY + row][pieceX + col] = currentType;
+                        playNote(INSTRUMENTS[currentType].baseFreq, pieceY + row);
+                    }
+                }
+            }
+            checkHarmony();
+        }
+
+        function checkHarmony() {
+            for (let row = 0; row < 20; row++) {
+                for (let col = 0; col < 9; col++) {
+                    if (board[row][col] && board[row][col + 1]) {
+                        const pair = [board[row][col], board[row][col + 1]].sort();
+                        const harmonic = HARMONIOUS.some(h =>
+                            h[0] === pair[0] && h[1] === pair[1] || h[1] === pair[0] && h[0] === pair[1]
+                        );
+                        if (harmonic) {
+                            gameState.harmony += 150;
+                            gameState.chords++;
+                            gameState.score += 150;
+                        } else if (Math.random() < 0.3) {
+                            gameState.dissonance++;
+                            gameState.score = Math.max(0, gameState.score - 50);
+                        }
+                    }
+                }
+            }
+            updateStats();
+            updateHarmonyBar();
+        }
+
+        function clearLines() {
+            let cleared = 0;
+            for (let row = 19; row >= 0; row--) {
+                if (board[row].every(cell => cell !== null)) {
+                    board.splice(row, 1);
+                    board.unshift(Array(10).fill(null));
+                    cleared++;
+                    row++;
+                }
+            }
+            if (cleared > 0) {
+                gameState.score += cleared * 200;
+                updateStats();
+            }
+        }
+
+        function gameLoop(timestamp = 0) {
+            if (gameState.gameOver) return;
+            if (timestamp - lastUpdate > gameSpeed) {
+                pieceY++;
+                if (collides(currentPiece, pieceX, pieceY)) {
+                    pieceY--;
+                    merge();
+                    clearLines();
+                    newPiece();
+                }
+                lastUpdate = timestamp;
+            }
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function draw() {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, 300, 600);
+
+            for (let row = 0; row < 20; row++) {
+                for (let col = 0; col < 10; col++) {
+                    if (board[row][col]) {
+                        ctx.fillStyle = INSTRUMENTS[board[row][col]].color;
+                        ctx.fillRect(col * 30, row * 30, 29, 29);
+                    }
+                }
+            }
+
+            if (currentPiece) {
+                ctx.fillStyle = INSTRUMENTS[currentType].color;
+                for (let row = 0; row < currentPiece.length; row++) {
+                    for (let col = 0; col < currentPiece[row].length; col++) {
+                        if (currentPiece[row][col]) {
+                            ctx.fillRect((pieceX + col) * 30, (pieceY + row) * 30, 29, 29);
+                        }
+                    }
+                }
+            }
+        }
+
+        function rotatePiece() {
+            const rotated = currentPiece[0].map((_, i) => currentPiece.map(row => row[i]).reverse());
+            if (!collides(rotated, pieceX, pieceY)) currentPiece = rotated;
+        }
+
+        function movePiece(dx) {
+            pieceX += dx;
+            if (collides(currentPiece, pieceX, pieceY)) pieceX -= dx;
+        }
+
+        function dropPiece() {
+            while (!collides(currentPiece, pieceX, pieceY + 1)) pieceY++;
+        }
+
+        function setGenre(genre) {
+            gameState.genre = genre;
+            document.querySelectorAll('.genre-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        function updateInstruments() {
+            const list = document.getElementById('instruments');
+            list.innerHTML = Object.entries(INSTRUMENTS).map(([key, inst]) =>
+                `<div class="instrument"><span>${inst.icon} ${inst.name}</span></div>`
+            ).join('');
+        }
+
+        function updateStats() {
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('harmony').textContent = gameState.harmony;
+            document.getElementById('chords').textContent = gameState.chords;
+            document.getElementById('dissonance').textContent = gameState.dissonance;
+        }
+
+        function updateHarmonyBar() {
+            const ratio = gameState.chords / Math.max(1, gameState.chords + gameState.dissonance);
+            document.getElementById('harmony-fill').style.width = (ratio * 100) + '%';
+        }
+
+        function showGameOver() {
+            document.getElementById('final-score').textContent =
+                `Score: ${gameState.score} | Chords: ${gameState.chords} | Harmony: ${gameState.harmony}`;
+            document.getElementById('game-over-msg').classList.add('show');
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (gameState.gameOver) return;
+            switch(e.key) {
+                case 'ArrowLeft': movePiece(-1); break;
+                case 'ArrowRight': movePiece(1); break;
+                case 'ArrowUp': rotatePiece(); break;
+                case 'ArrowDown': pieceY++; if (collides(currentPiece, pieceX, pieceY)) pieceY--; break;
+                case ' ': e.preventDefault(); dropPiece(); break;
+            }
+        });
+
+        init();
+    </script>
+</body>
+</html>

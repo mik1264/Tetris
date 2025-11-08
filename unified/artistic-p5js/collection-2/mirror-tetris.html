@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mirror Tetris - p5.js Variation</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #8e2de2 0%, #4a00e0 100%);
+            font-family: 'Arial', sans-serif;
+        }
+        #canvas-container {
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        h1 {
+            margin: 0 0 10px 0;
+            font-size: 2em;
+        }
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            background: rgba(0,0,0,0.5);
+            padding: 15px 25px;
+            border-radius: 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="info">
+        <h1>🪞 Mirror Tetris</h1>
+        <p>Score: <span id="score">0</span></p>
+        <p>Lines: <span id="lines">0</span></p>
+        <p>Level: <span id="level">1</span></p>
+    </div>
+    <div class="controls">
+        <strong>Controls:</strong> Arrow Keys to move/rotate | Space to drop | P to pause
+    </div>
+    <script>
+        const COLS = 10;
+        const ROWS = 20;
+        const BLOCK_SIZE = 25;
+
+        let grid = [];
+        let mirrorGrid = [];
+        let currentPiece;
+        let mirrorPiece;
+        let gameOver = false;
+        let paused = false;
+        let score = 0;
+        let lines = 0;
+        let level = 1;
+        let dropCounter = 0;
+        let dropInterval = 1000;
+        let lastTime = 0;
+
+        const SHAPES = [
+            [[1,1,1,1]], // I
+            [[1,1],[1,1]], // O
+            [[0,1,0],[1,1,1]], // T
+            [[1,0,0],[1,1,1]], // L
+            [[0,0,1],[1,1,1]], // J
+            [[0,1,1],[1,1,0]], // S
+            [[1,1,0],[0,1,1]]  // Z
+        ];
+
+        const COLORS = [
+            [138, 43, 226],   // Purple
+            [255, 0, 255],    // Magenta
+            [186, 85, 211],   // Medium Orchid
+            [147, 112, 219],  // Medium Purple
+            [123, 104, 238],  // Medium Slate Blue
+            [106, 90, 205],   // Slate Blue
+            [72, 61, 139]     // Dark Slate Blue
+        ];
+
+        class Piece {
+            constructor(isMirror = false) {
+                this.shape = random(SHAPES);
+                this.x = Math.floor(COLS / 2) - Math.floor(this.shape[0].length / 2);
+                this.y = 0;
+                this.col = random(COLORS);
+                this.isMirror = isMirror;
+            }
+
+            draw(offsetX) {
+                push();
+                translate(offsetX, 0);
+
+                for (let row = 0; row < this.shape.length; row++) {
+                    for (let col = 0; col < this.shape[row].length; col++) {
+                        if (this.shape[row][col]) {
+                            let px = (this.x + col) * BLOCK_SIZE;
+                            let py = (this.y + row) * BLOCK_SIZE;
+
+                            // Main block
+                            fill(this.col[0], this.col[1], this.col[2]);
+                            stroke(255, 200);
+                            strokeWeight(2);
+                            rect(px, py, BLOCK_SIZE, BLOCK_SIZE);
+
+                            // Highlight
+                            noStroke();
+                            fill(255, 255, 255, 150);
+                            rect(px + 3, py + 3, BLOCK_SIZE/3, BLOCK_SIZE/3);
+
+                            // Mirror effect
+                            if (this.isMirror) {
+                                fill(255, 255, 255, 50);
+                                rect(px, py, BLOCK_SIZE, BLOCK_SIZE);
+                            }
+                        }
+                    }
+                }
+                pop();
+            }
+
+            move(dx, dy, useGrid) {
+                this.x += dx;
+                this.y += dy;
+                if (this.collision(useGrid)) {
+                    this.x -= dx;
+                    this.y -= dy;
+                    return false;
+                }
+                return true;
+            }
+
+            rotate(useGrid) {
+                const newShape = this.shape[0].map((_, i) =>
+                    this.shape.map(row => row[i]).reverse()
+                );
+                const oldShape = this.shape;
+                this.shape = newShape;
+                if (this.collision(useGrid)) {
+                    this.shape = oldShape;
+                }
+            }
+
+            collision(useGrid) {
+                for (let row = 0; row < this.shape.length; row++) {
+                    for (let col = 0; col < this.shape[row].length; col++) {
+                        if (this.shape[row][col]) {
+                            let newX = this.x + col;
+                            let newY = this.y + row;
+                            if (newX < 0 || newX >= COLS || newY >= ROWS) {
+                                return true;
+                            }
+                            if (newY >= 0 && useGrid[newY][newX]) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+                return false;
+            }
+
+            lock(useGrid) {
+                for (let row = 0; row < this.shape.length; row++) {
+                    for (let col = 0; col < this.shape[row].length; col++) {
+                        if (this.shape[row][col]) {
+                            let newY = this.y + row;
+                            let newX = this.x + col;
+                            if (newY >= 0) {
+                                useGrid[newY][newX] = this.col;
+                            }
+                        }
+                    }
+                }
+            }
+
+            syncShape(otherPiece) {
+                this.shape = JSON.parse(JSON.stringify(otherPiece.shape));
+                this.col = otherPiece.col;
+            }
+        }
+
+        function setup() {
+            let canvas = createCanvas(COLS * BLOCK_SIZE * 2 + 100, ROWS * BLOCK_SIZE);
+            canvas.parent('canvas-container');
+
+            for (let i = 0; i < ROWS; i++) {
+                grid[i] = Array(COLS).fill(0);
+                mirrorGrid[i] = Array(COLS).fill(0);
+            }
+
+            currentPiece = new Piece(false);
+            mirrorPiece = new Piece(true);
+            mirrorPiece.syncShape(currentPiece);
+            frameRate(60);
+        }
+
+        function draw() {
+            if (!gameOver && !paused) {
+                let now = millis();
+                let deltaTime = now - lastTime;
+                lastTime = now;
+
+                dropCounter += deltaTime;
+                if (dropCounter > dropInterval) {
+                    let moved1 = currentPiece.move(0, 1, grid);
+                    let moved2 = mirrorPiece.move(0, 1, mirrorGrid);
+
+                    if (!moved1 || !moved2) {
+                        currentPiece.lock(grid);
+                        mirrorPiece.lock(mirrorGrid);
+                        clearLines();
+                        currentPiece = new Piece(false);
+                        mirrorPiece = new Piece(true);
+                        mirrorPiece.syncShape(currentPiece);
+
+                        if (currentPiece.collision(grid) || mirrorPiece.collision(mirrorGrid)) {
+                            gameOver = true;
+                        }
+                    }
+                    dropCounter = 0;
+                }
+            }
+
+            // Draw background
+            background(30, 20, 50);
+
+            // Draw mirror line
+            stroke(255, 255, 255, 100);
+            strokeWeight(3);
+            line(width/2, 0, width/2, height);
+
+            // Draw left board label
+            fill(255);
+            noStroke();
+            textAlign(CENTER);
+            textSize(16);
+            text('Main Board', COLS * BLOCK_SIZE / 2, 20);
+            text('Mirror Board', width - COLS * BLOCK_SIZE / 2 - 50, 20);
+
+            // Draw main grid (left side)
+            drawGrid(grid, 0, false);
+
+            // Draw mirror grid (right side)
+            drawGrid(mirrorGrid, COLS * BLOCK_SIZE + 100, true);
+
+            // Draw current pieces
+            if (!gameOver && currentPiece && mirrorPiece) {
+                currentPiece.draw(0);
+                mirrorPiece.draw(COLS * BLOCK_SIZE + 100);
+            }
+
+            // Game over overlay
+            if (gameOver) {
+                fill(0, 0, 0, 200);
+                rect(0, height/2 - 50, width, 100);
+                fill(255);
+                textAlign(CENTER, CENTER);
+                textSize(32);
+                text('GAME OVER', width/2, height/2 - 20);
+                textSize(16);
+                text('Press R to restart', width/2, height/2 + 20);
+            }
+
+            if (paused) {
+                fill(0, 0, 0, 150);
+                rect(0, height/2 - 40, width, 80);
+                fill(255);
+                textAlign(CENTER, CENTER);
+                textSize(32);
+                text('PAUSED', width/2, height/2);
+            }
+        }
+
+        function drawGrid(gridData, offsetX, isMirror) {
+            push();
+            translate(offsetX, 0);
+
+            for (let row = 0; row < ROWS; row++) {
+                for (let col = 0; col < COLS; col++) {
+                    let px = col * BLOCK_SIZE;
+                    let py = row * BLOCK_SIZE;
+
+                    if (gridData[row][col]) {
+                        let cellColor = gridData[row][col];
+
+                        // Main block
+                        fill(cellColor[0], cellColor[1], cellColor[2]);
+                        stroke(255, 200);
+                        strokeWeight(2);
+                        rect(px, py, BLOCK_SIZE, BLOCK_SIZE);
+
+                        // Highlight
+                        noStroke();
+                        fill(255, 255, 255, 150);
+                        rect(px + 3, py + 3, BLOCK_SIZE/3, BLOCK_SIZE/3);
+
+                        // Mirror overlay
+                        if (isMirror) {
+                            fill(255, 255, 255, 30);
+                            rect(px, py, BLOCK_SIZE, BLOCK_SIZE);
+                        }
+                    } else {
+                        stroke(100, 80, 150, 80);
+                        strokeWeight(1);
+                        noFill();
+                        rect(px, py, BLOCK_SIZE, BLOCK_SIZE);
+                    }
+                }
+            }
+
+            pop();
+        }
+
+        function clearLines() {
+            let linesCleared = 0;
+
+            // Clear lines in main grid
+            for (let row = ROWS - 1; row >= 0; row--) {
+                if (grid[row].every(cell => cell !== 0)) {
+                    grid.splice(row, 1);
+                    grid.unshift(Array(COLS).fill(0));
+                    linesCleared++;
+                    row++;
+                }
+            }
+
+            // Clear lines in mirror grid
+            for (let row = ROWS - 1; row >= 0; row--) {
+                if (mirrorGrid[row].every(cell => cell !== 0)) {
+                    mirrorGrid.splice(row, 1);
+                    mirrorGrid.unshift(Array(COLS).fill(0));
+                    linesCleared++;
+                    row++;
+                }
+            }
+
+            if (linesCleared > 0) {
+                lines += linesCleared;
+                score += linesCleared * linesCleared * 100 * level;
+                level = Math.floor(lines / 10) + 1;
+                dropInterval = Math.max(100, 1000 - (level - 1) * 100);
+
+                document.getElementById('score').textContent = score;
+                document.getElementById('lines').textContent = lines;
+                document.getElementById('level').textContent = level;
+            }
+        }
+
+        function keyPressed() {
+            if (gameOver && key === 'r') {
+                resetGame();
+                return;
+            }
+
+            if (key === 'p' || key === 'P') {
+                paused = !paused;
+                return;
+            }
+
+            if (paused || gameOver) return;
+
+            if (keyCode === LEFT_ARROW) {
+                currentPiece.move(-1, 0, grid);
+                mirrorPiece.move(-1, 0, mirrorGrid);
+            } else if (keyCode === RIGHT_ARROW) {
+                currentPiece.move(1, 0, grid);
+                mirrorPiece.move(1, 0, mirrorGrid);
+            } else if (keyCode === DOWN_ARROW) {
+                if (currentPiece.move(0, 1, grid) && mirrorPiece.move(0, 1, mirrorGrid)) {
+                    score += 1;
+                    document.getElementById('score').textContent = score;
+                }
+            } else if (keyCode === UP_ARROW) {
+                currentPiece.rotate(grid);
+                mirrorPiece.syncShape(currentPiece);
+            } else if (key === ' ') {
+                while (currentPiece.move(0, 1, grid) && mirrorPiece.move(0, 1, mirrorGrid)) {
+                    score += 2;
+                }
+                document.getElementById('score').textContent = score;
+            }
+        }
+
+        function resetGame() {
+            grid = [];
+            mirrorGrid = [];
+            for (let i = 0; i < ROWS; i++) {
+                grid[i] = Array(COLS).fill(0);
+                mirrorGrid[i] = Array(COLS).fill(0);
+            }
+            currentPiece = new Piece(false);
+            mirrorPiece = new Piece(true);
+            mirrorPiece.syncShape(currentPiece);
+            gameOver = false;
+            paused = false;
+            score = 0;
+            lines = 0;
+            level = 1;
+            dropCounter = 0;
+            dropInterval = 1000;
+
+            document.getElementById('score').textContent = score;
+            document.getElementById('lines').textContent = lines;
+            document.getElementById('level').textContent = level;
+        }
+    </script>
+</body>
+</html>

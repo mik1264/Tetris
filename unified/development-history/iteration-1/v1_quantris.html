@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QUANTRIS - Quantum Superposition Tetris</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #7e22ce 100%);
+        }
+
+        .game-container {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 90vw;
+        }
+
+        h1 {
+            color: #7e22ce;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .subtitle {
+            color: #7f8c8d;
+            margin-bottom: 20px;
+            font-style: italic;
+        }
+
+        .game-area {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            align-items: flex-start;
+            flex-wrap: wrap;
+        }
+
+        canvas {
+            border: 3px solid #7e22ce;
+            background: #000;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .side-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            min-width: 280px;
+        }
+
+        .info-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #7e22ce;
+        }
+
+        .info-box h3 {
+            color: #7e22ce;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .stat {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .quantum-state {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            border-radius: 10px;
+            color: white;
+            border: 2px solid #7e22ce;
+        }
+
+        .quantum-state h3 {
+            margin-bottom: 15px;
+        }
+
+        .probability-bars {
+            margin: 15px 0;
+        }
+
+        .prob-item {
+            display: flex;
+            align-items: center;
+            margin: 8px 0;
+            font-size: 0.85em;
+        }
+
+        .prob-label {
+            width: 40px;
+            font-weight: bold;
+        }
+
+        .prob-bar {
+            flex: 1;
+            height: 18px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 0 8px;
+        }
+
+        .prob-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #2ecc71, #27ae60);
+            transition: width 0.3s;
+        }
+
+        .prob-value {
+            width: 40px;
+            text-align: right;
+        }
+
+        .entanglement-box {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            padding: 15px;
+            border-radius: 10px;
+            color: white;
+            border: 2px solid #7e22ce;
+        }
+
+        .entanglement-indicator {
+            font-size: 2em;
+            margin: 10px 0;
+            animation: glow 1.5s ease-in-out infinite;
+        }
+
+        @keyframes glow {
+            0%, 100% { opacity: 1; text-shadow: 0 0 10px #fff; }
+            50% { opacity: 0.7; text-shadow: 0 0 20px #fff; }
+        }
+
+        .measurement-streak {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #7e22ce;
+        }
+
+        .measurement-streak h3 {
+            color: #7e22ce;
+            margin-bottom: 10px;
+        }
+
+        .streak-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            padding: 5px;
+            background: white;
+            border-radius: 5px;
+            font-size: 0.9em;
+        }
+
+        .controls {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #7e22ce;
+            text-align: left;
+            font-size: 0.85em;
+        }
+
+        .controls h3 {
+            color: #7e22ce;
+            margin-bottom: 10px;
+        }
+
+        .controls p {
+            margin: 5px 0;
+            color: #555;
+        }
+
+        button {
+            margin-top: 20px;
+            padding: 12px 30px;
+            font-size: 1.1em;
+            font-weight: bold;
+            background: #7e22ce;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 10px rgba(126, 34, 206, 0.3);
+        }
+
+        button:hover {
+            background: #6d28d9;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(109, 40, 217, 0.4);
+        }
+
+        .game-over {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            color: white;
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            display: none;
+            z-index: 1000;
+            max-width: 500px;
+        }
+
+        .game-over.show {
+            display: block;
+        }
+
+        .game-over h2 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            color: #a78bfa;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 1em;
+            display: none;
+            z-index: 999;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        .notification.show {
+            display: block;
+        }
+
+        .notification.collapse {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+
+        .notification.entanglement {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+        }
+
+        .notification.prediction {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+        }
+
+        @keyframes slideDown {
+            from {
+                top: -100px;
+                opacity: 0;
+            }
+            to {
+                top: 20px;
+                opacity: 1;
+            }
+        }
+
+        .superposition-piece {
+            filter: blur(2px);
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>⚛️ QUANTRIS</h1>
+        <p class="subtitle">Quantum Superposition Tetris: Pieces collapse on observation</p>
+
+        <div class="game-area">
+            <div>
+                <canvas id="tetris" width="300" height="600"></canvas>
+            </div>
+
+            <div class="side-panel">
+                <div class="info-box">
+                    <h3>Score</h3>
+                    <div class="stat" id="score">0</div>
+                </div>
+
+                <div class="info-box">
+                    <h3>Lines Cleared</h3>
+                    <div class="stat" id="lines">0</div>
+                </div>
+
+                <div class="quantum-state">
+                    <h3>🌀 Quantum State</h3>
+                    <p style="font-size: 0.9em; margin-bottom: 10px;">
+                        Current piece in superposition. Rotate to change probabilities!
+                    </p>
+                    <div class="probability-bars" id="probabilities"></div>
+                </div>
+
+                <div class="entanglement-box" id="entanglementBox" style="display: none;">
+                    <h3>🔗 ENTANGLED</h3>
+                    <div class="entanglement-indicator">⚡</div>
+                    <p style="font-size: 0.85em;">
+                        Next piece will be complementary!
+                    </p>
+                </div>
+
+                <div class="measurement-streak">
+                    <h3>Measurement Stats</h3>
+                    <div class="streak-item">
+                        <span>Prediction Streak:</span>
+                        <strong id="predictionStreak">0</strong>
+                    </div>
+                    <div class="streak-item">
+                        <span>Best Streak:</span>
+                        <strong id="bestStreak">0</strong>
+                    </div>
+                    <div class="streak-item">
+                        <span>Multiplier:</span>
+                        <strong id="multiplier">1.0x</strong>
+                    </div>
+                </div>
+
+                <div class="controls">
+                    <h3>Controls</h3>
+                    <p><strong>←/→</strong> Move</p>
+                    <p><strong>↓</strong> Soft Drop</p>
+                    <p><strong>↑</strong> Rotate (changes probability)</p>
+                    <p><strong>Space</strong> Collapse & Drop</p>
+                    <p><strong>P</strong> Pause</p>
+                    <p style="margin-top: 10px; font-style: italic;">
+                        Tip: Rotate more for better I-piece odds!
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <button id="startBtn">Start Quantum Game</button>
+    </div>
+
+    <div class="notification" id="notification"></div>
+
+    <div class="game-over" id="gameOver">
+        <h2>WAVE FUNCTION COLLAPSED</h2>
+        <p style="font-size: 1.2em; margin: 20px 0;">Final Score: <span id="finalScore">0</span></p>
+        <p style="font-size: 1em; margin: 10px 0;">Lines: <span id="finalLines">0</span></p>
+        <p style="font-size: 1em; margin: 10px 0;">Best Streak: <span id="finalBestStreak">0</span></p>
+        <p style="font-size: 1em; margin: 10px 0; color: #a78bfa;">Quantum Mastery: <span id="quantumRank">Novice</span></p>
+        <button id="restartBtn">New Quantum Reality</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('tetris');
+        const ctx = canvas.getContext('2d');
+        const COLS = 10;
+        const ROWS = 20;
+        const BLOCK_SIZE = 30;
+
+        const SHAPES = {
+            'I': [[1, 1, 1, 1]],
+            'O': [[1, 1], [1, 1]],
+            'T': [[0, 1, 0], [1, 1, 1]],
+            'S': [[0, 1, 1], [1, 1, 0]],
+            'Z': [[1, 1, 0], [0, 1, 1]],
+            'J': [[1, 0, 0], [1, 1, 1]],
+            'L': [[0, 0, 1], [1, 1, 1]]
+        };
+
+        const COLORS = {
+            'I': '#00f0f0',
+            'O': '#f0f000',
+            'T': '#a000f0',
+            'S': '#00f000',
+            'Z': '#f00000',
+            'J': '#0000f0',
+            'L': '#f0a000'
+        };
+
+        const COMPLEMENTARY_PAIRS = {
+            'I': 'O', 'O': 'I',
+            'T': 'T',
+            'S': 'Z', 'Z': 'S',
+            'J': 'L', 'L': 'J'
+        };
+
+        let board = [];
+        let currentPiece = null;
+        let score = 0;
+        let lines = 0;
+        let gameRunning = false;
+        let isPaused = false;
+        let dropCounter = 0;
+        let dropInterval = 1000;
+        let lastTime = 0;
+        let gameLoop = null;
+
+        // Quantum mechanics
+        let probabilities = { I: 1/7, O: 1/7, T: 1/7, S: 1/7, Z: 1/7, J: 1/7, L: 1/7 };
+        let rotationCount = 0;
+        let isEntangled = false;
+        let entangledType = null;
+        let predictionStreak = 0;
+        let bestStreak = 0;
+        let scoreMultiplier = 1.0;
+        let pieceCount = 0;
+        let lastCollapsedType = null;
+
+        function createBoard() {
+            board = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+        }
+
+        function createSuperpositionPiece() {
+            // If entangled, use complementary piece
+            if (isEntangled && entangledType) {
+                const type = COMPLEMENTARY_PAIRS[entangledType];
+                isEntangled = false;
+                entangledType = null;
+                updateEntanglementDisplay();
+                showNotification('🔗 Entanglement collapsed: ' + type + '-piece!', 'entanglement');
+                return createCollapsedPiece(type);
+            }
+
+            pieceCount++;
+
+            // Every 5th piece is entangled
+            if (pieceCount % 5 === 0 && lastCollapsedType) {
+                isEntangled = true;
+                entangledType = lastCollapsedType;
+                updateEntanglementDisplay();
+            }
+
+            // Start with equal probabilities
+            probabilities = { I: 1/7, O: 1/7, T: 1/7, S: 1/7, Z: 1/7, J: 1/7, L: 1/7 };
+            rotationCount = 0;
+
+            return {
+                shape: null, // Superposition - no shape yet!
+                color: '#a78bfa', // Quantum purple
+                x: Math.floor(COLS / 2) - 1,
+                y: 0,
+                type: 'superposition',
+                isCollapsed: false
+            };
+        }
+
+        function createCollapsedPiece(type) {
+            return {
+                shape: SHAPES[type],
+                color: COLORS[type],
+                x: Math.floor(COLS / 2) - Math.floor(SHAPES[type][0].length / 2),
+                y: 0,
+                type: type,
+                isCollapsed: true
+            };
+        }
+
+        function collapsePiece(piece) {
+            if (piece.isCollapsed) return piece;
+
+            // Collapse based on probability distribution
+            const rand = Math.random();
+            let cumulative = 0;
+            let collapsedType = 'I';
+
+            for (let [type, prob] of Object.entries(probabilities)) {
+                cumulative += prob;
+                if (rand <= cumulative) {
+                    collapsedType = type;
+                    break;
+                }
+            }
+
+            lastCollapsedType = collapsedType;
+
+            const collapsed = {
+                shape: SHAPES[collapsedType],
+                color: COLORS[collapsedType],
+                x: piece.x,
+                y: piece.y,
+                type: collapsedType,
+                isCollapsed: true
+            };
+
+            showNotification('⚛️ Collapsed to: ' + collapsedType + '-piece!', 'collapse');
+            return collapsed;
+        }
+
+        function rotateSuperposition() {
+            if (!currentPiece || currentPiece.isCollapsed) return;
+
+            rotationCount++;
+
+            // More rotations = higher chance of I-piece (desirable)
+            const boost = Math.min(rotationCount * 0.05, 0.3);
+            probabilities.I = (1/7) + boost;
+
+            // Redistribute remaining probability
+            const remaining = 1 - probabilities.I;
+            const perOther = remaining / 6;
+
+            Object.keys(probabilities).forEach(type => {
+                if (type !== 'I') {
+                    probabilities[type] = perOther;
+                }
+            });
+
+            updateProbabilityDisplay();
+        }
+
+        function updateProbabilityDisplay() {
+            const container = document.getElementById('probabilities');
+            container.innerHTML = '';
+
+            Object.entries(probabilities).forEach(([type, prob]) => {
+                const item = document.createElement('div');
+                item.className = 'prob-item';
+
+                const label = document.createElement('div');
+                label.className = 'prob-label';
+                label.textContent = type + ':';
+
+                const bar = document.createElement('div');
+                bar.className = 'prob-bar';
+
+                const fill = document.createElement('div');
+                fill.className = 'prob-fill';
+                fill.style.width = (prob * 100) + '%';
+
+                bar.appendChild(fill);
+
+                const value = document.createElement('div');
+                value.className = 'prob-value';
+                value.textContent = Math.round(prob * 100) + '%';
+
+                item.appendChild(label);
+                item.appendChild(bar);
+                item.appendChild(value);
+                container.appendChild(item);
+            });
+        }
+
+        function updateEntanglementDisplay() {
+            const box = document.getElementById('entanglementBox');
+            box.style.display = isEntangled ? 'block' : 'none';
+        }
+
+        function drawBlock(x, y, color, isSuperposition = false) {
+            if (isSuperposition) {
+                // Draw blurry superposition
+                ctx.save();
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = color;
+                ctx.globalAlpha = 0.3;
+
+                // Draw multiple overlapping shapes to simulate superposition
+                const types = Object.keys(SHAPES);
+                types.forEach((type, index) => {
+                    ctx.fillStyle = COLORS[type];
+                    ctx.globalAlpha = 0.15;
+                    ctx.fillRect(
+                        x * BLOCK_SIZE + (index * 2),
+                        y * BLOCK_SIZE + (index * 2),
+                        BLOCK_SIZE - 4,
+                        BLOCK_SIZE - 4
+                    );
+                });
+
+                ctx.restore();
+            } else {
+                ctx.fillStyle = color;
+                ctx.fillRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+            }
+        }
+
+        function drawBoard() {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            for (let row = 0; row < ROWS; row++) {
+                for (let col = 0; col < COLS; col++) {
+                    if (board[row][col]) {
+                        drawBlock(col, row, board[row][col]);
+                    }
+                }
+            }
+        }
+
+        function drawPiece(piece) {
+            if (!piece.isCollapsed) {
+                // Draw superposition as blurry multi-shape
+                for (let dy = 0; dy < 3; dy++) {
+                    for (let dx = 0; dx < 4; dx++) {
+                        drawBlock(piece.x + dx, piece.y + dy, piece.color, true);
+                    }
+                }
+            } else {
+                piece.shape.forEach((row, y) => {
+                    row.forEach((value, x) => {
+                        if (value) {
+                            drawBlock(piece.x + x, piece.y + y, piece.color);
+                        }
+                    });
+                });
+            }
+        }
+
+        function checkCollision(piece, offsetX = 0, offsetY = 0) {
+            if (!piece.isCollapsed) {
+                // Superposition doesn't collide
+                return false;
+            }
+
+            for (let y = 0; y < piece.shape.length; y++) {
+                for (let x = 0; x < piece.shape[y].length; x++) {
+                    if (piece.shape[y][x]) {
+                        const newX = piece.x + x + offsetX;
+                        const newY = piece.y + y + offsetY;
+
+                        if (newX < 0 || newX >= COLS || newY >= ROWS) {
+                            return true;
+                        }
+
+                        if (newY >= 0 && board[newY][newX]) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        function mergePiece() {
+            currentPiece.shape.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value) {
+                        const boardY = currentPiece.y + y;
+                        const boardX = currentPiece.x + x;
+                        if (boardY >= 0) {
+                            board[boardY][boardX] = currentPiece.color;
+                        }
+                    }
+                });
+            });
+        }
+
+        function clearLines() {
+            let linesCleared = 0;
+
+            for (let row = ROWS - 1; row >= 0; row--) {
+                if (board[row].every(cell => cell !== null)) {
+                    board.splice(row, 1);
+                    board.unshift(Array(COLS).fill(null));
+                    linesCleared++;
+                    row++;
+                }
+            }
+
+            if (linesCleared > 0) {
+                lines += linesCleared;
+                const baseScore = [0, 40, 100, 300, 1200][linesCleared];
+                score += Math.floor(baseScore * scoreMultiplier);
+
+                updateUI();
+            }
+        }
+
+        function rotate(piece) {
+            if (!piece.isCollapsed) {
+                rotateSuperposition();
+                return piece;
+            }
+
+            const newShape = piece.shape[0].map((_, i) =>
+                piece.shape.map(row => row[i]).reverse()
+            );
+
+            const rotated = { ...piece, shape: newShape };
+
+            if (!checkCollision(rotated)) {
+                return rotated;
+            }
+
+            for (let offset of [1, -1, 2, -2]) {
+                rotated.x = piece.x + offset;
+                if (!checkCollision(rotated)) {
+                    return rotated;
+                }
+            }
+
+            return piece;
+        }
+
+        function move(direction) {
+            if (!currentPiece || isPaused) return;
+
+            // Collapse on first move or drop
+            if (!currentPiece.isCollapsed && direction === 'down') {
+                currentPiece = collapsePiece(currentPiece);
+                return;
+            }
+
+            if (!currentPiece.isCollapsed) return;
+
+            if (direction === 'left' && !checkCollision(currentPiece, -1, 0)) {
+                currentPiece.x--;
+            } else if (direction === 'right' && !checkCollision(currentPiece, 1, 0)) {
+                currentPiece.x++;
+            } else if (direction === 'down') {
+                if (!checkCollision(currentPiece, 0, 1)) {
+                    currentPiece.y++;
+                    score += 1;
+                    updateUI();
+                } else {
+                    placePiece();
+                }
+            }
+        }
+
+        function hardDrop() {
+            if (!currentPiece || isPaused) return;
+
+            // Collapse first if in superposition
+            if (!currentPiece.isCollapsed) {
+                currentPiece = collapsePiece(currentPiece);
+            }
+
+            while (!checkCollision(currentPiece, 0, 1)) {
+                currentPiece.y++;
+                score += 2;
+            }
+            updateUI();
+            placePiece();
+        }
+
+        function placePiece() {
+            mergePiece();
+            clearLines();
+            spawnPiece();
+        }
+
+        function spawnPiece() {
+            currentPiece = createSuperpositionPiece();
+            updateProbabilityDisplay();
+
+            if (currentPiece.isCollapsed && checkCollision(currentPiece)) {
+                gameOver();
+            }
+        }
+
+        function updateStreakDisplay() {
+            document.getElementById('predictionStreak').textContent = predictionStreak;
+            document.getElementById('bestStreak').textContent = bestStreak;
+            document.getElementById('multiplier').textContent = scoreMultiplier.toFixed(1) + 'x';
+        }
+
+        function showNotification(message, type = '') {
+            const notif = document.getElementById('notification');
+            notif.textContent = message;
+            notif.className = 'notification show ' + type;
+            setTimeout(() => {
+                notif.classList.remove('show');
+            }, 2500);
+        }
+
+        function updateUI() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('lines').textContent = lines;
+            updateStreakDisplay();
+        }
+
+        function getQuantumRank() {
+            if (bestStreak === 0) return 'Observer';
+            if (bestStreak < 3) return 'Quantum Apprentice';
+            if (bestStreak < 5) return 'Probability Master';
+            if (bestStreak < 8) return 'Superposition Expert';
+            return 'Quantum Deity';
+        }
+
+        function gameOver() {
+            gameRunning = false;
+            cancelAnimationFrame(gameLoop);
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('finalLines').textContent = lines;
+            document.getElementById('finalBestStreak').textContent = bestStreak;
+            document.getElementById('quantumRank').textContent = getQuantumRank();
+            document.getElementById('gameOver').classList.add('show');
+        }
+
+        function update(time = 0) {
+            if (!gameRunning || isPaused) return;
+
+            const deltaTime = time - lastTime;
+            lastTime = time;
+            dropCounter += deltaTime;
+
+            if (dropCounter > dropInterval) {
+                move('down');
+                dropCounter = 0;
+            }
+
+            drawBoard();
+            if (currentPiece) {
+                drawPiece(currentPiece);
+            }
+
+            gameLoop = requestAnimationFrame(update);
+        }
+
+        function startGame() {
+            createBoard();
+            score = 0;
+            lines = 0;
+            dropCounter = 0;
+            isPaused = false;
+            gameRunning = true;
+            pieceCount = 0;
+            isEntangled = false;
+            entangledType = null;
+            predictionStreak = 0;
+            bestStreak = 0;
+            scoreMultiplier = 1.0;
+            lastCollapsedType = null;
+
+            updateUI();
+            updateEntanglementDisplay();
+            spawnPiece();
+
+            document.getElementById('gameOver').classList.remove('show');
+            document.getElementById('startBtn').textContent = 'Restart Quantum Game';
+
+            lastTime = 0;
+            update();
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (!gameRunning) return;
+
+            switch(e.key) {
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    move('left');
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    move('right');
+                    break;
+                case 'ArrowDown':
+                    e.preventDefault();
+                    move('down');
+                    break;
+                case 'ArrowUp':
+                    e.preventDefault();
+                    if (currentPiece && !isPaused) {
+                        currentPiece = rotate(currentPiece);
+                    }
+                    break;
+                case ' ':
+                    e.preventDefault();
+                    hardDrop();
+                    break;
+                case 'p':
+                case 'P':
+                    e.preventDefault();
+                    isPaused = !isPaused;
+                    if (!isPaused) {
+                        lastTime = performance.now();
+                        update(lastTime);
+                    }
+                    break;
+            }
+        });
+
+        document.getElementById('startBtn').addEventListener('click', startGame);
+        document.getElementById('restartBtn').addEventListener('click', startGame);
+
+        drawBoard();
+    </script>
+</body>
+</html>

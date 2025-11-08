@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D3.js Tetris - Data-Driven Blocks</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 800px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 20px;
+            font-style: italic;
+        }
+
+        .game-area {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            align-items: flex-start;
+            flex-wrap: wrap;
+        }
+
+        .board-container {
+            position: relative;
+        }
+
+        #game-board {
+            border: 3px solid #667eea;
+            border-radius: 10px;
+            background: #1a1a2e;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .cell {
+            stroke: rgba(255, 255, 255, 0.1);
+            stroke-width: 1;
+        }
+
+        .cell.filled {
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+        }
+
+        .info-panel {
+            min-width: 200px;
+        }
+
+        .info-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .info-card h3 {
+            margin-bottom: 10px;
+            font-size: 1.2em;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+            padding-bottom: 5px;
+        }
+
+        .stat {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            font-size: 1.1em;
+        }
+
+        .stat-value {
+            font-weight: bold;
+            font-size: 1.3em;
+        }
+
+        #next-piece {
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            margin-top: 10px;
+        }
+
+        .controls {
+            text-align: center;
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .controls h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .controls p {
+            margin: 5px 0;
+            color: #666;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 1.1em;
+            cursor: pointer;
+            margin: 10px 5px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .game-over {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .game-over-content {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .game-over h2 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 20px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .cell.filled {
+            animation: fadeIn 0.2s ease-in;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 D3.js Tetris</h1>
+        <p class="subtitle">Data-Driven Block Manipulation with SVG</p>
+
+        <div class="game-area">
+            <div class="board-container">
+                <svg id="game-board"></svg>
+            </div>
+
+            <div class="info-panel">
+                <div class="info-card">
+                    <h3>📊 Statistics</h3>
+                    <div class="stat">
+                        <span>Score:</span>
+                        <span class="stat-value" id="score">0</span>
+                    </div>
+                    <div class="stat">
+                        <span>Level:</span>
+                        <span class="stat-value" id="level">1</span>
+                    </div>
+                    <div class="stat">
+                        <span>Lines:</span>
+                        <span class="stat-value" id="lines">0</span>
+                    </div>
+                </div>
+
+                <div class="info-card">
+                    <h3>Next Piece</h3>
+                    <svg id="next-piece"></svg>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <h3>Controls</h3>
+            <p><strong>←/→</strong> Move | <strong>↑</strong> Rotate | <strong>↓</strong> Soft Drop | <strong>Space</strong> Hard Drop</p>
+            <button id="start-btn">Start Game</button>
+            <button id="pause-btn" style="display:none;">Pause</button>
+        </div>
+    </div>
+
+    <div class="game-over" id="game-over">
+        <div class="game-over-content">
+            <h2>Game Over!</h2>
+            <p style="font-size: 1.5em; margin: 20px 0;">Final Score: <strong id="final-score">0</strong></p>
+            <p style="font-size: 1.2em; margin: 10px 0;">Lines Cleared: <strong id="final-lines">0</strong></p>
+            <button id="restart-btn">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        // Game Configuration
+        const ROWS = 20;
+        const COLS = 10;
+        const CELL_SIZE = 30;
+        const BOARD_WIDTH = COLS * CELL_SIZE;
+        const BOARD_HEIGHT = ROWS * CELL_SIZE;
+
+        // Tetromino Shapes
+        const SHAPES = {
+            I: { blocks: [[0,0], [1,0], [2,0], [3,0]], color: '#00f0f0' },
+            O: { blocks: [[0,0], [1,0], [0,1], [1,1]], color: '#f0f000' },
+            T: { blocks: [[1,0], [0,1], [1,1], [2,1]], color: '#a000f0' },
+            S: { blocks: [[1,0], [2,0], [0,1], [1,1]], color: '#00f000' },
+            Z: { blocks: [[0,0], [1,0], [1,1], [2,1]], color: '#f00000' },
+            J: { blocks: [[0,0], [0,1], [1,1], [2,1]], color: '#0000f0' },
+            L: { blocks: [[2,0], [0,1], [1,1], [2,1]], color: '#f0a000' }
+        };
+
+        // Game State
+        let gameState = {
+            board: Array(ROWS).fill().map(() => Array(COLS).fill(null)),
+            score: 0,
+            level: 1,
+            lines: 0,
+            currentPiece: null,
+            nextPiece: null,
+            gameOver: false,
+            paused: false,
+            gameLoop: null
+        };
+
+        // Initialize SVG boards
+        const mainBoard = d3.select('#game-board')
+            .attr('width', BOARD_WIDTH)
+            .attr('height', BOARD_HEIGHT);
+
+        const nextBoard = d3.select('#next-piece')
+            .attr('width', 120)
+            .attr('height', 120);
+
+        // Create grid background
+        function initializeGrid() {
+            const gridData = [];
+            for (let row = 0; row < ROWS; row++) {
+                for (let col = 0; col < COLS; col++) {
+                    gridData.push({ row, col });
+                }
+            }
+
+            mainBoard.selectAll('.grid-cell')
+                .data(gridData)
+                .enter()
+                .append('rect')
+                .attr('class', 'grid-cell')
+                .attr('x', d => d.col * CELL_SIZE)
+                .attr('y', d => d.row * CELL_SIZE)
+                .attr('width', CELL_SIZE)
+                .attr('height', CELL_SIZE)
+                .attr('fill', 'transparent')
+                .attr('stroke', 'rgba(255, 255, 255, 0.1)')
+                .attr('stroke-width', 1);
+        }
+
+        // Create random piece
+        function createPiece() {
+            const shapes = Object.keys(SHAPES);
+            const shapeKey = shapes[Math.floor(Math.random() * shapes.length)];
+            const shape = SHAPES[shapeKey];
+
+            return {
+                blocks: shape.blocks.map(b => [...b]),
+                color: shape.color,
+                x: Math.floor(COLS / 2) - 2,
+                y: 0
+            };
+        }
+
+        // Rotate piece
+        function rotatePiece(piece) {
+            const rotated = {
+                ...piece,
+                blocks: piece.blocks.map(([x, y]) => [-y, x])
+            };
+
+            // Normalize position
+            const minX = Math.min(...rotated.blocks.map(b => b[0]));
+            const minY = Math.min(...rotated.blocks.map(b => b[1]));
+            rotated.blocks = rotated.blocks.map(([x, y]) => [x - minX, y - minY]);
+
+            return rotated;
+        }
+
+        // Check collision
+        function checkCollision(piece, offsetX = 0, offsetY = 0) {
+            return piece.blocks.some(([bx, by]) => {
+                const x = piece.x + bx + offsetX;
+                const y = piece.y + by + offsetY;
+
+                if (x < 0 || x >= COLS || y >= ROWS) return true;
+                if (y < 0) return false;
+                return gameState.board[y][x] !== null;
+            });
+        }
+
+        // Merge piece to board
+        function mergePiece() {
+            gameState.currentPiece.blocks.forEach(([bx, by]) => {
+                const x = gameState.currentPiece.x + bx;
+                const y = gameState.currentPiece.y + by;
+                if (y >= 0) {
+                    gameState.board[y][x] = gameState.currentPiece.color;
+                }
+            });
+        }
+
+        // Clear completed lines
+        function clearLines() {
+            let linesCleared = 0;
+
+            for (let row = ROWS - 1; row >= 0; row--) {
+                if (gameState.board[row].every(cell => cell !== null)) {
+                    gameState.board.splice(row, 1);
+                    gameState.board.unshift(Array(COLS).fill(null));
+                    linesCleared++;
+                    row++; // Check this row again
+                }
+            }
+
+            if (linesCleared > 0) {
+                gameState.lines += linesCleared;
+                gameState.score += [0, 100, 300, 500, 800][linesCleared] * gameState.level;
+                gameState.level = Math.floor(gameState.lines / 10) + 1;
+                updateStats();
+            }
+        }
+
+        // Render board using D3
+        function render() {
+            const cellData = [];
+
+            // Add board cells
+            for (let row = 0; row < ROWS; row++) {
+                for (let col = 0; col < COLS; col++) {
+                    if (gameState.board[row][col]) {
+                        cellData.push({
+                            x: col,
+                            y: row,
+                            color: gameState.board[row][col],
+                            type: 'board'
+                        });
+                    }
+                }
+            }
+
+            // Add current piece
+            if (gameState.currentPiece) {
+                gameState.currentPiece.blocks.forEach(([bx, by]) => {
+                    const x = gameState.currentPiece.x + bx;
+                    const y = gameState.currentPiece.y + by;
+                    if (y >= 0) {
+                        cellData.push({
+                            x,
+                            y,
+                            color: gameState.currentPiece.color,
+                            type: 'current'
+                        });
+                    }
+                });
+            }
+
+            // D3 data binding
+            const cells = mainBoard.selectAll('.cell')
+                .data(cellData, d => `${d.x}-${d.y}-${d.type}`);
+
+            // Exit
+            cells.exit()
+                .transition()
+                .duration(200)
+                .attr('opacity', 0)
+                .remove();
+
+            // Enter
+            cells.enter()
+                .append('rect')
+                .attr('class', 'cell filled')
+                .attr('x', d => d.x * CELL_SIZE + 1)
+                .attr('y', d => d.y * CELL_SIZE + 1)
+                .attr('width', CELL_SIZE - 2)
+                .attr('height', CELL_SIZE - 2)
+                .attr('rx', 3)
+                .attr('fill', d => d.color)
+                .attr('opacity', 0)
+                .transition()
+                .duration(200)
+                .attr('opacity', 1);
+
+            // Update
+            cells.attr('fill', d => d.color);
+        }
+
+        // Render next piece
+        function renderNextPiece() {
+            nextBoard.selectAll('*').remove();
+
+            if (!gameState.nextPiece) return;
+
+            const offsetX = 30;
+            const offsetY = 30;
+
+            gameState.nextPiece.blocks.forEach(([bx, by]) => {
+                nextBoard.append('rect')
+                    .attr('x', offsetX + bx * 20 + 1)
+                    .attr('y', offsetY + by * 20 + 1)
+                    .attr('width', 18)
+                    .attr('height', 18)
+                    .attr('rx', 3)
+                    .attr('fill', gameState.nextPiece.color);
+            });
+        }
+
+        // Update statistics
+        function updateStats() {
+            d3.select('#score').text(gameState.score);
+            d3.select('#level').text(gameState.level);
+            d3.select('#lines').text(gameState.lines);
+        }
+
+        // Move piece
+        function movePiece(dx, dy) {
+            if (!checkCollision(gameState.currentPiece, dx, dy)) {
+                gameState.currentPiece.x += dx;
+                gameState.currentPiece.y += dy;
+                render();
+                return true;
+            }
+            return false;
+        }
+
+        // Rotate current piece
+        function rotate() {
+            const rotated = rotatePiece(gameState.currentPiece);
+            rotated.x = gameState.currentPiece.x;
+            rotated.y = gameState.currentPiece.y;
+
+            if (!checkCollision(rotated)) {
+                gameState.currentPiece = rotated;
+                render();
+            }
+        }
+
+        // Hard drop
+        function hardDrop() {
+            while (movePiece(0, 1)) {}
+            lockPiece();
+        }
+
+        // Lock piece and spawn new one
+        function lockPiece() {
+            mergePiece();
+            clearLines();
+            spawnPiece();
+            render();
+        }
+
+        // Spawn new piece
+        function spawnPiece() {
+            gameState.currentPiece = gameState.nextPiece || createPiece();
+            gameState.nextPiece = createPiece();
+            renderNextPiece();
+
+            if (checkCollision(gameState.currentPiece)) {
+                endGame();
+            }
+        }
+
+        // Game loop
+        function gameLoop() {
+            if (gameState.paused || gameState.gameOver) return;
+
+            if (!movePiece(0, 1)) {
+                lockPiece();
+            }
+        }
+
+        // Start game
+        function startGame() {
+            gameState = {
+                board: Array(ROWS).fill().map(() => Array(COLS).fill(null)),
+                score: 0,
+                level: 1,
+                lines: 0,
+                currentPiece: null,
+                nextPiece: null,
+                gameOver: false,
+                paused: false,
+                gameLoop: null
+            };
+
+            updateStats();
+            spawnPiece();
+            render();
+
+            if (gameState.gameLoop) clearInterval(gameState.gameLoop);
+            gameState.gameLoop = setInterval(gameLoop, 1000);
+
+            d3.select('#game-over').style('display', 'none');
+            d3.select('#start-btn').style('display', 'none');
+            d3.select('#pause-btn').style('display', 'inline-block');
+        }
+
+        // End game
+        function endGame() {
+            gameState.gameOver = true;
+            clearInterval(gameState.gameLoop);
+
+            d3.select('#final-score').text(gameState.score);
+            d3.select('#final-lines').text(gameState.lines);
+            d3.select('#game-over').style('display', 'flex');
+            d3.select('#pause-btn').style('display', 'none');
+            d3.select('#start-btn').style('display', 'inline-block');
+        }
+
+        // Toggle pause
+        function togglePause() {
+            gameState.paused = !gameState.paused;
+            d3.select('#pause-btn').text(gameState.paused ? 'Resume' : 'Pause');
+        }
+
+        // Event listeners
+        document.addEventListener('keydown', (e) => {
+            if (gameState.gameOver || gameState.paused) return;
+
+            switch(e.key) {
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    movePiece(-1, 0);
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    movePiece(1, 0);
+                    break;
+                case 'ArrowDown':
+                    e.preventDefault();
+                    movePiece(0, 1);
+                    break;
+                case 'ArrowUp':
+                    e.preventDefault();
+                    rotate();
+                    break;
+                case ' ':
+                    e.preventDefault();
+                    hardDrop();
+                    break;
+            }
+        });
+
+        d3.select('#start-btn').on('click', startGame);
+        d3.select('#pause-btn').on('click', togglePause);
+        d3.select('#restart-btn').on('click', startGame);
+
+        // Initialize
+        initializeGrid();
+    </script>
+</body>
+</html>

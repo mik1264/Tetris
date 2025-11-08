@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Symphtetris - Musical Tetris</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Courier New', monospace;
+        }
+
+        .game-container {
+            display: flex;
+            gap: 30px;
+            align-items: flex-start;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        canvas {
+            border: 3px solid #333;
+            background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+            image-rendering: pixelated;
+        }
+
+        .info-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            color: #333;
+        }
+
+        .music-info {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 15px;
+            border-radius: 10px;
+            color: white;
+        }
+
+        .scale-selector {
+            margin: 10px 0;
+        }
+
+        .scale-selector select {
+            width: 100%;
+            padding: 8px;
+            border-radius: 5px;
+            border: none;
+            background: rgba(255, 255, 255, 0.9);
+            font-family: 'Courier New', monospace;
+        }
+
+        .instrument-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .instrument-btn {
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .instrument-btn.active {
+            background: rgba(255, 255, 255, 0.5);
+            transform: scale(1.05);
+        }
+
+        .instrument-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .stats {
+            background: #f0f4f8;
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        .stat-item {
+            margin: 8px 0;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .controls {
+            background: #e1e8ed;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 14px;
+        }
+
+        .title {
+            font-size: 28px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            text-align: center;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: #7f8c8d;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .tempo-control {
+            margin: 15px 0;
+        }
+
+        .tempo-control input {
+            width: 100%;
+        }
+
+        .tempo-display {
+            text-align: center;
+            margin-top: 5px;
+            font-weight: bold;
+        }
+
+        .visualizer {
+            height: 60px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            padding: 0 10px;
+        }
+
+        .visualizer-bar {
+            width: 4px;
+            background: white;
+            transition: height 0.1s ease;
+            border-radius: 2px;
+        }
+
+        .note-particles {
+            position: absolute;
+            pointer-events: none;
+        }
+
+        .note-particle {
+            position: absolute;
+            font-size: 20px;
+            animation: float-up 2s ease-out forwards;
+        }
+
+        @keyframes float-up {
+            0% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-50px) scale(1.5);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="info-panel">
+            <div>
+                <div class="title">SYMPHTETRIS</div>
+                <div class="subtitle">Compose Music Through Tetris</div>
+            </div>
+
+            <div class="music-info">
+                <h3>🎵 Musical Controls</h3>
+
+                <div class="scale-selector">
+                    <label>Scale:</label>
+                    <select id="scaleSelect">
+                        <option value="major">C Major (Happy)</option>
+                        <option value="minor">A Minor (Melancholic)</option>
+                        <option value="pentatonic">Pentatonic (Eastern)</option>
+                        <option value="blues">Blues (Soulful)</option>
+                        <option value="chromatic">Chromatic (Experimental)</option>
+                        <option value="dorian">Dorian (Jazzy)</option>
+                        <option value="lydian">Lydian (Dreamy)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label>Instruments:</label>
+                    <div class="instrument-grid">
+                        <button class="instrument-btn active" data-instrument="sine">Sine</button>
+                        <button class="instrument-btn" data-instrument="square">Square</button>
+                        <button class="instrument-btn" data-instrument="sawtooth">Sawtooth</button>
+                        <button class="instrument-btn" data-instrument="triangle">Triangle</button>
+                    </div>
+                </div>
+
+                <div class="tempo-control">
+                    <label>Tempo (BPM):</label>
+                    <input type="range" id="tempoSlider" min="60" max="180" value="120">
+                    <div class="tempo-display" id="tempoDisplay">120 BPM</div>
+                </div>
+
+                <div style="margin-top: 15px;">
+                    <label>Audio Visualizer:</label>
+                    <div class="visualizer" id="visualizer"></div>
+                </div>
+            </div>
+
+            <div class="stats">
+                <h3>📊 Composition Stats</h3>
+                <div class="stat-item">
+                    <span>Notes Played:</span>
+                    <span id="notesPlayed">0</span>
+                </div>
+                <div class="stat-item">
+                    <span>Chords Created:</span>
+                    <span id="chordsCreated">0</span>
+                </div>
+                <div class="stat-item">
+                    <span>Melody Length:</span>
+                    <span id="melodyLength">0</span>
+                </div>
+                <div class="stat-item">
+                    <span>Score:</span>
+                    <span id="score">0</span>
+                </div>
+            </div>
+
+            <div class="controls">
+                <h3>🎮 Controls</h3>
+                <div>← → : Move</div>
+                <div>↓ : Soft Drop</div>
+                <div>↑ : Rotate</div>
+                <div>Space : Hard Drop</div>
+                <div>P : Pause</div>
+                <div>M : Mute/Unmute</div>
+                <div><br><strong>Music Tips:</strong></div>
+                <div>• Height = Pitch</div>
+                <div>• Column = Note in scale</div>
+                <div>• Complete lines = Chords</div>
+                <div>• Patterns create melodies!</div>
+            </div>
+        </div>
+
+        <canvas id="gameCanvas"></canvas>
+    </div>
+
+    <div class="note-particles" id="noteParticles"></div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Game constants
+        const BLOCK_SIZE = 30;
+        const COLS = 10;
+        const ROWS = 20;
+        canvas.width = COLS * BLOCK_SIZE;
+        canvas.height = ROWS * BLOCK_SIZE;
+
+        // Audio setup
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        let isMuted = false;
+        let currentInstrument = 'sine';
+        let tempo = 120;
+
+        // Musical scales (frequencies in Hz)
+        const SCALES = {
+            major: [261.63, 293.66, 329.63, 349.23, 392.00, 440.00, 493.88, 523.25, 587.33, 659.25], // C Major
+            minor: [220.00, 246.94, 261.63, 293.66, 329.63, 349.23, 392.00, 440.00, 493.88, 523.25], // A Minor
+            pentatonic: [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25, 783.99, 880.00], // C Pentatonic
+            blues: [261.63, 311.13, 349.23, 369.99, 392.00, 466.16, 523.25, 622.25, 698.46, 739.99], // C Blues
+            chromatic: [261.63, 277.18, 293.66, 311.13, 329.63, 349.23, 369.99, 392.00, 415.30, 440.00], // Chromatic
+            dorian: [293.66, 329.63, 349.23, 392.00, 440.00, 493.88, 523.25, 587.33, 659.25, 698.46], // D Dorian
+            lydian: [349.23, 392.00, 440.00, 493.88, 523.25, 587.33, 659.25, 698.46, 783.99, 880.00] // F Lydian
+        };
+
+        let currentScale = 'major';
+
+        // Tetromino shapes with colors
+        const SHAPES = [
+            { shape: [[1,1,1,1]], color: '#FF6B6B' }, // I - Red
+            { shape: [[1,1,1],[0,1,0]], color: '#4ECDC4' }, // T - Teal
+            { shape: [[1,1,0],[0,1,1]], color: '#45B7D1' }, // Z - Blue
+            { shape: [[0,1,1],[1,1,0]], color: '#96CEB4' }, // S - Green
+            { shape: [[1,1],[1,1]], color: '#FFEAA7' }, // O - Yellow
+            { shape: [[1,1,1],[1,0,0]], color: '#DDA0DD' }, // L - Plum
+            { shape: [[1,1,1],[0,0,1]], color: '#FFA07A' } // J - Light Salmon
+        ];
+
+        // Game state
+        let board = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+        let currentPiece = null;
+        let gameRunning = true;
+        let score = 0;
+        let dropCounter = 0;
+        let lastTime = 0;
+        let isPaused = false;
+
+        // Music tracking
+        let notesPlayed = 0;
+        let chordsCreated = 0;
+        let melodyLength = 0;
+        let melodySequence = [];
+        let visualizerBars = [];
+
+        // Initialize visualizer
+        function initVisualizer() {
+            const visualizer = document.getElementById('visualizer');
+            for (let i = 0; i < 20; i++) {
+                const bar = document.createElement('div');
+                bar.className = 'visualizer-bar';
+                bar.style.height = '5px';
+                visualizer.appendChild(bar);
+                visualizerBars.push(bar);
+            }
+        }
+
+        class Piece {
+            constructor() {
+                const shapeData = SHAPES[Math.floor(Math.random() * SHAPES.length)];
+                this.shape = shapeData.shape;
+                this.color = shapeData.color;
+                this.x = Math.floor(COLS / 2) - Math.floor(this.shape[0].length / 2);
+                this.y = 0;
+            }
+
+            rotate() {
+                const rotated = this.shape[0].map((_, i) =>
+                    this.shape.map(row => row[i]).reverse()
+                );
+
+                const prevShape = this.shape;
+                this.shape = rotated;
+
+                if (this.collides()) {
+                    this.shape = prevShape;
+                } else {
+                    // Play rotation sound
+                    playNote(440, 0.05, 'triangle'); // Quick rotation tick
+                }
+            }
+
+            collides() {
+                for (let y = 0; y < this.shape.length; y++) {
+                    for (let x = 0; x < this.shape[y].length; x++) {
+                        if (this.shape[y][x]) {
+                            const boardX = this.x + x;
+                            const boardY = this.y + y;
+
+                            if (boardX < 0 || boardX >= COLS || boardY >= ROWS) {
+                                return true;
+                            }
+
+                            if (boardY >= 0 && board[boardY][boardX]) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+                return false;
+            }
+
+            lock() {
+                let notes = [];
+
+                for (let y = 0; y < this.shape.length; y++) {
+                    for (let x = 0; x < this.shape[y].length; x++) {
+                        if (this.shape[y][x]) {
+                            const boardY = this.y + y;
+                            const boardX = this.x + x;
+                            if (boardY >= 0) {
+                                board[boardY][boardX] = this.color;
+
+                                // Play note based on position
+                                const frequency = getFrequencyForPosition(boardX, boardY);
+                                notes.push({ freq: frequency, x: boardX, y: boardY });
+
+                                // Create note particle
+                                createNoteParticle(boardX * BLOCK_SIZE + canvas.offsetLeft,
+                                                 boardY * BLOCK_SIZE + canvas.offsetTop);
+                            }
+                        }
+                    }
+                }
+
+                // Play the notes as a chord or arpeggio
+                playMusicalSequence(notes);
+            }
+        }
+
+        function getFrequencyForPosition(x, y) {
+            const scale = SCALES[currentScale];
+            const noteIndex = x % scale.length;
+            const octaveShift = Math.floor((ROWS - y) / 7); // Higher position = higher octave
+            return scale[noteIndex] * Math.pow(2, octaveShift);
+        }
+
+        function playNote(frequency, duration = 0.2, type = null) {
+            if (isMuted || !audioContext) return;
+
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.type = type || currentInstrument;
+            oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+
+            // ADSR envelope
+            gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+            gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.01); // Attack
+            gainNode.gain.exponentialRampToValueAtTime(0.2, audioContext.currentTime + 0.1); // Decay/Sustain
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration); // Release
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + duration);
+
+            notesPlayed++;
+            updateVisualizer(frequency);
+        }
+
+        function playMusicalSequence(notes) {
+            if (notes.length === 0) return;
+
+            // Sort notes by x position for left-to-right arpeggio
+            notes.sort((a, b) => a.x - b.x);
+
+            if (notes.length > 2) {
+                // Play as arpeggio
+                notes.forEach((note, index) => {
+                    setTimeout(() => {
+                        playNote(note.freq, 0.3);
+                    }, index * 50); // 50ms between notes
+                });
+
+                if (notes.length >= 4) {
+                    chordsCreated++;
+                }
+            } else {
+                // Play simultaneously
+                notes.forEach(note => playNote(note.freq, 0.4));
+            }
+
+            // Add to melody sequence
+            melodySequence.push(...notes.map(n => n.freq));
+            if (melodySequence.length > 16) {
+                melodySequence.shift();
+            }
+            melodyLength = melodySequence.length;
+        }
+
+        function updateVisualizer(frequency) {
+            // Animate visualizer bars based on frequency
+            const barIndex = Math.floor((frequency / 1000) * visualizerBars.length) % visualizerBars.length;
+            visualizerBars.forEach((bar, i) => {
+                const distance = Math.abs(i - barIndex);
+                const height = Math.max(5, 40 - distance * 5);
+                bar.style.height = height + 'px';
+
+                setTimeout(() => {
+                    bar.style.height = '5px';
+                }, 200);
+            });
+        }
+
+        function createNoteParticle(x, y) {
+            const particle = document.createElement('div');
+            particle.className = 'note-particle';
+            particle.innerHTML = '♪';
+            particle.style.left = x + 'px';
+            particle.style.top = y + 'px';
+            particle.style.color = SHAPES[Math.floor(Math.random() * SHAPES.length)].color;
+
+            document.getElementById('noteParticles').appendChild(particle);
+
+            setTimeout(() => {
+                particle.remove();
+            }, 2000);
+        }
+
+        function clearLines() {
+            let linesCleared = 0;
+            let clearedRows = [];
+
+            for (let y = ROWS - 1; y >= 0; y--) {
+                if (board[y].every(cell => cell !== null)) {
+                    clearedRows.push(y);
+                    board.splice(y, 1);
+                    board.unshift(Array(COLS).fill(null));
+                    linesCleared++;
+                    y++;
+                }
+            }
+
+            if (linesCleared > 0) {
+                // Play celebratory chord for cleared lines
+                const chordNotes = [261.63, 329.63, 392.00, 523.25]; // C Major chord
+                chordNotes.forEach((freq, i) => {
+                    setTimeout(() => {
+                        playNote(freq * (linesCleared > 2 ? 1.5 : 1), 0.5, 'triangle');
+                    }, i * 30);
+                });
+
+                score += linesCleared * 100 * (linesCleared > 1 ? linesCleared : 1);
+                chordsCreated += linesCleared;
+            }
+        }
+
+        function updateDisplay() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('notesPlayed').textContent = notesPlayed;
+            document.getElementById('chordsCreated').textContent = chordsCreated;
+            document.getElementById('melodyLength').textContent = melodyLength;
+        }
+
+        function draw() {
+            // Clear canvas with gradient
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#1a1a2e');
+            gradient.addColorStop(1, '#16213e');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw grid with musical staff lines
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+            ctx.lineWidth = 1;
+
+            // Vertical lines (bar lines)
+            for (let x = 0; x <= COLS; x++) {
+                ctx.beginPath();
+                ctx.moveTo(x * BLOCK_SIZE, 0);
+                ctx.lineTo(x * BLOCK_SIZE, canvas.height);
+                ctx.stroke();
+            }
+
+            // Horizontal lines with emphasis on musical intervals
+            for (let y = 0; y <= ROWS; y++) {
+                // Make every 4th line brighter (musical measure)
+                ctx.strokeStyle = y % 4 === 0 ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.05)';
+                ctx.beginPath();
+                ctx.moveTo(0, y * BLOCK_SIZE);
+                ctx.lineTo(canvas.width, y * BLOCK_SIZE);
+                ctx.stroke();
+            }
+
+            // Draw board
+            for (let y = 0; y < ROWS; y++) {
+                for (let x = 0; x < COLS; x++) {
+                    if (board[y][x]) {
+                        drawBlock(x, y, board[y][x]);
+                    }
+                }
+            }
+
+            // Draw current piece
+            if (currentPiece && !isPaused) {
+                for (let y = 0; y < currentPiece.shape.length; y++) {
+                    for (let x = 0; x < currentPiece.shape[y].length; x++) {
+                        if (currentPiece.shape[y][x]) {
+                            drawBlock(
+                                currentPiece.x + x,
+                                currentPiece.y + y,
+                                currentPiece.color
+                            );
+                        }
+                    }
+                }
+
+                // Draw ghost piece
+                let ghostY = currentPiece.y;
+                while (!wouldCollide(currentPiece, 0, 1)) {
+                    currentPiece.y++;
+                }
+                let finalY = currentPiece.y;
+                currentPiece.y = ghostY;
+
+                ctx.globalAlpha = 0.3;
+                for (let y = 0; y < currentPiece.shape.length; y++) {
+                    for (let x = 0; x < currentPiece.shape[y].length; x++) {
+                        if (currentPiece.shape[y][x]) {
+                            drawBlock(
+                                currentPiece.x + x,
+                                finalY + y,
+                                currentPiece.color
+                            );
+                        }
+                    }
+                }
+                ctx.globalAlpha = 1;
+            }
+
+            // Draw pause overlay
+            if (isPaused) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = 'white';
+                ctx.font = '30px Courier New';
+                ctx.textAlign = 'center';
+                ctx.fillText('PAUSED', canvas.width / 2, canvas.height / 2);
+                ctx.font = '16px Courier New';
+                ctx.fillText('Press P to continue', canvas.width / 2, canvas.height / 2 + 30);
+            }
+
+            // Draw game over
+            if (!gameRunning) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = 'white';
+                ctx.font = '30px Courier New';
+                ctx.textAlign = 'center';
+                ctx.fillText('SYMPHONY COMPLETE', canvas.width / 2, canvas.height / 2);
+                ctx.font = '16px Courier New';
+                ctx.fillText('Press R to compose again', canvas.width / 2, canvas.height / 2 + 30);
+            }
+        }
+
+        function drawBlock(x, y, color) {
+            // Main block with gradient
+            const gradient = ctx.createLinearGradient(
+                x * BLOCK_SIZE, y * BLOCK_SIZE,
+                (x + 1) * BLOCK_SIZE, (y + 1) * BLOCK_SIZE
+            );
+            gradient.addColorStop(0, color);
+            gradient.addColorStop(1, adjustColor(color, -30));
+
+            ctx.fillStyle = gradient;
+            ctx.fillRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+
+            // Inner highlight
+            ctx.fillStyle = adjustColor(color, 30);
+            ctx.fillRect(x * BLOCK_SIZE + 2, y * BLOCK_SIZE + 2, BLOCK_SIZE - 4, 2);
+            ctx.fillRect(x * BLOCK_SIZE + 2, y * BLOCK_SIZE + 2, 2, BLOCK_SIZE - 4);
+
+            // Border
+            ctx.strokeStyle = adjustColor(color, -50);
+            ctx.lineWidth = 1;
+            ctx.strokeRect(x * BLOCK_SIZE + 0.5, y * BLOCK_SIZE + 0.5, BLOCK_SIZE - 1, BLOCK_SIZE - 1);
+
+            // Musical note symbol in center
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.font = '16px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('♪', x * BLOCK_SIZE + BLOCK_SIZE / 2, y * BLOCK_SIZE + BLOCK_SIZE / 2);
+        }
+
+        function adjustColor(color, amount) {
+            const num = parseInt(color.replace('#', ''), 16);
+            const r = Math.max(0, Math.min(255, (num >> 16) + amount));
+            const g = Math.max(0, Math.min(255, ((num >> 8) & 0x00FF) + amount));
+            const b = Math.max(0, Math.min(255, (num & 0x0000FF) + amount));
+            return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
+        }
+
+        function wouldCollide(piece, dx, dy) {
+            for (let y = 0; y < piece.shape.length; y++) {
+                for (let x = 0; x < piece.shape[y].length; x++) {
+                    if (piece.shape[y][x]) {
+                        const newX = piece.x + x + dx;
+                        const newY = piece.y + y + dy;
+
+                        if (newX < 0 || newX >= COLS || newY >= ROWS) {
+                            return true;
+                        }
+
+                        if (newY >= 0 && board[newY][newX]) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        function gameLoop(time = 0) {
+            if (!gameRunning) {
+                requestAnimationFrame(gameLoop);
+                return;
+            }
+
+            const deltaTime = time - lastTime;
+            lastTime = time;
+
+            if (!isPaused) {
+                // Adjust drop speed based on tempo
+                const dropSpeed = 60000 / tempo; // Convert BPM to milliseconds
+                dropCounter += deltaTime;
+
+                if (dropCounter > dropSpeed) {
+                    if (currentPiece) {
+                        if (!wouldCollide(currentPiece, 0, 1)) {
+                            currentPiece.y++;
+                        } else {
+                            currentPiece.lock();
+                            clearLines();
+                            updateDisplay();
+                            currentPiece = new Piece();
+
+                            if (currentPiece.collides()) {
+                                gameRunning = false;
+                                // Play ending melody
+                                const endingNotes = [523.25, 392.00, 329.63, 261.63];
+                                endingNotes.forEach((freq, i) => {
+                                    setTimeout(() => {
+                                        playNote(freq, 0.5, 'sine');
+                                    }, i * 200);
+                                });
+                            }
+                        }
+                    } else {
+                        currentPiece = new Piece();
+                    }
+                    dropCounter = 0;
+                }
+            }
+
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Event listeners
+        document.getElementById('scaleSelect').addEventListener('change', (e) => {
+            currentScale = e.target.value;
+            // Play scale preview
+            const scale = SCALES[currentScale];
+            scale.forEach((freq, i) => {
+                setTimeout(() => {
+                    playNote(freq, 0.1);
+                }, i * 100);
+            });
+        });
+
+        document.getElementById('tempoSlider').addEventListener('input', (e) => {
+            tempo = parseInt(e.target.value);
+            document.getElementById('tempoDisplay').textContent = tempo + ' BPM';
+        });
+
+        document.querySelectorAll('.instrument-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.instrument-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentInstrument = btn.dataset.instrument;
+                // Play test note
+                playNote(440, 0.1);
+            });
+        });
+
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            if (!gameRunning && e.key.toLowerCase() === 'r') {
+                // Reset game
+                board = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+                score = 0;
+                notesPlayed = 0;
+                chordsCreated = 0;
+                melodyLength = 0;
+                melodySequence = [];
+                currentPiece = new Piece();
+                gameRunning = true;
+                updateDisplay();
+                return;
+            }
+
+            if (!gameRunning || !currentPiece) return;
+
+            if (e.key.toLowerCase() === 'p') {
+                isPaused = !isPaused;
+                return;
+            }
+
+            if (e.key.toLowerCase() === 'm') {
+                isMuted = !isMuted;
+                return;
+            }
+
+            if (isPaused) return;
+
+            switch(e.key) {
+                case 'ArrowLeft':
+                    if (!wouldCollide(currentPiece, -1, 0)) {
+                        currentPiece.x--;
+                        playNote(220, 0.05, 'sine'); // Movement sound
+                    }
+                    break;
+                case 'ArrowRight':
+                    if (!wouldCollide(currentPiece, 1, 0)) {
+                        currentPiece.x++;
+                        playNote(220, 0.05, 'sine'); // Movement sound
+                    }
+                    break;
+                case 'ArrowDown':
+                    if (!wouldCollide(currentPiece, 0, 1)) {
+                        currentPiece.y++;
+                        score++;
+                    }
+                    break;
+                case 'ArrowUp':
+                    currentPiece.rotate();
+                    break;
+                case ' ':
+                    // Play descending glissando for hard drop
+                    let dropDistance = 0;
+                    while (!wouldCollide(currentPiece, 0, 1)) {
+                        currentPiece.y++;
+                        dropDistance++;
+                        score += 2;
+                    }
+
+                    if (dropDistance > 0) {
+                        for (let i = 0; i < Math.min(dropDistance, 10); i++) {
+                            setTimeout(() => {
+                                playNote(880 - i * 50, 0.05, 'square');
+                            }, i * 20);
+                        }
+                    }
+
+                    currentPiece.lock();
+                    clearLines();
+                    updateDisplay();
+                    currentPiece = new Piece();
+                    if (currentPiece.collides()) {
+                        gameRunning = false;
+                    }
+                    dropCounter = 0;
+                    break;
+            }
+        });
+
+        // Initialize and start
+        initVisualizer();
+        currentPiece = new Piece();
+        updateDisplay();
+        gameLoop();
+
+        // Start with welcome melody
+        setTimeout(() => {
+            const welcomeNotes = [261.63, 329.63, 392.00, 523.25];
+            welcomeNotes.forEach((freq, i) => {
+                setTimeout(() => {
+                    playNote(freq, 0.2, 'sine');
+                }, i * 150);
+            });
+        }, 500);
+    </script>
+</body>
+</html>

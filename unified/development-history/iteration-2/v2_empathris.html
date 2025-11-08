@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EMPATHRIS - Emotion-Responsive Tetris</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            color: #fff;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .game-container {
+            display: flex;
+            gap: 30px;
+            margin-bottom: 20px;
+            align-items: flex-start;
+        }
+
+        canvas {
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 10px;
+            background: rgba(0,0,0,0.3);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+
+        .emotion-panel {
+            background: rgba(255,255,255,0.2);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            width: 300px;
+        }
+
+        .emotion-display {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .current-emotion {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+
+        .emotion-name {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .emotion-effect {
+            font-size: 0.95em;
+            opacity: 0.9;
+            font-style: italic;
+        }
+
+        .emotion-meter {
+            margin: 20px 0;
+        }
+
+        .meter-label {
+            font-size: 0.9em;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .meter-bar {
+            width: 100%;
+            height: 30px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .meter-fill {
+            height: 100%;
+            transition: width 0.5s, background 0.5s;
+            border-radius: 15px;
+        }
+
+        .calm-controls {
+            background: rgba(255,255,255,0.2);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+        }
+
+        .calm-controls h3 {
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .breathe-btn {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.2em;
+            font-weight: bold;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+            color: white;
+            transition: all 0.3s;
+            margin-bottom: 10px;
+        }
+
+        .breathe-btn:hover:not(:disabled) {
+            transform: scale(1.05);
+            box-shadow: 0 4px 15px rgba(67, 233, 123, 0.5);
+        }
+
+        .breathe-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .combo-display {
+            background: rgba(255,255,255,0.2);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            text-align: center;
+        }
+
+        .combo-progress {
+            font-size: 1.1em;
+            margin-bottom: 5px;
+        }
+
+        .combo-reward {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .stat {
+            background: rgba(255,255,255,0.2);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.8;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: bold;
+        }
+
+        .controls {
+            background: rgba(255,255,255,0.2);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            max-width: 700px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .controls h3 {
+            margin-bottom: 10px;
+        }
+
+        .controls p {
+            margin: 5px 0;
+            font-size: 0.95em;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 10px rgba(255,255,255,0.5); }
+            50% { box-shadow: 0 0 20px rgba(255,255,255,0.8); }
+        }
+
+        .focused-glow {
+            animation: glow 2s infinite;
+        }
+
+        .game-over {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.95);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+            display: none;
+            z-index: 1000;
+        }
+
+        .game-over h2 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            color: #f5576c;
+        }
+
+        .game-over button {
+            padding: 15px 30px;
+            font-size: 1.2em;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: transform 0.3s;
+        }
+
+        .game-over button:hover {
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>💗 EMPATHRIS 💗</h1>
+        <p>Your Emotions Control The Game!</p>
+    </div>
+
+    <div class="game-container">
+        <canvas id="gameCanvas" width="300" height="600"></canvas>
+
+        <div class="emotion-panel">
+            <div class="emotion-display">
+                <div class="current-emotion" id="emotionEmoji">😊</div>
+                <div class="emotion-name" id="emotionName">Calm</div>
+                <div class="emotion-effect" id="emotionEffect">Normal gameplay</div>
+            </div>
+
+            <div class="emotion-meter">
+                <div class="meter-label">
+                    <span>Stress Level</span>
+                    <span id="stressValue">0%</span>
+                </div>
+                <div class="meter-bar">
+                    <div class="meter-fill" id="stressFill"></div>
+                </div>
+            </div>
+
+            <div class="calm-controls">
+                <h3>Self-Regulation</h3>
+                <button class="breathe-btn" id="breatheBtn">
+                    🧘 Deep Breath (B)
+                </button>
+                <p style="font-size: 0.85em; opacity: 0.8;">Press B to calm down and reduce stress</p>
+            </div>
+
+            <div class="combo-display">
+                <div class="combo-progress" id="comboProgress">Emotion Streak: 0s</div>
+                <div class="combo-reward" id="comboReward">Stay calm 60s for Zen Mode!</div>
+            </div>
+
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-label">Score</div>
+                    <div class="stat-value" id="score">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Lines</div>
+                    <div class="stat-value" id="lines">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Level</div>
+                    <div class="stat-value" id="level">1</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Zen Modes</div>
+                    <div class="stat-value" id="zenCount">0</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <h3>Controls</h3>
+        <p><strong>←→:</strong> Move | <strong>↑:</strong> Rotate | <strong>↓:</strong> Soft Drop | <strong>Space:</strong> Hard Drop</p>
+        <p><strong>B:</strong> Deep Breath (reduce stress) | <strong>P:</strong> Pause</p>
+        <p style="margin-top: 10px; font-size: 0.9em; opacity: 0.9;">
+            💡 Your stress increases with mistakes. Stay calm to unlock special abilities!
+        </p>
+    </div>
+
+    <div class="game-over" id="gameOver">
+        <h2>Game Over</h2>
+        <p id="finalScore"></p>
+        <button onclick="location.reload()">Play Again</button>
+    </div>
+
+    <script>
+        // Game constants
+        const COLS = 15;
+        const ROWS = 30;
+        const BLOCK_SIZE = 20;
+        const COLORS = {
+            I: '#00f0f0',
+            O: '#f0f000',
+            T: '#a000f0',
+            S: '#00f000',
+            Z: '#f00000',
+            J: '#0000f0',
+            L: '#f0a000'
+        };
+
+        const SHAPES = {
+            I: [[1,1,1,1]],
+            O: [[1,1],[1,1]],
+            T: [[0,1,0],[1,1,1]],
+            S: [[0,1,1],[1,1,0]],
+            Z: [[1,1,0],[0,1,1]],
+            J: [[1,0,0],[1,1,1]],
+            L: [[0,0,1],[1,1,1]]
+        };
+
+        const EMOTIONS = {
+            calm: {
+                emoji: '😊',
+                name: 'Calm',
+                effect: 'Normal gameplay',
+                speedMod: 1,
+                color: '#43e97b'
+            },
+            frustrated: {
+                emoji: '😤',
+                name: 'Frustrated',
+                effect: 'Faster falling, erratic rotation',
+                speedMod: 1.8,
+                color: '#ff6b6b'
+            },
+            happy: {
+                emoji: '😄',
+                name: 'Happy',
+                effect: 'Pieces occasionally split',
+                speedMod: 0.9,
+                color: '#ffd93d'
+            },
+            surprised: {
+                emoji: '😮',
+                name: 'Surprised',
+                effect: 'Time slows briefly',
+                speedMod: 0.5,
+                color: '#6bcfff'
+            },
+            focused: {
+                emoji: '🧘',
+                name: 'Focused',
+                effect: 'Placement hints visible',
+                speedMod: 0.8,
+                color: '#b19cd9'
+            }
+        };
+
+        // Game state
+        let gameState = {
+            score: 0,
+            lines: 0,
+            level: 1,
+            stressLevel: 0, // 0-100
+            currentEmotion: 'calm',
+            emotionStreak: 0,
+            zenModesActivated: 0,
+            breatheCooldown: 0,
+            paused: false,
+            gameOver: false,
+            showHints: false
+        };
+
+        let board = Array(ROWS).fill().map(() => Array(COLS).fill(0));
+        let currentPiece = null;
+        let nextPiece = null;
+        let lastTime = 0;
+        let dropCounter = 0;
+        let dropInterval = 1000;
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function createPiece() {
+            const types = Object.keys(SHAPES);
+            const type = types[Math.floor(Math.random() * types.length)];
+            return {
+                type: type,
+                shape: SHAPES[type],
+                x: Math.floor(COLS / 2) - Math.floor(SHAPES[type][0].length / 2),
+                y: 0,
+                color: COLORS[type]
+            };
+        }
+
+        function drawBoard() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw placed blocks
+            board.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value) {
+                        ctx.fillStyle = value;
+                        ctx.fillRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE - 1, BLOCK_SIZE - 1);
+                    }
+                });
+            });
+
+            // Draw current piece
+            if (currentPiece) {
+                drawPiece(currentPiece);
+            }
+
+            // Draw placement hint if focused
+            if (gameState.showHints && currentPiece) {
+                drawHint();
+            }
+        }
+
+        function drawPiece(piece) {
+            ctx.fillStyle = piece.color;
+
+            // Add glow effect if focused
+            if (gameState.currentEmotion === 'focused') {
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = piece.color;
+            }
+
+            piece.shape.forEach((row, dy) => {
+                row.forEach((value, dx) => {
+                    if (value) {
+                        ctx.fillRect(
+                            (piece.x + dx) * BLOCK_SIZE,
+                            (piece.y + dy) * BLOCK_SIZE,
+                            BLOCK_SIZE - 1,
+                            BLOCK_SIZE - 1
+                        );
+                    }
+                });
+            });
+
+            ctx.shadowBlur = 0;
+        }
+
+        function drawHint() {
+            const hint = {...currentPiece};
+            while (!collide(hint)) {
+                hint.y++;
+            }
+            hint.y--;
+
+            ctx.save();
+            ctx.globalAlpha = 0.3;
+            ctx.strokeStyle = currentPiece.color;
+            ctx.lineWidth = 2;
+
+            hint.shape.forEach((row, dy) => {
+                row.forEach((value, dx) => {
+                    if (value) {
+                        ctx.strokeRect(
+                            (hint.x + dx) * BLOCK_SIZE,
+                            (hint.y + dy) * BLOCK_SIZE,
+                            BLOCK_SIZE - 1,
+                            BLOCK_SIZE - 1
+                        );
+                    }
+                });
+            });
+            ctx.restore();
+        }
+
+        function collide(piece = currentPiece) {
+            return piece.shape.some((row, dy) => {
+                return row.some((value, dx) => {
+                    if (!value) return false;
+                    const newX = piece.x + dx;
+                    const newY = piece.y + dy;
+                    return newX < 0 || newX >= COLS || newY >= ROWS ||
+                           (newY >= 0 && board[newY][newX] !== 0);
+                });
+            });
+        }
+
+        function merge() {
+            currentPiece.shape.forEach((row, dy) => {
+                row.forEach((value, dx) => {
+                    if (value) {
+                        const y = currentPiece.y + dy;
+                        const x = currentPiece.x + dx;
+                        if (y >= 0) {
+                            board[y][x] = currentPiece.color;
+                        }
+                    }
+                });
+            });
+        }
+
+        function clearLines() {
+            let linesCleared = 0;
+
+            for (let y = board.length - 1; y >= 0; y--) {
+                if (board[y].every(cell => cell !== 0)) {
+                    board.splice(y, 1);
+                    board.unshift(Array(COLS).fill(0));
+                    linesCleared++;
+                    y++;
+                    gameState.stressLevel = Math.max(0, gameState.stressLevel - 5);
+                }
+            }
+
+            if (linesCleared > 0) {
+                gameState.lines += linesCleared;
+                gameState.score += linesCleared * 100 * gameState.level;
+            }
+
+            return linesCleared;
+        }
+
+        function rotate() {
+            const newShape = currentPiece.shape[0].map((_, i) =>
+                currentPiece.shape.map(row => row[i]).reverse()
+            );
+            const rotated = {...currentPiece, shape: newShape};
+
+            // Frustrated emotion: erratic rotation
+            if (gameState.currentEmotion === 'frustrated' && Math.random() < 0.3) {
+                // Sometimes rotate twice
+                const doubleRotated = newShape[0].map((_, i) =>
+                    newShape.map(row => row[i]).reverse()
+                );
+                rotated.shape = doubleRotated;
+            }
+
+            if (!collide(rotated)) {
+                currentPiece.shape = rotated.shape;
+            }
+        }
+
+        function updateEmotion() {
+            const stress = gameState.stressLevel;
+
+            if (stress < 20) {
+                gameState.currentEmotion = 'calm';
+            } else if (stress < 40) {
+                gameState.currentEmotion = 'focused';
+                gameState.showHints = true;
+            } else if (stress < 60) {
+                if (Math.random() < 0.3) {
+                    gameState.currentEmotion = 'surprised';
+                } else {
+                    gameState.currentEmotion = 'happy';
+                }
+                gameState.showHints = false;
+            } else {
+                gameState.currentEmotion = 'frustrated';
+                gameState.showHints = false;
+            }
+
+            const emotion = EMOTIONS[gameState.currentEmotion];
+            document.getElementById('emotionEmoji').textContent = emotion.emoji;
+            document.getElementById('emotionName').textContent = emotion.name;
+            document.getElementById('emotionEffect').textContent = emotion.effect;
+            document.getElementById('stressValue').textContent = Math.round(stress) + '%';
+
+            const fill = document.getElementById('stressFill');
+            fill.style.width = stress + '%';
+            fill.style.background = emotion.color;
+
+            // Add focused glow effect
+            if (gameState.currentEmotion === 'focused') {
+                canvas.classList.add('focused-glow');
+            } else {
+                canvas.classList.remove('focused-glow');
+            }
+        }
+
+        function deepBreathe() {
+            if (gameState.breatheCooldown > 0) return;
+
+            gameState.stressLevel = Math.max(0, gameState.stressLevel - 25);
+            gameState.breatheCooldown = 5000; // 5 second cooldown
+
+            const btn = document.getElementById('breatheBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Breathing...';
+
+            setTimeout(() => {
+                gameState.breatheCooldown = 0;
+                btn.disabled = false;
+                btn.textContent = '🧘 Deep Breath (B)';
+            }, 5000);
+        }
+
+        function updateEmotionStreak(deltaTime) {
+            if (gameState.currentEmotion === 'calm' || gameState.currentEmotion === 'focused') {
+                gameState.emotionStreak += deltaTime;
+
+                const streakSeconds = Math.floor(gameState.emotionStreak / 1000);
+                document.getElementById('comboProgress').textContent = `Emotion Streak: ${streakSeconds}s`;
+
+                // Zen Mode at 60 seconds
+                if (streakSeconds >= 60 && streakSeconds < 61) {
+                    activateZenMode();
+                    gameState.emotionStreak = 0;
+                }
+
+                if (streakSeconds < 60) {
+                    document.getElementById('comboReward').textContent =
+                        `${60 - streakSeconds}s until Zen Mode!`;
+                }
+            } else {
+                gameState.emotionStreak = 0;
+                document.getElementById('comboProgress').textContent = 'Emotion Streak: 0s';
+                document.getElementById('comboReward').textContent = 'Stay calm 60s for Zen Mode!';
+            }
+        }
+
+        function activateZenMode() {
+            gameState.zenModesActivated++;
+
+            // Clear bottom row
+            board[ROWS - 1] = Array(COLS).fill(0);
+
+            // Reduce stress significantly
+            gameState.stressLevel = 0;
+
+            // Bonus points
+            gameState.score += 1000;
+
+            document.getElementById('comboReward').textContent = '✨ ZEN MODE ACTIVATED! ✨';
+            setTimeout(() => {
+                document.getElementById('comboReward').textContent = 'Stay calm 60s for Zen Mode!';
+            }, 3000);
+        }
+
+        function moveHorizontal(dir) {
+            if (gameState.paused || gameState.gameOver) return;
+            currentPiece.x += dir;
+            if (collide()) {
+                currentPiece.x -= dir;
+            }
+        }
+
+        function moveDown() {
+            if (gameState.paused || gameState.gameOver) return;
+            currentPiece.y++;
+            if (collide()) {
+                currentPiece.y--;
+                merge();
+                const cleared = clearLines();
+
+                if (cleared === 0) {
+                    gameState.stressLevel = Math.min(100, gameState.stressLevel + 2);
+                }
+
+                currentPiece = nextPiece;
+                nextPiece = createPiece();
+
+                // Happy emotion: chance to split piece
+                if (gameState.currentEmotion === 'happy' && Math.random() < 0.2) {
+                    currentPiece = createPiece(); // Simpler piece
+                }
+
+                if (collide()) {
+                    endGame();
+                }
+            }
+        }
+
+        function drop() {
+            if (gameState.paused || gameState.gameOver) return;
+            while (!collide()) {
+                currentPiece.y++;
+            }
+            currentPiece.y--;
+            merge();
+            clearLines();
+            currentPiece = nextPiece;
+            nextPiece = createPiece();
+
+            if (collide()) {
+                endGame();
+            }
+        }
+
+        function update(time = 0) {
+            if (gameState.paused || gameState.gameOver) {
+                requestAnimationFrame(update);
+                return;
+            }
+
+            const deltaTime = time - lastTime;
+            lastTime = time;
+            dropCounter += deltaTime;
+
+            const emotion = EMOTIONS[gameState.currentEmotion];
+            const adjustedInterval = dropInterval / emotion.speedMod;
+
+            if (dropCounter > adjustedInterval) {
+                moveDown();
+                dropCounter = 0;
+            }
+
+            // Gradually increase stress
+            gameState.stressLevel = Math.min(100, gameState.stressLevel + deltaTime / 1000);
+
+            updateEmotion();
+            updateEmotionStreak(deltaTime);
+            drawBoard();
+            updateUI();
+
+            requestAnimationFrame(update);
+        }
+
+        function updateUI() {
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('lines').textContent = gameState.lines;
+            document.getElementById('level').textContent = gameState.level;
+            document.getElementById('zenCount').textContent = gameState.zenModesActivated;
+
+            gameState.level = Math.floor(gameState.lines / 10) + 1;
+            dropInterval = Math.max(100, 1000 - (gameState.level - 1) * 50);
+        }
+
+        function endGame() {
+            gameState.gameOver = true;
+            const gameOverEl = document.getElementById('gameOver');
+            document.getElementById('finalScore').textContent =
+                `Final Score: ${gameState.score} | Lines: ${gameState.lines} | Zen Modes: ${gameState.zenModesActivated}`;
+            gameOverEl.style.display = 'block';
+        }
+
+        function init() {
+            currentPiece = createPiece();
+            nextPiece = createPiece();
+            requestAnimationFrame(update);
+        }
+
+        document.addEventListener('keydown', e => {
+            if (e.key === 'p' || e.key === 'P') {
+                gameState.paused = !gameState.paused;
+                return;
+            }
+
+            if (gameState.paused || gameState.gameOver) return;
+
+            switch(e.key) {
+                case 'ArrowLeft':
+                    moveHorizontal(-1);
+                    break;
+                case 'ArrowRight':
+                    moveHorizontal(1);
+                    break;
+                case 'ArrowDown':
+                    moveDown();
+                    break;
+                case 'ArrowUp':
+                    rotate();
+                    break;
+                case ' ':
+                    e.preventDefault();
+                    drop();
+                    break;
+                case 'b':
+                case 'B':
+                    deepBreathe();
+                    break;
+            }
+        });
+
+        document.getElementById('breatheBtn').addEventListener('click', deepBreathe);
+
+        init();
+    </script>
+</body>
+</html>

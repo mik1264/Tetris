@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oblivitris - Memory-Based Invisible Tetris</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #000428 0%, #004e92 100%);
+            font-family: 'Courier New', monospace;
+            color: white;
+        }
+        #info-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #0088ff;
+            max-width: 300px;
+        }
+        h1 {
+            margin: 0 0 10px 0;
+            font-size: 24px;
+            color: #00ccff;
+            text-shadow: 0 0 10px #00ccff;
+        }
+        .stat {
+            margin: 8px 0;
+            font-size: 16px;
+        }
+        .label {
+            color: #aaddff;
+        }
+        .value {
+            color: #00ff88;
+            font-weight: bold;
+        }
+        .sonar-count {
+            font-size: 24px;
+            color: #ffaa00;
+            text-align: center;
+            margin: 10px 0;
+        }
+        .instructions {
+            margin-top: 15px;
+            font-size: 12px;
+            color: #cccccc;
+            border-top: 1px solid #0088ff;
+            padding-top: 10px;
+        }
+        .memory-tip {
+            margin-top: 15px;
+            font-size: 11px;
+            color: #aaffaa;
+            border-top: 1px solid #0088ff;
+            padding-top: 10px;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div id="info-panel">
+        <h1>🧠 OBLIVITRIS</h1>
+        <div class="stat"><span class="label">Score:</span> <span class="value" id="score">0</span></div>
+        <div class="stat"><span class="label">Lines:</span> <span class="value" id="lines">0</span></div>
+        <div class="stat"><span class="label">Level:</span> <span class="value" id="level">1</span></div>
+        <div class="sonar-count">📡 Sonar: <span id="sonar">3</span></div>
+        <div class="stat"><span class="label">Memory Bonus:</span> <span class="value" id="bonus">×1.0</span></div>
+        <div class="instructions">
+            <strong>Controls:</strong><br>
+            ← → Move<br>
+            ↑ Rotate<br>
+            ↓ Soft Drop<br>
+            Space: Hard Drop<br>
+            S: Sonar Pulse (reveal all)
+        </div>
+        <div class="memory-tip">
+            Pieces fade from view. Trust your memory! Avoid sonar for bonus points.
+        </div>
+    </div>
+
+    <script>
+        const COLS = 10;
+        const ROWS = 20;
+        const BLOCK_SIZE = 30;
+        const FALL_SPEED_BASE = 800;
+
+        // Fade timing constants
+        const FULL_VISIBLE_TIME = 3000; // 3 seconds fully visible
+        const FADE_TIME = 7000; // 7 more seconds to fade to invisible
+        const TOTAL_FADE_TIME = FULL_VISIBLE_TIME + FADE_TIME;
+
+        const SHAPES = [
+            [[1,1,1,1]], // I
+            [[1,1],[1,1]], // O
+            [[0,1,0],[1,1,1]], // T
+            [[1,1,0],[0,1,1]], // S
+            [[0,1,1],[1,1,0]], // Z
+            [[1,0,0],[1,1,1]], // J
+            [[0,0,1],[1,1,1]]  // L
+        ];
+
+        const COLORS = [
+            [0, 255, 255],   // I - cyan
+            [255, 255, 0],   // O - yellow
+            [128, 0, 128],   // T - purple
+            [0, 255, 0],     // S - green
+            [255, 0, 0],     // Z - red
+            [0, 0, 255],     // J - blue
+            [255, 127, 0]    // L - orange
+        ];
+
+        let board = [];
+        let placementTimes = []; // Track when each block was placed
+        let currentPiece = null;
+        let currentRotation = 0;
+        let currentX = 0;
+        let currentY = 0;
+        let lastFall = 0;
+        let gameOver = false;
+        let score = 0;
+        let linesCleared = 0;
+        let level = 1;
+        let sonarPulses = 3;
+        let sonarActive = false;
+        let sonarTime = 0;
+        let noSonarBonus = 1.0;
+        let lastFiveGhosts = []; // Track last 5 placed pieces
+
+        function setup() {
+            createCanvas(COLS * BLOCK_SIZE + 200, ROWS * BLOCK_SIZE + 100);
+
+            // Initialize board
+            for (let y = 0; y < ROWS; y++) {
+                board[y] = [];
+                placementTimes[y] = [];
+                for (let x = 0; x < COLS; x++) {
+                    board[y][x] = null;
+                    placementTimes[y][x] = 0;
+                }
+            }
+
+            spawnPiece();
+        }
+
+        function draw() {
+            background(0, 4, 40);
+
+            // Draw board grid (faint)
+            stroke(30, 60, 100);
+            strokeWeight(1);
+            for (let x = 0; x <= COLS; x++) {
+                line(x * BLOCK_SIZE, 0, x * BLOCK_SIZE, ROWS * BLOCK_SIZE);
+            }
+            for (let y = 0; y <= ROWS; y++) {
+                line(0, y * BLOCK_SIZE, COLS * BLOCK_SIZE, y * BLOCK_SIZE);
+            }
+
+            // Draw placed blocks with fading
+            for (let y = 0; y < ROWS; y++) {
+                for (let x = 0; x < COLS; x++) {
+                    if (board[y][x] !== null) {
+                        let alpha = calculateAlpha(placementTimes[y][x]);
+                        if (alpha > 0) {
+                            drawBlock(x, y, board[y][x], alpha);
+                        }
+                    }
+                }
+            }
+
+            // Draw ghost outlines of last 5 pieces
+            drawGhostPieces();
+
+            // Draw current piece
+            if (currentPiece && !gameOver) {
+                drawCurrentPiece();
+            }
+
+            // Sonar pulse effect
+            if (sonarActive) {
+                drawSonarPulse();
+                if (millis() - sonarTime > 1500) {
+                    sonarActive = false;
+                }
+            }
+
+            // Auto-fall
+            if (millis() - lastFall > FALL_SPEED_BASE / level && !gameOver) {
+                moveDown();
+                lastFall = millis();
+            }
+
+            if (gameOver) {
+                drawGameOver();
+            }
+        }
+
+        function calculateAlpha(placementTime) {
+            if (sonarActive) return 255;
+
+            let elapsed = millis() - placementTime;
+
+            if (elapsed < FULL_VISIBLE_TIME) {
+                return 255;
+            } else if (elapsed < TOTAL_FADE_TIME) {
+                let fadeProgress = (elapsed - FULL_VISIBLE_TIME) / FADE_TIME;
+                return 255 * (1 - fadeProgress);
+            } else {
+                return 0; // Completely invisible
+            }
+        }
+
+        function drawBlock(x, y, colorIndex, alpha) {
+            let col = COLORS[colorIndex];
+            fill(col[0], col[1], col[2], alpha);
+            stroke(255, 255, 255, alpha * 0.8);
+            strokeWeight(2);
+            rect(x * BLOCK_SIZE + 2, y * BLOCK_SIZE + 2, BLOCK_SIZE - 4, BLOCK_SIZE - 4, 3);
+        }
+
+        function drawCurrentPiece() {
+            let shape = SHAPES[currentPiece];
+            for (let y = 0; y < shape.length; y++) {
+                for (let x = 0; x < shape[y].length; x++) {
+                    if (shape[y][x]) {
+                        drawBlock(currentX + x, currentY + y, currentPiece, 255);
+                    }
+                }
+            }
+
+            // Draw drop shadow
+            let shadowY = currentY;
+            while (canPlace(currentX, shadowY + 1, currentRotation)) {
+                shadowY++;
+            }
+            if (shadowY !== currentY) {
+                for (let y = 0; y < shape.length; y++) {
+                    for (let x = 0; x < shape[y].length; x++) {
+                        if (shape[y][x]) {
+                            let col = COLORS[currentPiece];
+                            fill(col[0], col[1], col[2], 50);
+                            noStroke();
+                            rect(currentX * BLOCK_SIZE + x * BLOCK_SIZE + 2,
+                                 shadowY * BLOCK_SIZE + y * BLOCK_SIZE + 2,
+                                 BLOCK_SIZE - 4, BLOCK_SIZE - 4, 3);
+                        }
+                    }
+                }
+            }
+        }
+
+        function drawGhostPieces() {
+            // Draw faint outlines of last 5 placed pieces
+            for (let i = 0; i < lastFiveGhosts.length; i++) {
+                let ghost = lastFiveGhosts[i];
+                let alpha = 40 * (i + 1) / lastFiveGhosts.length;
+
+                noFill();
+                stroke(100, 200, 255, alpha);
+                strokeWeight(1);
+
+                for (let coord of ghost.coords) {
+                    rect(coord.x * BLOCK_SIZE + 2, coord.y * BLOCK_SIZE + 2,
+                         BLOCK_SIZE - 4, BLOCK_SIZE - 4, 3);
+                }
+            }
+        }
+
+        function drawSonarPulse() {
+            // Reveal all blocks temporarily
+            let pulseAlpha = 150 * (1 - (millis() - sonarTime) / 1500);
+
+            // Draw expanding circles from center
+            noFill();
+            stroke(255, 200, 0, pulseAlpha);
+            strokeWeight(3);
+
+            let centerX = COLS * BLOCK_SIZE / 2;
+            let centerY = ROWS * BLOCK_SIZE / 2;
+            let radius = ((millis() - sonarTime) / 1500) * COLS * BLOCK_SIZE;
+
+            for (let i = 0; i < 3; i++) {
+                ellipse(centerX, centerY, radius - i * 50, radius - i * 50);
+            }
+        }
+
+        function spawnPiece() {
+            currentPiece = Math.floor(Math.random() * SHAPES.length);
+            currentRotation = 0;
+            currentX = Math.floor(COLS / 2) - 1;
+            currentY = 0;
+
+            // Check if game over
+            if (!canPlace(currentX, currentY, currentRotation)) {
+                gameOver = true;
+            }
+        }
+
+        function placePiece() {
+            let shape = SHAPES[currentPiece];
+            let ghostCoords = [];
+            let placeTime = millis();
+
+            for (let y = 0; y < shape.length; y++) {
+                for (let x = 0; x < shape[y].length; x++) {
+                    if (shape[y][x]) {
+                        let boardY = currentY + y;
+                        let boardX = currentX + x;
+                        board[boardY][boardX] = currentPiece;
+                        placementTimes[boardY][boardX] = placeTime;
+                        ghostCoords.push({x: boardX, y: boardY});
+                    }
+                }
+            }
+
+            // Add to ghost history
+            lastFiveGhosts.push({coords: ghostCoords});
+            if (lastFiveGhosts.length > 5) {
+                lastFiveGhosts.shift();
+            }
+
+            clearLines();
+            spawnPiece();
+        }
+
+        function canPlace(x, y, rotation) {
+            let shape = SHAPES[currentPiece];
+
+            for (let sy = 0; sy < shape.length; sy++) {
+                for (let sx = 0; sx < shape[sy].length; sx++) {
+                    if (shape[sy][sx]) {
+                        let newX = x + sx;
+                        let newY = y + sy;
+
+                        if (newX < 0 || newX >= COLS || newY >= ROWS) {
+                            return false;
+                        }
+                        if (newY >= 0 && board[newY][newX] !== null) {
+                            return false;
+                        }
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        function moveDown() {
+            if (canPlace(currentX, currentY + 1, currentRotation)) {
+                currentY++;
+            } else {
+                placePiece();
+            }
+        }
+
+        function moveLeft() {
+            if (canPlace(currentX - 1, currentY, currentRotation)) {
+                currentX--;
+            }
+        }
+
+        function moveRight() {
+            if (canPlace(currentX + 1, currentY, currentRotation)) {
+                currentX++;
+            }
+        }
+
+        function rotate() {
+            // Simple rotation - just flip the shape (simplified for this demo)
+            let oldShape = SHAPES[currentPiece];
+            // For simplicity, we'll just check if rotation is possible
+            // In a full implementation, you'd rotate the matrix
+            if (canPlace(currentX, currentY, (currentRotation + 1) % 4)) {
+                currentRotation = (currentRotation + 1) % 4;
+            }
+        }
+
+        function hardDrop() {
+            while (canPlace(currentX, currentY + 1, currentRotation)) {
+                currentY++;
+                score += 2;
+            }
+            updateStats();
+            placePiece();
+        }
+
+        function activateSonar() {
+            if (sonarPulses > 0 && !sonarActive) {
+                sonarPulses--;
+                sonarActive = true;
+                sonarTime = millis();
+                noSonarBonus = Math.max(1.0, noSonarBonus - 0.2);
+                updateStats();
+            }
+        }
+
+        function clearLines() {
+            let cleared = 0;
+
+            for (let y = ROWS - 1; y >= 0; y--) {
+                let full = true;
+                for (let x = 0; x < COLS; x++) {
+                    if (board[y][x] === null) {
+                        full = false;
+                        break;
+                    }
+                }
+
+                if (full) {
+                    board.splice(y, 1);
+                    board.unshift(new Array(COLS).fill(null));
+                    placementTimes.splice(y, 1);
+                    placementTimes.unshift(new Array(COLS).fill(0));
+                    cleared++;
+                    y++; // Check same line again
+                }
+            }
+
+            if (cleared > 0) {
+                linesCleared += cleared;
+                let baseScore = cleared * 100 * level;
+                score += Math.floor(baseScore * noSonarBonus);
+                level = Math.floor(linesCleared / 10) + 1;
+
+                // Speed up fading as level increases
+                updateStats();
+            }
+        }
+
+        function updateStats() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('lines').textContent = linesCleared;
+            document.getElementById('level').textContent = level;
+            document.getElementById('sonar').textContent = sonarPulses;
+            document.getElementById('bonus').textContent = '×' + noSonarBonus.toFixed(1);
+        }
+
+        function keyPressed() {
+            if (gameOver) {
+                if (key === 'r' || key === 'R') {
+                    resetGame();
+                }
+                return;
+            }
+
+            if (keyCode === LEFT_ARROW) {
+                moveLeft();
+            } else if (keyCode === RIGHT_ARROW) {
+                moveRight();
+            } else if (keyCode === DOWN_ARROW) {
+                moveDown();
+                score += 1;
+                updateStats();
+            } else if (keyCode === UP_ARROW) {
+                rotate();
+            } else if (key === ' ') {
+                hardDrop();
+            } else if (key === 's' || key === 'S') {
+                activateSonar();
+            }
+        }
+
+        function drawGameOver() {
+            fill(0, 0, 0, 200);
+            rect(0, 0, COLS * BLOCK_SIZE, ROWS * BLOCK_SIZE);
+
+            fill(255, 100, 100);
+            textSize(48);
+            textAlign(CENTER, CENTER);
+            text('GAME OVER', COLS * BLOCK_SIZE / 2, ROWS * BLOCK_SIZE / 2 - 50);
+
+            fill(255);
+            textSize(24);
+            text('Score: ' + score, COLS * BLOCK_SIZE / 2, ROWS * BLOCK_SIZE / 2);
+
+            if (sonarPulses === 3) {
+                fill(255, 215, 0);
+                textSize(20);
+                text('🏆 PERFECT MEMORY!', COLS * BLOCK_SIZE / 2, ROWS * BLOCK_SIZE / 2 + 40);
+            }
+
+            fill(200);
+            textSize(16);
+            text('Press R to restart', COLS * BLOCK_SIZE / 2, ROWS * BLOCK_SIZE / 2 + 100);
+        }
+
+        function resetGame() {
+            board = [];
+            placementTimes = [];
+            for (let y = 0; y < ROWS; y++) {
+                board[y] = [];
+                placementTimes[y] = [];
+                for (let x = 0; x < COLS; x++) {
+                    board[y][x] = null;
+                    placementTimes[y][x] = 0;
+                }
+            }
+
+            score = 0;
+            linesCleared = 0;
+            level = 1;
+            sonarPulses = 3;
+            noSonarBonus = 1.0;
+            gameOver = false;
+            lastFiveGhosts = [];
+            updateStats();
+            spawnPiece();
+        }
+    </script>
+</body>
+</html>

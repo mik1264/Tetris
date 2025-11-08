@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ECOTRIS - Ecosystem Simulation Matrix Tetris</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #0f0;
+            overflow-x: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        #matrix-rain {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            opacity: 0.15;
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            text-shadow: 0 0 10px #0f0, 0 0 20px #0f0;
+            margin-bottom: 20px;
+            letter-spacing: 4px;
+            text-align: center;
+        }
+
+        .game-layout {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+        }
+
+        .panel {
+            background: rgba(0, 20, 0, 0.9);
+            border: 2px solid #0f0;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+        }
+
+        h3 {
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+            text-shadow: 0 0 5px #0f0;
+        }
+
+        .ecosystem-health {
+            margin-bottom: 20px;
+        }
+
+        .health-bar {
+            width: 100%;
+            height: 30px;
+            background: rgba(0, 50, 0, 0.5);
+            border: 2px solid #0f0;
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .health-fill {
+            height: 100%;
+            transition: width 0.5s, background 0.5s;
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
+        }
+
+        .health-fill.healthy {
+            background: linear-gradient(90deg, #00ff00, #00ff66);
+        }
+
+        .health-fill.warning {
+            background: linear-gradient(90deg, #ffff00, #ffaa00);
+        }
+
+        .health-fill.critical {
+            background: linear-gradient(90deg, #ff0000, #ff6600);
+            animation: pulse-health 0.5s infinite;
+        }
+
+        @keyframes pulse-health {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .health-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-weight: bold;
+            font-size: 1rem;
+            text-shadow: 0 0 5px #000, 0 0 10px #000;
+        }
+
+        .species {
+            background: rgba(0, 40, 0, 0.6);
+            border: 1px solid #0a0;
+            border-radius: 5px;
+            padding: 12px;
+            margin-bottom: 10px;
+        }
+
+        .species-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .species-name {
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .species-count {
+            font-size: 1.3rem;
+            font-weight: bold;
+            padding: 4px 10px;
+            background: rgba(0, 60, 0, 0.6);
+            border-radius: 5px;
+        }
+
+        .species-icon {
+            font-size: 1.5rem;
+            margin-right: 8px;
+        }
+
+        .species-status {
+            font-size: 0.85rem;
+            margin-top: 5px;
+            opacity: 0.8;
+        }
+
+        .species.extinct {
+            opacity: 0.3;
+            background: rgba(100, 0, 0, 0.3);
+            border-color: #500;
+        }
+
+        .species.thriving {
+            border-color: #0ff;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+        }
+
+        .species.endangered {
+            border-color: #f80;
+            animation: warn-blink 1s infinite;
+        }
+
+        @keyframes warn-blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        canvas {
+            border: 2px solid #0a0;
+            background: #000;
+            box-shadow: inset 0 0 20px rgba(0, 255, 0, 0.1);
+            display: block;
+            margin: 0 auto;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .stat {
+            background: rgba(0, 30, 0, 0.6);
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #0a0;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+
+        .stat-value {
+            font-size: 1.3rem;
+            font-weight: bold;
+            text-shadow: 0 0 5px #0f0;
+        }
+
+        .events-log {
+            margin-top: 20px;
+            max-height: 150px;
+            overflow-y: auto;
+            background: rgba(0, 10, 0, 0.5);
+            border: 1px solid #0a0;
+            border-radius: 5px;
+            padding: 10px;
+            font-size: 0.85rem;
+        }
+
+        .event {
+            margin-bottom: 8px;
+            padding: 5px;
+            border-left: 2px solid #0f0;
+            padding-left: 8px;
+        }
+
+        .event.symbiosis {
+            border-left-color: #0ff;
+            color: #0ff;
+        }
+
+        .event.extinction {
+            border-left-color: #f00;
+            color: #f66;
+        }
+
+        .event.overpopulation {
+            border-left-color: #f80;
+            color: #fa0;
+        }
+
+        .controls {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 0.9rem;
+            opacity: 0.8;
+            padding: 10px;
+            background: rgba(0, 30, 0, 0.6);
+            border-radius: 5px;
+        }
+
+        .message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 20, 0, 0.98);
+            border: 3px solid #0f0;
+            padding: 40px;
+            border-radius: 15px;
+            z-index: 1000;
+            text-align: center;
+            box-shadow: 0 0 40px rgba(0, 255, 0, 0.6);
+            display: none;
+            max-width: 500px;
+        }
+
+        .message.show {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+            to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        }
+
+        button {
+            background: rgba(0, 50, 0, 0.8);
+            color: #0f0;
+            border: 2px solid #0f0;
+            padding: 10px 25px;
+            font-family: 'Courier New', monospace;
+            font-size: 1rem;
+            cursor: pointer;
+            border-radius: 5px;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: rgba(0, 100, 0, 0.9);
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 20, 0, 0.5);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #0f0;
+            border-radius: 3px;
+        }
+
+        .meteor-warning {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 0, 0, 0.3);
+            border: 2px solid #f00;
+            color: #f00;
+            padding: 15px 30px;
+            border-radius: 10px;
+            z-index: 100;
+            display: none;
+            animation: shake 0.5s infinite;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(-50%) rotate(0deg); }
+            25% { transform: translateX(-50%) rotate(-2deg); }
+            75% { transform: translateX(-50%) rotate(2deg); }
+        }
+
+        .meteor-warning.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="matrix-rain"></canvas>
+    <div class="meteor-warning" id="meteor-warning">☄️ EXTINCTION EVENT IMMINENT ☄️</div>
+
+    <div class="container">
+        <h1>🌍 ECOTRIS 🌍</h1>
+
+        <div class="game-layout">
+            <!-- Ecosystem Panel -->
+            <div class="panel">
+                <h3>ECOSYSTEM STATUS</h3>
+
+                <div class="ecosystem-health">
+                    <div class="health-bar">
+                        <div class="health-fill healthy" id="health-fill" style="width: 100%"></div>
+                        <div class="health-text" id="health-text">100% BALANCED</div>
+                    </div>
+                </div>
+
+                <div id="species-list"></div>
+
+                <div class="events-log" id="events-log">
+                    <div class="event">System initialized. Maintain ecosystem balance!</div>
+                </div>
+            </div>
+
+            <!-- Game Panel -->
+            <div class="panel">
+                <div class="stats">
+                    <div class="stat">
+                        <div class="stat-label">SCORE</div>
+                        <div class="stat-value" id="score">0</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">DIVERSITY</div>
+                        <div class="stat-value" id="diversity">7/7</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">SYMBIOSIS</div>
+                        <div class="stat-value" id="symbiosis">0</div>
+                    </div>
+                </div>
+
+                <canvas id="canvas" width="400" height="600"></canvas>
+
+                <div class="controls">
+                    ← → Move | ↑ Rotate | ↓ Fast Drop | SPACE Hard Drop<br>
+                    <small>Create balanced ecosystems! Predators need prey. Diversity prevents extinction.</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="message" id="game-over-msg">
+        <h2 style="font-size: 2rem; margin-bottom: 15px;">ECOSYSTEM COLLAPSED</h2>
+        <p id="final-score"></p>
+        <p style="margin-top: 10px; font-size: 0.9rem; opacity: 0.8;" id="collapse-reason"></p>
+        <button onclick="location.reload()">NEW ECOSYSTEM</button>
+    </div>
+
+    <script>
+        // Matrix rain
+        const rainCanvas = document.getElementById('matrix-rain');
+        const rainCtx = rainCanvas.getContext('2d');
+        rainCanvas.width = window.innerWidth;
+        rainCanvas.height = window.innerHeight;
+
+        const columns = Math.floor(rainCanvas.width / 20);
+        const drops = Array(columns).fill(1);
+
+        function drawMatrixRain() {
+            rainCtx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+            rainCtx.fillRect(0, 0, rainCanvas.width, rainCanvas.height);
+            rainCtx.fillStyle = '#0f0';
+            rainCtx.font = '15px monospace';
+
+            for (let i = 0; i < drops.length; i++) {
+                const text = String.fromCharCode(0x30A0 + Math.random() * 96);
+                rainCtx.fillText(text, i * 20, drops[i] * 20);
+                if (drops[i] * 20 > rainCanvas.height && Math.random() > 0.975) {
+                    drops[i] = 0;
+                }
+                drops[i]++;
+            }
+        }
+
+        setInterval(drawMatrixRain, 33);
+
+        // Game constants
+        const COLS = 10;
+        const ROWS = 20;
+        const BLOCK_SIZE = 30;
+
+        const SPECIES = {
+            I: {
+                name: 'Apex Predator',
+                icon: '🦁',
+                color: '#ff0000',
+                type: 'apex',
+                needs: ['predator', 'herbivore'],
+                count: 0
+            },
+            O: {
+                name: 'Herbivore',
+                icon: '🦌',
+                color: '#00ff00',
+                type: 'herbivore',
+                needs: ['plant'],
+                count: 0
+            },
+            T: {
+                name: 'Plant',
+                icon: '🌱',
+                color: '#00ff66',
+                type: 'plant',
+                needs: ['decomposer'],
+                count: 0
+            },
+            S: {
+                name: 'Decomposer',
+                icon: '🍄',
+                color: '#996600',
+                type: 'decomposer',
+                needs: [],
+                count: 0
+            },
+            Z: {
+                name: 'Decomposer',
+                icon: '🦠',
+                color: '#aa6600',
+                type: 'decomposer',
+                needs: [],
+                count: 0
+            },
+            J: {
+                name: 'Predator',
+                icon: '🐺',
+                color: '#ff6600',
+                type: 'predator',
+                needs: ['herbivore'],
+                count: 0
+            },
+            L: {
+                name: 'Predator',
+                icon: '🦅',
+                color: '#ff8800',
+                type: 'predator',
+                needs: ['herbivore'],
+                count: 0
+            }
+        };
+
+        const SHAPES = {
+            I: [[1,1,1,1]],
+            O: [[1,1],[1,1]],
+            T: [[0,1,0],[1,1,1]],
+            S: [[1,1,0],[0,1,1]],
+            Z: [[0,1,1],[1,1,0]],
+            J: [[1,0,0],[1,1,1]],
+            L: [[0,0,1],[1,1,1]]
+        };
+
+        const SYMBIOSIS = [
+            { pair: ['decomposer', 'plant'], bonus: 200, name: 'Nutrient Cycle' },
+            { pair: ['herbivore', 'plant'], bonus: 150, name: 'Pollination' },
+            { pair: ['predator', 'herbivore'], bonus: 100, name: 'Food Chain' }
+        ];
+
+        // Game state
+        let gameState = {
+            score: 0,
+            diversity: 7,
+            symbiosisCount: 0,
+            health: 100,
+            gameOver: false,
+            extinctSpecies: new Set(),
+            meteorWarning: false
+        };
+
+        let board = Array(ROWS).fill(null).map(() => Array(COLS).fill(null));
+        let currentPiece = null;
+        let currentSpecies = null;
+        let pieceX = 0;
+        let pieceY = 0;
+        let lastUpdate = 0;
+        let lastEcologyCheck = 0;
+        let gameSpeed = 600;
+
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        function init() {
+            updateSpeciesList();
+            updateEcosystemHealth();
+            newPiece();
+            gameLoop();
+
+            // Ecology simulation
+            setInterval(simulateEcology, 3000);
+        }
+
+        function newPiece() {
+            const species = Object.keys(SHAPES);
+            currentSpecies = species[Math.floor(Math.random() * species.length)];
+            currentPiece = SHAPES[currentSpecies];
+            pieceX = Math.floor(COLS / 2) - Math.floor(currentPiece[0].length / 2);
+            pieceY = 0;
+
+            if (collides(currentPiece, pieceX, pieceY)) {
+                gameState.gameOver = true;
+                showGameOver('Board overflow');
+            }
+        }
+
+        function collides(piece, x, y) {
+            for (let row = 0; row < piece.length; row++) {
+                for (let col = 0; col < piece[row].length; col++) {
+                    if (piece[row][col] &&
+                        (y + row >= ROWS || x + col < 0 || x + col >= COLS ||
+                         (y + row >= 0 && board[y + row][x + col]))) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        function merge() {
+            for (let row = 0; row < currentPiece.length; row++) {
+                for (let col = 0; col < currentPiece[row].length; col++) {
+                    if (currentPiece[row][col]) {
+                        if (pieceY + row >= 0) {
+                            board[pieceY + row][pieceX + col] = currentSpecies;
+                            SPECIES[currentSpecies].count++;
+                        }
+                    }
+                }
+            }
+
+            checkSymbiosis();
+            updateCounts();
+        }
+
+        function checkSymbiosis() {
+            // Check for symbiotic relationships
+            for (let row = 0; row < ROWS; row++) {
+                for (let col = 0; col < COLS; col++) {
+                    if (board[row][col]) {
+                        const species1 = SPECIES[board[row][col]];
+                        const adjacentTypes = getAdjacentTypes(col, row);
+
+                        SYMBIOSIS.forEach(sym => {
+                            if (sym.pair.includes(species1.type) &&
+                                adjacentTypes.some(t => sym.pair.includes(t))) {
+                                gameState.score += sym.bonus;
+                                gameState.symbiosisCount++;
+                                addEvent(`✨ ${sym.name} symbiosis detected! +${sym.bonus}`, 'symbiosis');
+                            }
+                        });
+                    }
+                }
+            }
+        }
+
+        function getAdjacentTypes(x, y) {
+            const types = [];
+            const directions = [[-1,0], [1,0], [0,-1], [0,1]];
+
+            directions.forEach(([dx, dy]) => {
+                const nx = x + dx;
+                const ny = y + dy;
+                if (nx >= 0 && nx < COLS && ny >= 0 && ny < ROWS && board[ny][nx]) {
+                    types.push(SPECIES[board[ny][nx]].type);
+                }
+            });
+
+            return types;
+        }
+
+        function clearLines() {
+            let linesCleared = 0;
+
+            for (let row = ROWS - 1; row >= 0; row--) {
+                if (board[row].every(cell => cell !== null)) {
+                    // Count removed species
+                    board[row].forEach(species => {
+                        if (species) SPECIES[species].count--;
+                    });
+
+                    board.splice(row, 1);
+                    board.unshift(Array(COLS).fill(null));
+                    linesCleared++;
+                    row++;
+                }
+            }
+
+            if (linesCleared > 0) {
+                // In Ecotris, clearing lines is not always good
+                gameState.score += linesCleared * 50;
+                updateCounts();
+            }
+        }
+
+        function updateCounts() {
+            // Recount all species
+            Object.keys(SPECIES).forEach(k => SPECIES[k].count = 0);
+
+            for (let row = 0; row < ROWS; row++) {
+                for (let col = 0; col < COLS; col++) {
+                    if (board[row][col]) {
+                        SPECIES[board[row][col]].count++;
+                    }
+                }
+            }
+
+            updateSpeciesList();
+            updateStats();
+        }
+
+        function simulateEcology() {
+            if (gameState.gameOver) return;
+
+            // Check for starvation
+            Object.keys(SPECIES).forEach(key => {
+                const species = SPECIES[key];
+
+                // Predators need prey
+                if (species.needs.length > 0) {
+                    const hasFood = species.needs.some(need => {
+                        return Object.values(SPECIES).some(s =>
+                            s.type === need && s.count > 0
+                        );
+                    });
+
+                    if (!hasFood && species.count > 0) {
+                        // Starvation: remove random blocks
+                        removeRandomBlocks(key, Math.ceil(species.count * 0.3));
+                        addEvent(`⚠️ ${species.name} population declining (starvation)`, 'overpopulation');
+                    }
+                }
+
+                // Overpopulation
+                if (species.count > 30) {
+                    removeRandomBlocks(key, Math.ceil(species.count * 0.2));
+                    addEvent(`⚠️ ${species.name} overpopulation! Natural die-off occurring.`, 'overpopulation');
+                }
+            });
+
+            // Check for extinctions
+            Object.keys(SPECIES).forEach(key => {
+                if (SPECIES[key].count === 0 && !gameState.extinctSpecies.has(key)) {
+                    gameState.extinctSpecies.add(key);
+                    gameState.diversity--;
+                    addEvent(`💀 ${SPECIES[key].name} has gone EXTINCT!`, 'extinction');
+
+                    // Trigger meteor shower
+                    if (!gameState.meteorWarning) {
+                        gameState.meteorWarning = true;
+                        document.getElementById('meteor-warning').classList.add('show');
+                        setTimeout(() => {
+                            meteorShower();
+                            document.getElementById('meteor-warning').classList.remove('show');
+                            gameState.meteorWarning = false;
+                        }, 2000);
+                    }
+                }
+            });
+
+            updateEcosystemHealth();
+            updateCounts();
+
+            // Game over if too many extinctions
+            if (gameState.diversity <= 2) {
+                gameState.gameOver = true;
+                showGameOver('Ecosystem collapse: insufficient diversity');
+            }
+        }
+
+        function removeRandomBlocks(species, count) {
+            let removed = 0;
+
+            for (let row = ROWS - 1; row >= 0 && removed < count; row--) {
+                for (let col = 0; col < COLS && removed < count; col++) {
+                    if (board[row][col] === species) {
+                        board[row][col] = null;
+                        SPECIES[species].count--;
+                        removed++;
+                    }
+                }
+            }
+        }
+
+        function meteorShower() {
+            // Add garbage blocks
+            for (let i = 0; i < 3; i++) {
+                board.shift();
+                const garbageLine = Array(COLS).fill(null).map(() =>
+                    Math.random() < 0.6 ? Object.keys(SPECIES)[Math.floor(Math.random() * 7)] : null
+                );
+                board.push(garbageLine);
+            }
+            updateCounts();
+        }
+
+        function updateEcosystemHealth() {
+            // Health based on diversity and balance
+            const diversityScore = (gameState.diversity / 7) * 50;
+            const balanceScore = calculateBalance() * 50;
+
+            gameState.health = Math.max(0, Math.min(100, diversityScore + balanceScore));
+
+            const fill = document.getElementById('health-fill');
+            const text = document.getElementById('health-text');
+
+            fill.style.width = gameState.health + '%';
+            text.textContent = Math.round(gameState.health) + '% ' +
+                (gameState.health > 70 ? 'BALANCED' :
+                 gameState.health > 40 ? 'UNSTABLE' : 'CRITICAL');
+
+            fill.className = 'health-fill ' +
+                (gameState.health > 70 ? 'healthy' :
+                 gameState.health > 40 ? 'warning' : 'critical');
+        }
+
+        function calculateBalance() {
+            const counts = Object.values(SPECIES).map(s => s.count);
+            if (counts.length === 0) return 0;
+
+            const avg = counts.reduce((a, b) => a + b, 0) / counts.length;
+            const variance = counts.reduce((sum, count) => sum + Math.pow(count - avg, 2), 0) / counts.length;
+
+            // Lower variance = better balance
+            return Math.max(0, 1 - (variance / 100));
+        }
+
+        function updateSpeciesList() {
+            const list = document.getElementById('species-list');
+            list.innerHTML = '';
+
+            Object.keys(SPECIES).forEach(key => {
+                const species = SPECIES[key];
+                const div = document.createElement('div');
+
+                let className = 'species';
+                if (species.count === 0) className += ' extinct';
+                else if (species.count > 20) className += ' thriving';
+                else if (species.count < 3) className += ' endangered';
+
+                div.className = className;
+                div.innerHTML = `
+                    <div class="species-header">
+                        <div>
+                            <span class="species-icon">${species.icon}</span>
+                            <span class="species-name">${species.name}</span>
+                        </div>
+                        <div class="species-count">${species.count}</div>
+                    </div>
+                    <div class="species-status">
+                        ${species.count === 0 ? 'EXTINCT' :
+                          species.count > 20 ? 'Thriving' :
+                          species.count < 3 ? 'Endangered' : 'Stable'}
+                    </div>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        function addEvent(text, type = 'event') {
+            const log = document.getElementById('events-log');
+            const event = document.createElement('div');
+            event.className = `event ${type}`;
+            event.textContent = text;
+            log.appendChild(event);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        function gameLoop(timestamp = 0) {
+            if (gameState.gameOver) return;
+
+            if (timestamp - lastUpdate > gameSpeed) {
+                pieceY++;
+
+                if (collides(currentPiece, pieceX, pieceY)) {
+                    pieceY--;
+                    merge();
+                    clearLines();
+                    newPiece();
+                }
+
+                lastUpdate = timestamp;
+            }
+
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function draw() {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw board
+            for (let row = 0; row < ROWS; row++) {
+                for (let col = 0; col < COLS; col++) {
+                    if (board[row][col]) {
+                        const species = SPECIES[board[row][col]];
+                        ctx.fillStyle = species.color;
+                        ctx.fillRect(col * BLOCK_SIZE + (canvas.width - COLS * BLOCK_SIZE) / 2,
+                                    row * BLOCK_SIZE,
+                                    BLOCK_SIZE - 1, BLOCK_SIZE - 1);
+
+                        ctx.font = '18px monospace';
+                        ctx.fillText(species.icon,
+                                    col * BLOCK_SIZE + (canvas.width - COLS * BLOCK_SIZE) / 2 + 6,
+                                    row * BLOCK_SIZE + 22);
+                    }
+                }
+            }
+
+            // Draw current piece
+            if (currentPiece) {
+                const species = SPECIES[currentSpecies];
+                ctx.fillStyle = species.color;
+
+                for (let row = 0; row < currentPiece.length; row++) {
+                    for (let col = 0; col < currentPiece[row].length; col++) {
+                        if (currentPiece[row][col]) {
+                            ctx.fillRect((pieceX + col) * BLOCK_SIZE + (canvas.width - COLS * BLOCK_SIZE) / 2,
+                                        (pieceY + row) * BLOCK_SIZE,
+                                        BLOCK_SIZE - 1, BLOCK_SIZE - 1);
+
+                            ctx.font = '18px monospace';
+                            ctx.fillText(species.icon,
+                                        (pieceX + col) * BLOCK_SIZE + (canvas.width - COLS * BLOCK_SIZE) / 2 + 6,
+                                        (pieceY + row) * BLOCK_SIZE + 22);
+                        }
+                    }
+                }
+            }
+        }
+
+        function rotatePiece() {
+            const rotated = currentPiece[0].map((_, i) =>
+                currentPiece.map(row => row[i]).reverse());
+
+            if (!collides(rotated, pieceX, pieceY)) {
+                currentPiece = rotated;
+            }
+        }
+
+        function movePiece(dx) {
+            pieceX += dx;
+            if (collides(currentPiece, pieceX, pieceY)) {
+                pieceX -= dx;
+            }
+        }
+
+        function dropPiece() {
+            while (!collides(currentPiece, pieceX, pieceY + 1)) {
+                pieceY++;
+            }
+        }
+
+        function updateStats() {
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('diversity').textContent = gameState.diversity + '/7';
+            document.getElementById('symbiosis').textContent = gameState.symbiosisCount;
+        }
+
+        function showGameOver(reason) {
+            document.getElementById('final-score').textContent =
+                `Final Score: ${gameState.score} | Diversity: ${gameState.diversity}/7 | Symbiosis: ${gameState.symbiosisCount}`;
+            document.getElementById('collapse-reason').textContent = reason;
+            document.getElementById('game-over-msg').classList.add('show');
+        }
+
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            if (gameState.gameOver) return;
+
+            switch(e.key) {
+                case 'ArrowLeft':
+                    movePiece(-1);
+                    break;
+                case 'ArrowRight':
+                    movePiece(1);
+                    break;
+                case 'ArrowUp':
+                    rotatePiece();
+                    break;
+                case 'ArrowDown':
+                    pieceY++;
+                    if (collides(currentPiece, pieceX, pieceY)) {
+                        pieceY--;
+                    }
+                    break;
+                case ' ':
+                    e.preventDefault();
+                    dropPiece();
+                    break;
+            }
+        });
+
+        init();
+    </script>
+</body>
+</html>

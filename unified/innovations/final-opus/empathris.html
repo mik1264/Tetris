@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Empathris - Emotion-Responsive Tetris</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Courier New', monospace;
+            transition: background 2s ease;
+        }
+
+        body.calm {
+            background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%);
+        }
+
+        body.excited {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        body.stressed {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        }
+
+        body.focused {
+            background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);
+        }
+
+        .game-container {
+            display: flex;
+            gap: 30px;
+            align-items: flex-start;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        canvas {
+            border: 3px solid #333;
+            background: #1a1a2e;
+            image-rendering: pixelated;
+            transition: filter 1s ease;
+        }
+
+        canvas.calm {
+            filter: hue-rotate(180deg) saturate(0.8);
+        }
+
+        canvas.excited {
+            filter: hue-rotate(320deg) saturate(1.5) contrast(1.1);
+        }
+
+        canvas.stressed {
+            filter: hue-rotate(30deg) saturate(1.2) brightness(1.1);
+        }
+
+        canvas.focused {
+            filter: hue-rotate(240deg) saturate(0.9);
+        }
+
+        .info-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            color: #333;
+        }
+
+        .emotion-info {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 15px;
+            border-radius: 10px;
+            color: white;
+        }
+
+        .emotion-display {
+            text-align: center;
+            margin: 15px 0;
+        }
+
+        .current-emotion {
+            font-size: 48px;
+            margin: 10px 0;
+        }
+
+        .emotion-label {
+            font-size: 20px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .emotion-metrics {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .metric {
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+        }
+
+        .metric-label {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        .metric-value {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .stats {
+            background: #f0f4f8;
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        .stat-item {
+            margin: 8px 0;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .controls {
+            background: #e1e8ed;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 14px;
+        }
+
+        .title {
+            font-size: 28px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            text-align: center;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: #7f8c8d;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .emotion-history {
+            display: flex;
+            gap: 5px;
+            margin-top: 15px;
+            justify-content: center;
+        }
+
+        .history-dot {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            opacity: 0.7;
+        }
+
+        .adaptation-notice {
+            background: rgba(255, 255, 255, 0.3);
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .breathe {
+            animation: breathe 4s infinite;
+        }
+
+        @keyframes breathe {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="info-panel">
+            <div>
+                <div class="title">EMPATHRIS</div>
+                <div class="subtitle">Emotion-Adaptive Gameplay</div>
+            </div>
+
+            <div class="emotion-info">
+                <h3>💭 Emotional State</h3>
+
+                <div class="emotion-display">
+                    <div class="current-emotion" id="emotionEmoji">😊</div>
+                    <div class="emotion-label" id="emotionLabel">CALM</div>
+                </div>
+
+                <div class="emotion-metrics">
+                    <div class="metric">
+                        <div class="metric-label">Stress Level</div>
+                        <div class="metric-value" id="stressLevel">Low</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Focus</div>
+                        <div class="metric-value" id="focusLevel">Medium</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Excitement</div>
+                        <div class="metric-value" id="excitementLevel">Low</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Flow State</div>
+                        <div class="metric-value" id="flowState">Building</div>
+                    </div>
+                </div>
+
+                <div class="emotion-history" id="emotionHistory">
+                    <!-- History dots will be added here -->
+                </div>
+
+                <div class="adaptation-notice" id="adaptationNotice">
+                    Game adapting to your emotional state...
+                </div>
+            </div>
+
+            <div class="stats">
+                <h3>📊 Performance</h3>
+                <div class="stat-item">
+                    <span>Score:</span>
+                    <span id="score">0</span>
+                </div>
+                <div class="stat-item">
+                    <span>Lines:</span>
+                    <span id="lines">0</span>
+                </div>
+                <div class="stat-item">
+                    <span>Level:</span>
+                    <span id="level">1</span>
+                </div>
+                <div class="stat-item">
+                    <span>Mood Bonus:</span>
+                    <span id="moodBonus">0</span>
+                </div>
+            </div>
+
+            <div class="controls">
+                <h3>🎮 Controls</h3>
+                <div>← → : Move</div>
+                <div>↓ : Soft Drop</div>
+                <div>↑ : Rotate</div>
+                <div>Space : Hard Drop</div>
+                <div>P : Pause</div>
+                <div>B : Breathing Mode</div>
+                <div><br><strong>Emotion Tips:</strong></div>
+                <div>• Game responds to your play</div>
+                <div>• Calm play = easier pieces</div>
+                <div>• Stressed = helping features</div>
+                <div>• Flow state = bonus points!</div>
+            </div>
+        </div>
+
+        <canvas id="gameCanvas"></canvas>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Game constants
+        const BLOCK_SIZE = 30;
+        const COLS = 10;
+        const ROWS = 20;
+        canvas.width = COLS * BLOCK_SIZE;
+        canvas.height = ROWS * BLOCK_SIZE;
+
+        // Emotional states
+        const EMOTIONS = {
+            CALM: {
+                emoji: '😊',
+                color: '#4FC3F7',
+                dropSpeed: 600,
+                pieceComplexity: 0.7,
+                effects: 'soothing'
+            },
+            EXCITED: {
+                emoji: '😄',
+                color: '#FF6B6B',
+                dropSpeed: 400,
+                pieceComplexity: 1.0,
+                effects: 'energetic'
+            },
+            STRESSED: {
+                emoji: '😰',
+                color: '#FFB74D',
+                dropSpeed: 700,
+                pieceComplexity: 0.5,
+                effects: 'supportive'
+            },
+            FOCUSED: {
+                emoji: '🧘',
+                color: '#9575CD',
+                dropSpeed: 500,
+                pieceComplexity: 0.9,
+                effects: 'zen'
+            },
+            FLOW: {
+                emoji: '✨',
+                color: '#81C784',
+                dropSpeed: 450,
+                pieceComplexity: 1.0,
+                effects: 'optimal'
+            }
+        };
+
+        // Tetromino shapes
+        const SHAPES = [
+            [[1,1,1,1]], // I
+            [[1,1,1],[0,1,0]], // T
+            [[1,1,0],[0,1,1]], // Z
+            [[0,1,1],[1,1,0]], // S
+            [[1,1],[1,1]], // O
+            [[1,1,1],[1,0,0]], // L
+            [[1,1,1],[0,0,1]] // J
+        ];
+
+        // Simpler shapes for stressed states
+        const SIMPLE_SHAPES = [
+            [[1,1],[1,1]], // O only
+            [[1,1,1,1]], // I only
+        ];
+
+        // Game state
+        let board = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+        let currentPiece = null;
+        let gameRunning = true;
+        let score = 0;
+        let lines = 0;
+        let level = 1;
+        let dropCounter = 0;
+        let lastTime = 0;
+        let isPaused = false;
+        let breathingMode = false;
+
+        // Emotion tracking
+        let emotionalState = {
+            current: 'CALM',
+            stress: 0,
+            excitement: 0,
+            focus: 50,
+            flow: 0,
+            history: [],
+
+            // Gameplay metrics for emotion detection
+            moveSpeed: [],
+            rotationCount: 0,
+            hardDropCount: 0,
+            mistakeCount: 0,
+            successStreak: 0,
+            lastMoveTime: Date.now(),
+            avgReactionTime: 500,
+            heartRate: 70 // Simulated
+        };
+
+        class Piece {
+            constructor() {
+                const emotion = EMOTIONS[emotionalState.current];
+
+                // Choose shapes based on emotional state
+                let shapePool = SHAPES;
+                if (emotionalState.current === 'STRESSED' && Math.random() < 0.6) {
+                    shapePool = SIMPLE_SHAPES;
+                }
+
+                this.shape = shapePool[Math.floor(Math.random() * shapePool.length)];
+                this.x = Math.floor(COLS / 2) - Math.floor(this.shape[0].length / 2);
+                this.y = 0;
+                this.color = emotion.color;
+
+                // Add helper features based on emotion
+                this.hasGhost = emotionalState.current !== 'EXCITED';
+                this.glowIntensity = emotionalState.current === 'FLOW' ? 0.8 : 0.3;
+            }
+
+            rotate() {
+                const rotated = this.shape[0].map((_, i) =>
+                    this.shape.map(row => row[i]).reverse()
+                );
+
+                const prevShape = this.shape;
+                this.shape = rotated;
+
+                if (this.collides()) {
+                    this.shape = prevShape;
+                    emotionalState.mistakeCount++;
+                } else {
+                    emotionalState.rotationCount++;
+                }
+
+                analyzeEmotionalState();
+            }
+
+            collides() {
+                for (let y = 0; y < this.shape.length; y++) {
+                    for (let x = 0; x < this.shape[y].length; x++) {
+                        if (this.shape[y][x]) {
+                            const boardX = this.x + x;
+                            const boardY = this.y + y;
+
+                            if (boardX < 0 || boardX >= COLS || boardY >= ROWS) {
+                                return true;
+                            }
+
+                            if (boardY >= 0 && board[boardY][boardX]) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+                return false;
+            }
+
+            lock() {
+                for (let y = 0; y < this.shape.length; y++) {
+                    for (let x = 0; x < this.shape[y].length; x++) {
+                        if (this.shape[y][x]) {
+                            const boardY = this.y + y;
+                            const boardX = this.x + x;
+                            if (boardY >= 0) {
+                                board[boardY][boardX] = this.color;
+                            }
+                        }
+                    }
+                }
+
+                emotionalState.successStreak++;
+                analyzeEmotionalState();
+            }
+        }
+
+        function analyzeEmotionalState() {
+            const now = Date.now();
+            const timeSinceLastMove = now - emotionalState.lastMoveTime;
+
+            // Update reaction time
+            emotionalState.avgReactionTime = emotionalState.avgReactionTime * 0.9 + timeSinceLastMove * 0.1;
+
+            // Calculate stress (based on mistakes and speed)
+            if (emotionalState.mistakeCount > 5) {
+                emotionalState.stress = Math.min(100, emotionalState.stress + 10);
+            } else {
+                emotionalState.stress = Math.max(0, emotionalState.stress - 2);
+            }
+
+            // Calculate excitement (based on hard drops and move speed)
+            if (emotionalState.hardDropCount > 3 || emotionalState.avgReactionTime < 300) {
+                emotionalState.excitement = Math.min(100, emotionalState.excitement + 5);
+            } else {
+                emotionalState.excitement = Math.max(0, emotionalState.excitement - 1);
+            }
+
+            // Calculate focus (based on success streak and rotation precision)
+            if (emotionalState.successStreak > 5 && emotionalState.rotationCount > 10) {
+                emotionalState.focus = Math.min(100, emotionalState.focus + 3);
+            } else {
+                emotionalState.focus = Math.max(0, emotionalState.focus - 1);
+            }
+
+            // Calculate flow state (optimal challenge-skill balance)
+            if (emotionalState.focus > 70 && emotionalState.stress < 30 && emotionalState.successStreak > 10) {
+                emotionalState.flow = Math.min(100, emotionalState.flow + 5);
+            } else {
+                emotionalState.flow = Math.max(0, emotionalState.flow - 2);
+            }
+
+            // Determine current emotional state
+            let newState = 'CALM';
+
+            if (emotionalState.flow > 60) {
+                newState = 'FLOW';
+            } else if (emotionalState.stress > 60) {
+                newState = 'STRESSED';
+            } else if (emotionalState.excitement > 60) {
+                newState = 'EXCITED';
+            } else if (emotionalState.focus > 60) {
+                newState = 'FOCUSED';
+            }
+
+            if (newState !== emotionalState.current) {
+                emotionalState.current = newState;
+                emotionalState.history.push(newState);
+                if (emotionalState.history.length > 10) {
+                    emotionalState.history.shift();
+                }
+                updateEmotionalDisplay();
+                adaptGameplay();
+            }
+
+            // Reset counters periodically
+            if (emotionalState.mistakeCount > 10) emotionalState.mistakeCount = 0;
+            if (emotionalState.hardDropCount > 10) emotionalState.hardDropCount = 0;
+
+            emotionalState.lastMoveTime = now;
+        }
+
+        function adaptGameplay() {
+            const emotion = EMOTIONS[emotionalState.current];
+
+            // Update visual themes
+            document.body.className = emotionalState.current.toLowerCase();
+            canvas.className = emotionalState.current.toLowerCase();
+
+            // Show adaptation notice
+            const notice = document.getElementById('adaptationNotice');
+            let message = '';
+
+            switch(emotionalState.current) {
+                case 'STRESSED':
+                    message = '😌 Slowing down & simplifying pieces to help you relax...';
+                    break;
+                case 'EXCITED':
+                    message = '⚡ Matching your energy with faster gameplay!';
+                    break;
+                case 'FOCUSED':
+                    message = '🎯 Optimizing for precision play...';
+                    break;
+                case 'FLOW':
+                    message = '✨ Flow state detected! Bonus points activated!';
+                    break;
+                default:
+                    message = '😊 Maintaining balanced gameplay...';
+            }
+
+            notice.textContent = message;
+            notice.classList.add('pulse');
+            setTimeout(() => notice.classList.remove('pulse'), 2000);
+        }
+
+        function updateEmotionalDisplay() {
+            const emotion = EMOTIONS[emotionalState.current];
+
+            document.getElementById('emotionEmoji').textContent = emotion.emoji;
+            document.getElementById('emotionLabel').textContent = emotionalState.current;
+
+            // Update metrics
+            document.getElementById('stressLevel').textContent =
+                emotionalState.stress < 30 ? 'Low' :
+                emotionalState.stress < 60 ? 'Medium' : 'High';
+
+            document.getElementById('focusLevel').textContent =
+                emotionalState.focus < 30 ? 'Low' :
+                emotionalState.focus < 60 ? 'Medium' : 'High';
+
+            document.getElementById('excitementLevel').textContent =
+                emotionalState.excitement < 30 ? 'Low' :
+                emotionalState.excitement < 60 ? 'Medium' : 'High';
+
+            document.getElementById('flowState').textContent =
+                emotionalState.flow < 20 ? 'Building' :
+                emotionalState.flow < 60 ? 'Approaching' : 'Active!';
+
+            // Update history dots
+            const historyContainer = document.getElementById('emotionHistory');
+            historyContainer.innerHTML = '';
+            emotionalState.history.slice(-5).forEach(state => {
+                const dot = document.createElement('div');
+                dot.className = 'history-dot';
+                dot.style.background = EMOTIONS[state].color;
+                dot.title = state;
+                historyContainer.appendChild(dot);
+            });
+
+            // Update mood bonus
+            let moodBonus = 0;
+            if (emotionalState.current === 'FLOW') moodBonus = 500;
+            else if (emotionalState.current === 'FOCUSED') moodBonus = 200;
+            document.getElementById('moodBonus').textContent = moodBonus;
+        }
+
+        function clearLines() {
+            let linesCleared = 0;
+
+            for (let y = ROWS - 1; y >= 0; y--) {
+                if (board[y].every(cell => cell !== null)) {
+                    board.splice(y, 1);
+                    board.unshift(Array(COLS).fill(null));
+                    linesCleared++;
+                    y++;
+                }
+            }
+
+            if (linesCleared > 0) {
+                lines += linesCleared;
+                level = Math.floor(lines / 10) + 1;
+
+                // Score with emotional multiplier
+                let multiplier = 1;
+                if (emotionalState.current === 'FLOW') multiplier = 2;
+                else if (emotionalState.current === 'FOCUSED') multiplier = 1.5;
+
+                score += linesCleared * 100 * level * multiplier;
+
+                // Reduce stress on successful clears
+                emotionalState.stress = Math.max(0, emotionalState.stress - linesCleared * 5);
+                emotionalState.successStreak += linesCleared;
+            }
+        }
+
+        function draw() {
+            // Clear canvas
+            ctx.fillStyle = '#1a1a2e';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw emotional background effect
+            if (breathingMode) {
+                const breathIntensity = (Math.sin(Date.now() * 0.001) + 1) / 2;
+                ctx.fillStyle = `rgba(135, 206, 235, ${breathIntensity * 0.2})`;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+
+            // Draw grid with emotional coloring
+            const emotion = EMOTIONS[emotionalState.current];
+            ctx.strokeStyle = `${emotion.color}22`;
+            ctx.lineWidth = 1;
+
+            for (let x = 0; x <= COLS; x++) {
+                ctx.beginPath();
+                ctx.moveTo(x * BLOCK_SIZE, 0);
+                ctx.lineTo(x * BLOCK_SIZE, canvas.height);
+                ctx.stroke();
+            }
+            for (let y = 0; y <= ROWS; y++) {
+                ctx.beginPath();
+                ctx.moveTo(0, y * BLOCK_SIZE);
+                ctx.lineTo(canvas.width, y * BLOCK_SIZE);
+                ctx.stroke();
+            }
+
+            // Draw board
+            for (let y = 0; y < ROWS; y++) {
+                for (let x = 0; x < COLS; x++) {
+                    if (board[y][x]) {
+                        drawBlock(x, y, board[y][x]);
+                    }
+                }
+            }
+
+            // Draw current piece
+            if (currentPiece && !isPaused) {
+                // Draw with glow in flow state
+                if (emotionalState.current === 'FLOW') {
+                    ctx.shadowColor = currentPiece.color;
+                    ctx.shadowBlur = 10;
+                }
+
+                for (let y = 0; y < currentPiece.shape.length; y++) {
+                    for (let x = 0; x < currentPiece.shape[y].length; x++) {
+                        if (currentPiece.shape[y][x]) {
+                            drawBlock(
+                                currentPiece.x + x,
+                                currentPiece.y + y,
+                                currentPiece.color,
+                                currentPiece.glowIntensity
+                            );
+                        }
+                    }
+                }
+
+                ctx.shadowBlur = 0;
+
+                // Draw ghost piece (helper for stressed states)
+                if (currentPiece.hasGhost) {
+                    let ghostY = currentPiece.y;
+                    while (!wouldCollide(currentPiece, 0, 1)) {
+                        currentPiece.y++;
+                    }
+                    let finalY = currentPiece.y;
+                    currentPiece.y = ghostY;
+
+                    ctx.globalAlpha = 0.2;
+                    for (let y = 0; y < currentPiece.shape.length; y++) {
+                        for (let x = 0; x < currentPiece.shape[y].length; x++) {
+                            if (currentPiece.shape[y][x]) {
+                                drawBlock(
+                                    currentPiece.x + x,
+                                    finalY + y,
+                                    currentPiece.color
+                                );
+                            }
+                        }
+                    }
+                    ctx.globalAlpha = 1;
+                }
+            }
+
+            // Draw emotional particles
+            if (emotionalState.current === 'FLOW') {
+                for (let i = 0; i < 3; i++) {
+                    const time = Date.now() * 0.001 + i * 2;
+                    const x = (Math.sin(time) + 1) * canvas.width / 2;
+                    const y = (time * 50) % canvas.height;
+
+                    ctx.fillStyle = `${emotion.color}44`;
+                    ctx.beginPath();
+                    ctx.arc(x, y, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            // Draw pause overlay
+            if (isPaused) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = 'white';
+                ctx.font = '30px Courier New';
+                ctx.textAlign = 'center';
+                ctx.fillText('PAUSED', canvas.width / 2, canvas.height / 2);
+                ctx.font = '16px Courier New';
+                ctx.fillText('Press P to continue', canvas.width / 2, canvas.height / 2 + 30);
+            }
+
+            // Draw breathing mode overlay
+            if (breathingMode) {
+                const breathPhase = (Math.sin(Date.now() * 0.0005) + 1) / 2;
+                ctx.fillStyle = `rgba(135, 206, 235, ${breathPhase * 0.3})`;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                ctx.fillStyle = 'white';
+                ctx.font = '20px Courier New';
+                ctx.textAlign = 'center';
+                ctx.fillText(breathPhase > 0.5 ? 'Breathe In...' : 'Breathe Out...',
+                           canvas.width / 2, 30);
+            }
+
+            // Draw game over
+            if (!gameRunning) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = 'white';
+                ctx.font = '30px Courier New';
+                ctx.textAlign = 'center';
+                ctx.fillText('GAME COMPLETE', canvas.width / 2, canvas.height / 2);
+                ctx.font = '16px Courier New';
+                ctx.fillText('Press R to play again', canvas.width / 2, canvas.height / 2 + 30);
+            }
+        }
+
+        function drawBlock(x, y, color, glowIntensity = 0.3) {
+            ctx.fillStyle = color;
+            ctx.fillRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+
+            // Inner highlight
+            const gradient = ctx.createLinearGradient(
+                x * BLOCK_SIZE, y * BLOCK_SIZE,
+                (x + 1) * BLOCK_SIZE, (y + 1) * BLOCK_SIZE
+            );
+            gradient.addColorStop(0, `${color}88`);
+            gradient.addColorStop(1, color);
+
+            ctx.fillStyle = gradient;
+            ctx.fillRect(x * BLOCK_SIZE + 2, y * BLOCK_SIZE + 2, BLOCK_SIZE - 4, BLOCK_SIZE - 4);
+
+            // Border
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(x * BLOCK_SIZE + 0.5, y * BLOCK_SIZE + 0.5, BLOCK_SIZE - 1, BLOCK_SIZE - 1);
+        }
+
+        function wouldCollide(piece, dx, dy) {
+            for (let y = 0; y < piece.shape.length; y++) {
+                for (let x = 0; x < piece.shape[y].length; x++) {
+                    if (piece.shape[y][x]) {
+                        const newX = piece.x + x + dx;
+                        const newY = piece.y + y + dy;
+
+                        if (newX < 0 || newX >= COLS || newY >= ROWS) {
+                            return true;
+                        }
+
+                        if (newY >= 0 && board[newY][newX]) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        function gameLoop(time = 0) {
+            if (!gameRunning) {
+                requestAnimationFrame(gameLoop);
+                return;
+            }
+
+            const deltaTime = time - lastTime;
+            lastTime = time;
+
+            if (!isPaused) {
+                dropCounter += deltaTime;
+
+                const emotion = EMOTIONS[emotionalState.current];
+                const dropSpeed = emotion.dropSpeed / (level * 0.5 + 1);
+
+                if (dropCounter > dropSpeed) {
+                    if (currentPiece) {
+                        if (!wouldCollide(currentPiece, 0, 1)) {
+                            currentPiece.y++;
+                        } else {
+                            currentPiece.lock();
+                            clearLines();
+                            currentPiece = new Piece();
+
+                            if (currentPiece.collides()) {
+                                gameRunning = false;
+                            }
+                        }
+                    } else {
+                        currentPiece = new Piece();
+                    }
+                    dropCounter = 0;
+                }
+            }
+
+            draw();
+
+            // Update display
+            document.getElementById('score').textContent = score;
+            document.getElementById('lines').textContent = lines;
+            document.getElementById('level').textContent = level;
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            if (!gameRunning && e.key.toLowerCase() === 'r') {
+                // Reset game
+                board = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+                score = 0;
+                lines = 0;
+                level = 1;
+                emotionalState.stress = 0;
+                emotionalState.excitement = 0;
+                emotionalState.focus = 50;
+                emotionalState.flow = 0;
+                emotionalState.current = 'CALM';
+                emotionalState.history = [];
+                currentPiece = new Piece();
+                gameRunning = true;
+                updateEmotionalDisplay();
+                return;
+            }
+
+            if (!gameRunning || !currentPiece) return;
+
+            if (e.key.toLowerCase() === 'p') {
+                isPaused = !isPaused;
+                return;
+            }
+
+            if (e.key.toLowerCase() === 'b') {
+                breathingMode = !breathingMode;
+                if (breathingMode) {
+                    emotionalState.stress = Math.max(0, emotionalState.stress - 20);
+                }
+                return;
+            }
+
+            if (isPaused) return;
+
+            // Track move speed
+            const moveTime = Date.now();
+            emotionalState.moveSpeed.push(moveTime);
+            if (emotionalState.moveSpeed.length > 10) {
+                emotionalState.moveSpeed.shift();
+            }
+
+            switch(e.key) {
+                case 'ArrowLeft':
+                    if (!wouldCollide(currentPiece, -1, 0)) {
+                        currentPiece.x--;
+                    }
+                    break;
+                case 'ArrowRight':
+                    if (!wouldCollide(currentPiece, 1, 0)) {
+                        currentPiece.x++;
+                    }
+                    break;
+                case 'ArrowDown':
+                    if (!wouldCollide(currentPiece, 0, 1)) {
+                        currentPiece.y++;
+                        score++;
+                    }
+                    break;
+                case 'ArrowUp':
+                    currentPiece.rotate();
+                    break;
+                case ' ':
+                    emotionalState.hardDropCount++;
+                    while (!wouldCollide(currentPiece, 0, 1)) {
+                        currentPiece.y++;
+                        score += 2;
+                    }
+                    currentPiece.lock();
+                    clearLines();
+                    currentPiece = new Piece();
+                    if (currentPiece.collides()) {
+                        gameRunning = false;
+                    }
+                    dropCounter = 0;
+                    analyzeEmotionalState();
+                    break;
+            }
+        });
+
+        // Initialize
+        currentPiece = new Piece();
+        updateEmotionalDisplay();
+        adaptGameplay();
+        gameLoop();
+
+        // Simulate heartbeat for emotion tracking
+        setInterval(() => {
+            if (!isPaused && gameRunning) {
+                // Simulate heart rate based on game intensity
+                const baseRate = 70;
+                const stressModifier = emotionalState.stress * 0.3;
+                const excitementModifier = emotionalState.excitement * 0.2;
+                emotionalState.heartRate = baseRate + stressModifier + excitementModifier +
+                                          (Math.random() - 0.5) * 10;
+            }
+        }, 1000);
+    </script>
+</body>
+</html>
