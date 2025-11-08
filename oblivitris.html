@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OBLIVITRIS - Memory-Based Invisible Tetris</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            color: #fff;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .game-container {
+            display: flex;
+            gap: 30px;
+            margin-bottom: 20px;
+            align-items: flex-start;
+        }
+
+        canvas {
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 10px;
+            background: rgba(0,0,0,0.5);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+        }
+
+        .sonar-active {
+            animation: sonarPulse 1s;
+        }
+
+        @keyframes sonarPulse {
+            0%, 100% {
+                box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+            }
+            50% {
+                box-shadow: 0 0 40px rgba(0, 255, 255, 0.8);
+            }
+        }
+
+        .memory-panel {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            width: 350px;
+        }
+
+        .sonar-status {
+            background: rgba(0, 255, 255, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .sonar-status h3 {
+            margin-bottom: 10px;
+        }
+
+        .sonar-count {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #00ffff;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+        }
+
+        .sonar-btn {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.2em;
+            font-weight: bold;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
+            color: white;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+
+        .sonar-btn:hover:not(:disabled) {
+            transform: scale(1.05);
+            box-shadow: 0 4px 15px rgba(0, 210, 255, 0.5);
+        }
+
+        .sonar-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .memory-info {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+
+        .memory-info h3 {
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .fade-indicator {
+            margin: 10px 0;
+        }
+
+        .fade-bar {
+            width: 100%;
+            height: 20px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+
+        .fade-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #43e97b 0%, #ffd93d 50%, #ff6b6b 100%);
+            transition: width 0.3s;
+        }
+
+        .ghost-memory {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .ghost-memory h3 {
+            margin-bottom: 10px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .stat {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.8;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        .achievement {
+            background: rgba(255, 215, 0, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            text-align: center;
+            font-weight: bold;
+            display: none;
+        }
+
+        .achievement.show {
+            display: block;
+            animation: slideIn 0.5s;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .controls {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            max-width: 800px;
+            text-align: center;
+        }
+
+        .controls h3 {
+            margin-bottom: 10px;
+        }
+
+        .controls p {
+            margin: 5px 0;
+            font-size: 0.95em;
+        }
+
+        .game-over {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.95);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+            display: none;
+            z-index: 1000;
+        }
+
+        .game-over h2 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            color: #00ffff;
+        }
+
+        .game-over button {
+            padding: 15px 30px;
+            font-size: 1.2em;
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: transform 0.3s;
+        }
+
+        .game-over button:hover {
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🌫️ OBLIVITRIS 🌫️</h1>
+        <p>Play From Memory As Pieces Fade Away!</p>
+    </div>
+
+    <div class="game-container">
+        <canvas id="gameCanvas" width="300" height="600"></canvas>
+
+        <div class="memory-panel">
+            <div class="sonar-status">
+                <h3>Sonar Pulses Remaining</h3>
+                <div class="sonar-count" id="sonarCount">3</div>
+                <button class="sonar-btn" id="sonarBtn">📡 ACTIVATE SONAR (S)</button>
+            </div>
+
+            <div class="memory-info">
+                <h3>Memory Challenge</h3>
+                <div class="fade-indicator">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.85em;">
+                        <span>Visible</span>
+                        <span>Fading</span>
+                        <span>Hidden</span>
+                    </div>
+                    <div class="fade-bar">
+                        <div class="fade-fill" id="fadeFill"></div>
+                    </div>
+                </div>
+                <p style="margin-top: 10px; font-size: 0.9em; opacity: 0.8;">
+                    Pieces fade after 3s, disappear after 10s
+                </p>
+            </div>
+
+            <div class="ghost-memory">
+                <h3>Ghost Memory</h3>
+                <p style="font-size: 0.9em; opacity: 0.8;">Last 5 placements shown as outlines</p>
+            </div>
+
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-label">Score</div>
+                    <div class="stat-value" id="score">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Lines</div>
+                    <div class="stat-value" id="lines">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Perfect Memory</div>
+                    <div class="stat-value" id="perfectMemory">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Memory Fails</div>
+                    <div class="stat-value" id="memoryFails">0</div>
+                </div>
+            </div>
+
+            <div class="achievement" id="achievement"></div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <h3>Controls</h3>
+        <p><strong>←→:</strong> Move | <strong>↑:</strong> Rotate | <strong>↓:</strong> Soft Drop | <strong>Space:</strong> Hard Drop</p>
+        <p><strong>S:</strong> Sonar Pulse (reveal all blocks for 1 second) | <strong>P:</strong> Pause</p>
+        <p style="margin-top: 10px; font-size: 0.9em; opacity: 0.9;">
+            💡 Use your memory! Clear lines without sonar for "Perfect Memory" bonus!
+        </p>
+    </div>
+
+    <div class="game-over" id="gameOver">
+        <h2>Memory Exhausted!</h2>
+        <p id="finalScore"></p>
+        <button onclick="location.reload()">Test Memory Again</button>
+    </div>
+
+    <script>
+        // Game constants
+        const COLS = 15;
+        const ROWS = 30;
+        const BLOCK_SIZE = 20;
+        const COLORS = {
+            I: '#00f0f0',
+            O: '#f0f000',
+            T: '#a000f0',
+            S: '#00f000',
+            Z: '#f00000',
+            J: '#0000f0',
+            L: '#f0a000'
+        };
+
+        const SHAPES = {
+            I: [[1,1,1,1]],
+            O: [[1,1],[1,1]],
+            T: [[0,1,0],[1,1,1]],
+            S: [[0,1,1],[1,1,0]],
+            Z: [[1,1,0],[0,1,1]],
+            J: [[1,0,0],[1,1,1]],
+            L: [[0,0,1],[1,1,1]]
+        };
+
+        const FADE_START = 3000; // Start fading after 3 seconds
+        const FADE_COMPLETE = 10000; // Completely invisible after 10 seconds
+
+        // Game state
+        let gameState = {
+            score: 0,
+            lines: 0,
+            sonarPulses: 3,
+            perfectMemoryClears: 0,
+            memoryFails: 0,
+            sonarActive: false,
+            usedSonarRecently: false,
+            paused: false,
+            gameOver: false
+        };
+
+        let board = Array(ROWS).fill().map(() => Array(COLS).fill(null));
+        let currentPiece = null;
+        let ghostPlacements = []; // Last 5 placements
+        let lastTime = 0;
+        let dropCounter = 0;
+        let dropInterval = 1000;
+        let currentTime = 0;
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function createPiece() {
+            const types = Object.keys(SHAPES);
+            const type = types[Math.floor(Math.random() * types.length)];
+            return {
+                type: type,
+                shape: SHAPES[type],
+                x: Math.floor(COLS / 2) - Math.floor(SHAPES[type][0].length / 2),
+                y: 0,
+                color: COLORS[type]
+            };
+        }
+
+        function getOpacity(placementTime) {
+            if (gameState.sonarActive) return 1;
+
+            const age = currentTime - placementTime;
+
+            if (age < FADE_START) {
+                return 1; // Fully visible
+            } else if (age < FADE_COMPLETE) {
+                // Gradually fade from 1 to 0
+                const fadeProgress = (age - FADE_START) / (FADE_COMPLETE - FADE_START);
+                return 1 - fadeProgress;
+            } else {
+                return 0; // Completely invisible
+            }
+        }
+
+        function drawBoard() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw ghost placements (outlines of last 5 pieces)
+            ctx.save();
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.lineWidth = 1;
+            ghostPlacements.forEach(ghost => {
+                ghost.positions.forEach(([x, y]) => {
+                    if (y >= 0) {
+                        ctx.strokeRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE - 1, BLOCK_SIZE - 1);
+                    }
+                });
+            });
+            ctx.restore();
+
+            // Draw placed blocks with fading
+            board.forEach((row, y) => {
+                row.forEach((cell, x) => {
+                    if (cell) {
+                        const opacity = getOpacity(cell.placedAt);
+                        if (opacity > 0) {
+                            ctx.globalAlpha = opacity;
+                            ctx.fillStyle = cell.color;
+                            ctx.fillRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE - 1, BLOCK_SIZE - 1);
+
+                            // Draw fading indicator
+                            if (opacity < 0.5 && !gameState.sonarActive) {
+                                ctx.strokeStyle = 'rgba(255, 255, 0, 0.5)';
+                                ctx.lineWidth = 1;
+                                ctx.strokeRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE - 1, BLOCK_SIZE - 1);
+                            }
+                        }
+                        ctx.globalAlpha = 1;
+                    }
+                });
+            });
+
+            // Draw current piece (always visible)
+            if (currentPiece) {
+                ctx.fillStyle = currentPiece.color;
+                currentPiece.shape.forEach((row, dy) => {
+                    row.forEach((value, dx) => {
+                        if (value) {
+                            ctx.fillRect(
+                                (currentPiece.x + dx) * BLOCK_SIZE,
+                                (currentPiece.y + dy) * BLOCK_SIZE,
+                                BLOCK_SIZE - 1,
+                                BLOCK_SIZE - 1
+                            );
+                        }
+                    });
+                });
+            }
+
+            // Sonar effect
+            if (gameState.sonarActive) {
+                ctx.strokeStyle = 'rgba(0, 255, 255, 0.5)';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(0, 0, canvas.width, canvas.height);
+            }
+        }
+
+        function collide(piece = currentPiece) {
+            return piece.shape.some((row, dy) => {
+                return row.some((value, dx) => {
+                    if (!value) return false;
+                    const newX = piece.x + dx;
+                    const newY = piece.y + dy;
+                    return newX < 0 || newX >= COLS || newY >= ROWS ||
+                           (newY >= 0 && board[newY][newX] !== null);
+                });
+            });
+        }
+
+        function merge() {
+            const positions = [];
+
+            currentPiece.shape.forEach((row, dy) => {
+                row.forEach((value, dx) => {
+                    if (value) {
+                        const y = currentPiece.y + dy;
+                        const x = currentPiece.x + dx;
+                        if (y >= 0) {
+                            board[y][x] = {
+                                color: currentPiece.color,
+                                placedAt: currentTime
+                            };
+                            positions.push([x, y]);
+                        }
+                    }
+                });
+            });
+
+            // Add to ghost memory
+            ghostPlacements.unshift({ positions, time: currentTime });
+            if (ghostPlacements.length > 5) {
+                ghostPlacements.pop();
+            }
+        }
+
+        function clearLines() {
+            let linesCleared = 0;
+
+            for (let y = board.length - 1; y >= 0; y--) {
+                if (board[y].every(cell => cell !== null)) {
+                    board.splice(y, 1);
+                    board.unshift(Array(COLS).fill(null));
+                    linesCleared++;
+                    y++;
+                }
+            }
+
+            if (linesCleared > 0) {
+                gameState.lines += linesCleared;
+
+                // Perfect memory bonus if no sonar used recently
+                if (!gameState.usedSonarRecently) {
+                    gameState.perfectMemoryClears++;
+                    gameState.score += linesCleared * 200; // Double points
+                    showAchievement('🧠 PERFECT MEMORY CLEAR! +' + (linesCleared * 200));
+                } else {
+                    gameState.score += linesCleared * 100;
+                }
+            }
+        }
+
+        function activateSonar() {
+            if (gameState.sonarPulses <= 0 || gameState.sonarActive) return;
+
+            gameState.sonarPulses--;
+            gameState.sonarActive = true;
+            gameState.usedSonarRecently = true;
+
+            canvas.classList.add('sonar-active');
+
+            setTimeout(() => {
+                gameState.sonarActive = false;
+                canvas.classList.remove('sonar-active');
+            }, 1000);
+
+            // Mark sonar usage for 5 seconds
+            setTimeout(() => {
+                gameState.usedSonarRecently = false;
+            }, 5000);
+        }
+
+        function showAchievement(text) {
+            const achievement = document.getElementById('achievement');
+            achievement.textContent = text;
+            achievement.classList.add('show');
+
+            setTimeout(() => {
+                achievement.classList.remove('show');
+            }, 3000);
+        }
+
+        function checkMemoryFail() {
+            // Check if player tries to place in occupied (but invisible) space
+            let fail = false;
+
+            currentPiece.shape.forEach((row, dy) => {
+                row.forEach((value, dx) => {
+                    if (value) {
+                        const y = currentPiece.y + dy;
+                        const x = currentPiece.x + dx;
+                        if (y >= 0 && y < ROWS && x >= 0 && x < COLS && board[y][x]) {
+                            const opacity = getOpacity(board[y][x].placedAt);
+                            if (opacity < 0.3) {
+                                fail = true;
+                            }
+                        }
+                    }
+                });
+            });
+
+            if (fail) {
+                gameState.memoryFails++;
+            }
+        }
+
+        function moveHorizontal(dir) {
+            if (gameState.paused || gameState.gameOver) return;
+            currentPiece.x += dir;
+            if (collide()) {
+                currentPiece.x -= dir;
+                checkMemoryFail();
+            }
+        }
+
+        function moveDown() {
+            if (gameState.paused || gameState.gameOver) return;
+            currentPiece.y++;
+            if (collide()) {
+                currentPiece.y--;
+                merge();
+                clearLines();
+                currentPiece = createPiece();
+
+                if (collide()) {
+                    endGame();
+                }
+            }
+        }
+
+        function drop() {
+            if (gameState.paused || gameState.gameOver) return;
+            while (!collide()) {
+                currentPiece.y++;
+            }
+            currentPiece.y--;
+            merge();
+            clearLines();
+            currentPiece = createPiece();
+
+            if (collide()) {
+                endGame();
+            }
+        }
+
+        function rotate() {
+            if (gameState.paused || gameState.gameOver) return;
+            const newShape = currentPiece.shape[0].map((_, i) =>
+                currentPiece.shape.map(row => row[i]).reverse()
+            );
+            const rotated = {...currentPiece, shape: newShape};
+            if (!collide(rotated)) {
+                currentPiece.shape = rotated.shape;
+            } else {
+                checkMemoryFail();
+            }
+        }
+
+        function update(time = 0) {
+            if (gameState.paused || gameState.gameOver) {
+                requestAnimationFrame(update);
+                return;
+            }
+
+            const deltaTime = time - lastTime;
+            lastTime = time;
+            currentTime = time;
+            dropCounter += deltaTime;
+
+            if (dropCounter > dropInterval) {
+                moveDown();
+                dropCounter = 0;
+            }
+
+            drawBoard();
+            updateUI();
+
+            requestAnimationFrame(update);
+        }
+
+        function updateUI() {
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('lines').textContent = gameState.lines;
+            document.getElementById('sonarCount').textContent = gameState.sonarPulses;
+            document.getElementById('perfectMemory').textContent = gameState.perfectMemoryClears;
+            document.getElementById('memoryFails').textContent = gameState.memoryFails;
+
+            const sonarBtn = document.getElementById('sonarBtn');
+            sonarBtn.disabled = gameState.sonarPulses === 0 || gameState.sonarActive;
+
+            // Update fade indicator
+            const avgOpacity = calculateAverageOpacity();
+            document.getElementById('fadeFill').style.width = (avgOpacity * 100) + '%';
+        }
+
+        function calculateAverageOpacity() {
+            let total = 0;
+            let count = 0;
+
+            board.forEach(row => {
+                row.forEach(cell => {
+                    if (cell) {
+                        total += getOpacity(cell.placedAt);
+                        count++;
+                    }
+                });
+            });
+
+            return count > 0 ? total / count : 1;
+        }
+
+        function endGame() {
+            gameState.gameOver = true;
+            const gameOverEl = document.getElementById('gameOver');
+
+            let rank = '';
+            if (gameState.perfectMemoryClears >= 10) {
+                rank = '🏆 MEMORY MASTER!';
+            } else if (gameState.perfectMemoryClears >= 5) {
+                rank = '🥇 EXCELLENT RECALL!';
+            } else if (gameState.perfectMemoryClears >= 2) {
+                rank = '🥈 GOOD MEMORY!';
+            } else {
+                rank = '🥉 LEARNING!';
+            }
+
+            document.getElementById('finalScore').textContent =
+                `${rank}\nScore: ${gameState.score} | Lines: ${gameState.lines}\nPerfect Memory Clears: ${gameState.perfectMemoryClears} | Memory Fails: ${gameState.memoryFails}`;
+            gameOverEl.style.display = 'block';
+        }
+
+        function init() {
+            currentPiece = createPiece();
+            requestAnimationFrame(update);
+        }
+
+        document.addEventListener('keydown', e => {
+            if (e.key === 'p' || e.key === 'P') {
+                gameState.paused = !gameState.paused;
+                return;
+            }
+
+            if (gameState.paused || gameState.gameOver) return;
+
+            switch(e.key) {
+                case 'ArrowLeft':
+                    moveHorizontal(-1);
+                    break;
+                case 'ArrowRight':
+                    moveHorizontal(1);
+                    break;
+                case 'ArrowDown':
+                    moveDown();
+                    break;
+                case 'ArrowUp':
+                    rotate();
+                    break;
+                case ' ':
+                    e.preventDefault();
+                    drop();
+                    break;
+                case 's':
+                case 'S':
+                    activateSonar();
+                    break;
+            }
+        });
+
+        document.getElementById('sonarBtn').addEventListener('click', activateSonar);
+
+        init();
+    </script>
+</body>
+</html>

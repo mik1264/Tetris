@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NARRATRIS - Story-Driven Tetris</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Georgia, serif;
+            background: linear-gradient(135deg, #3a1c71 0%, #d76d77 50%, #ffaf7b 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            color: #fff;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .game-container {
+            display: flex;
+            gap: 30px;
+            margin-bottom: 20px;
+            align-items: flex-start;
+        }
+
+        canvas {
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 10px;
+            background: rgba(0,0,0,0.3);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+
+        .story-panel {
+            background: rgba(255,255,255,0.2);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            width: 400px;
+            max-height: 700px;
+            overflow-y: auto;
+        }
+
+        .character-roster {
+            background: rgba(255,255,255,0.2);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+
+        .character-roster h3 {
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .character {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            margin: 5px 0;
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+            font-size: 0.9em;
+        }
+
+        .character-icon {
+            font-size: 2em;
+            margin-right: 10px;
+        }
+
+        .character-info {
+            flex: 1;
+        }
+
+        .character-name {
+            font-weight: bold;
+            margin-bottom: 3px;
+        }
+
+        .character-status {
+            font-size: 0.85em;
+            opacity: 0.8;
+        }
+
+        .character.dead {
+            opacity: 0.4;
+            text-decoration: line-through;
+        }
+
+        .story-feed {
+            background: rgba(255,255,255,0.2);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .story-feed h3 {
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .story-event {
+            background: rgba(255,255,255,0.2);
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 4px solid #ffaf7b;
+            animation: slideIn 0.5s;
+        }
+
+        .story-event.dialogue {
+            border-left-color: #6dd5ed;
+        }
+
+        .story-event.death {
+            border-left-color: #ff6b6b;
+            background: rgba(255, 107, 107, 0.3);
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .stat {
+            background: rgba(255,255,255,0.2);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.8;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        .moral-choice {
+            background: rgba(255,255,255,0.3);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            text-align: center;
+            font-weight: bold;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+
+        .controls {
+            background: rgba(255,255,255,0.2);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            max-width: 900px;
+            text-align: center;
+        }
+
+        .controls h3 {
+            margin-bottom: 10px;
+        }
+
+        .controls p {
+            margin: 5px 0;
+            font-size: 0.95em;
+        }
+
+        .game-over {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.95);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+            display: none;
+            z-index: 1000;
+            max-width: 600px;
+        }
+
+        .game-over h2 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            color: #ffaf7b;
+        }
+
+        .ending {
+            font-size: 1.2em;
+            margin: 20px 0;
+            line-height: 1.6;
+        }
+
+        .game-over button {
+            padding: 15px 30px;
+            font-size: 1.2em;
+            background: linear-gradient(135deg, #3a1c71 0%, #d76d77 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: transform 0.3s;
+        }
+
+        .game-over button:hover {
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📖 NARRATRIS 📖</h1>
+        <p>Every Piece Tells A Story</p>
+    </div>
+
+    <div class="game-container">
+        <canvas id="gameCanvas" width="300" height="600"></canvas>
+
+        <div class="story-panel">
+            <div class="character-roster">
+                <h3>Character Status</h3>
+                <div id="characterList"></div>
+            </div>
+
+            <div class="story-feed">
+                <h3>Story Events</h3>
+                <div id="storyEvents"></div>
+            </div>
+
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-label">Score</div>
+                    <div class="stat-value" id="score">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Lines</div>
+                    <div class="stat-value" id="lines">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Survivors</div>
+                    <div class="stat-value" id="survivors">7</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Relationships</div>
+                    <div class="stat-value" id="relationships">0</div>
+                </div>
+            </div>
+
+            <div class="moral-choice" id="moralChoice" style="display: none;"></div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <h3>Controls</h3>
+        <p><strong>←→:</strong> Move | <strong>↑:</strong> Rotate | <strong>↓:</strong> Soft Drop | <strong>Space:</strong> Hard Drop | <strong>P:</strong> Pause</p>
+        <p style="margin-top: 10px; font-size: 0.9em; opacity: 0.9;">
+            💡 When pieces touch, they interact! Clearing lines will destroy characters. Choose wisely!
+        </p>
+    </div>
+
+    <div class="game-over" id="gameOver">
+        <h2>The Story Ends</h2>
+        <div class="ending" id="ending"></div>
+        <p id="finalScore"></p>
+        <button onclick="location.reload()">New Story</button>
+    </div>
+
+    <script>
+        // Game constants
+        const COLS = 15;
+        const ROWS = 30;
+        const BLOCK_SIZE = 20;
+
+        const CHARACTERS = {
+            I: {
+                name: 'Hero',
+                emoji: '⚔️',
+                color: '#00f0f0',
+                role: 'The Chosen One',
+                personality: 'brave'
+            },
+            O: {
+                name: 'Villain',
+                emoji: '😈',
+                color: '#f0f000',
+                role: 'Dark Lord',
+                personality: 'evil'
+            },
+            T: {
+                name: 'Mentor',
+                emoji: '🧙',
+                color: '#a000f0',
+                role: 'Wise Guide',
+                personality: 'wise'
+            },
+            S: {
+                name: 'Rival',
+                emoji: '🗡️',
+                color: '#00f000',
+                role: 'Competitive Fighter',
+                personality: 'ambitious'
+            },
+            Z: {
+                name: 'Shadow',
+                emoji: '🥷',
+                color: '#f00000',
+                role: 'Mysterious Assassin',
+                personality: 'secretive'
+            },
+            J: {
+                name: 'Healer',
+                emoji: '💚',
+                color: '#0000f0',
+                role: 'Kind Protector',
+                personality: 'caring'
+            },
+            L: {
+                name: 'Bard',
+                emoji: '🎵',
+                color: '#f0a000',
+                role: 'Storyteller',
+                personality: 'cheerful'
+            }
+        };
+
+        const SHAPES = {
+            I: [[1,1,1,1]],
+            O: [[1,1],[1,1]],
+            T: [[0,1,0],[1,1,1]],
+            S: [[0,1,1],[1,1,0]],
+            Z: [[1,1,0],[0,1,1]],
+            J: [[1,0,0],[1,1,1]],
+            L: [[0,0,1],[1,1,1]]
+        };
+
+        const DIALOGUES = {
+            'I-O': ["Hero faces Villain! 'This ends now!'", "Villain laughs, 'You cannot defeat me!'"],
+            'I-T': ["Mentor trains Hero: 'Trust in yourself.'", "Hero gains confidence!"],
+            'I-J': ["Healer blesses Hero with protection.", "Hero feels renewed strength!"],
+            'O-T': ["Villain confronts Mentor: 'Join me!'", "Mentor refuses: 'Never!'"],
+            'S-Z': ["Rival meets Shadow in secret.", "An alliance forms in darkness..."],
+            'T-L': ["Mentor and Bard share ancient tales.", "Knowledge spreads through song."],
+            'J-L': ["Healer and Bard perform healing songs.", "Hope fills the air!"],
+            'I-S': ["Hero challenges Rival to a duel!", "Rival grins: 'Finally, a worthy opponent!'"],
+            'O-Z': ["Villain recruits Shadow.", "Dark forces gather strength..."]
+        };
+
+        // Game state
+        let gameState = {
+            score: 0,
+            lines: 0,
+            relationships: [],
+            characterStatus: {},
+            storyEvents: [],
+            moralDilemmas: 0,
+            paused: false,
+            gameOver: false
+        };
+
+        // Initialize character status
+        Object.keys(CHARACTERS).forEach(type => {
+            gameState.characterStatus[type] = { alive: true, interactions: 0 };
+        });
+
+        let board = Array(ROWS).fill().map(() => Array(COLS).fill(null));
+        let currentPiece = null;
+        let lastPiece = null;
+        let lastTime = 0;
+        let dropCounter = 0;
+        let dropInterval = 1000;
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function createPiece() {
+            const types = Object.keys(SHAPES);
+            const type = types[Math.floor(Math.random() * types.length)];
+            return {
+                type: type,
+                shape: SHAPES[type],
+                x: Math.floor(COLS / 2) - Math.floor(SHAPES[type][0].length / 2),
+                y: 0,
+                color: CHARACTERS[type].color,
+                character: CHARACTERS[type]
+            };
+        }
+
+        function drawBoard() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw placed blocks with character emoji
+            board.forEach((row, y) => {
+                row.forEach((cell, x) => {
+                    if (cell) {
+                        ctx.fillStyle = cell.color;
+                        ctx.fillRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE - 1, BLOCK_SIZE - 1);
+
+                        // Draw mini emoji
+                        ctx.font = '12px Arial';
+                        ctx.fillText(cell.emoji, x * BLOCK_SIZE + 4, y * BLOCK_SIZE + 15);
+                    }
+                });
+            });
+
+            // Draw current piece
+            if (currentPiece) {
+                ctx.fillStyle = currentPiece.color;
+                currentPiece.shape.forEach((row, dy) => {
+                    row.forEach((value, dx) => {
+                        if (value) {
+                            ctx.fillRect(
+                                (currentPiece.x + dx) * BLOCK_SIZE,
+                                (currentPiece.y + dy) * BLOCK_SIZE,
+                                BLOCK_SIZE - 1,
+                                BLOCK_SIZE - 1
+                            );
+                            ctx.font = '12px Arial';
+                            ctx.fillText(
+                                currentPiece.character.emoji,
+                                (currentPiece.x + dx) * BLOCK_SIZE + 4,
+                                (currentPiece.y + dy) * BLOCK_SIZE + 15
+                            );
+                        }
+                    });
+                });
+            }
+        }
+
+        function collide(piece = currentPiece) {
+            return piece.shape.some((row, dy) => {
+                return row.some((value, dx) => {
+                    if (!value) return false;
+                    const newX = piece.x + dx;
+                    const newY = piece.y + dy;
+                    return newX < 0 || newX >= COLS || newY >= ROWS ||
+                           (newY >= 0 && board[newY][newX] !== null);
+                });
+            });
+        }
+
+        function merge() {
+            currentPiece.shape.forEach((row, dy) => {
+                row.forEach((value, dx) => {
+                    if (value) {
+                        const y = currentPiece.y + dy;
+                        const x = currentPiece.x + dx;
+                        if (y >= 0) {
+                            board[y][x] = {
+                                type: currentPiece.type,
+                                color: currentPiece.color,
+                                emoji: currentPiece.character.emoji
+                            };
+                        }
+                    }
+                });
+            });
+
+            checkInteractions();
+        }
+
+        function checkInteractions() {
+            // Check if current piece touched any other pieces
+            currentPiece.shape.forEach((row, dy) => {
+                row.forEach((value, dx) => {
+                    if (value) {
+                        const y = currentPiece.y + dy;
+                        const x = currentPiece.x + dx;
+
+                        // Check adjacent cells
+                        const adjacent = [
+                            [x-1, y], [x+1, y], [x, y-1], [x, y+1]
+                        ];
+
+                        adjacent.forEach(([ax, ay]) => {
+                            if (ax >= 0 && ax < COLS && ay >= 0 && ay < ROWS && board[ay][ax]) {
+                                const other = board[ay][ax];
+                                if (other.type !== currentPiece.type) {
+                                    triggerDialogue(currentPiece.type, other.type);
+                                }
+                            }
+                        });
+                    }
+                });
+            });
+        }
+
+        function triggerDialogue(type1, type2) {
+            const key1 = `${type1}-${type2}`;
+            const key2 = `${type2}-${type1}`;
+            const dialogue = DIALOGUES[key1] || DIALOGUES[key2];
+
+            if (dialogue && !gameState.relationships.includes(key1) && !gameState.relationships.includes(key2)) {
+                const text = dialogue[Math.floor(Math.random() * dialogue.length)];
+                addStoryEvent(text, 'dialogue');
+                gameState.relationships.push(key1);
+                gameState.characterStatus[type1].interactions++;
+                gameState.characterStatus[type2].interactions++;
+            }
+        }
+
+        function clearLines() {
+            let linesCleared = 0;
+            let charactersKilled = new Set();
+
+            for (let y = board.length - 1; y >= 0; y--) {
+                if (board[y].every(cell => cell !== null)) {
+                    // Record characters in this line
+                    board[y].forEach(cell => {
+                        if (cell) {
+                            charactersKilled.add(cell.type);
+                        }
+                    });
+
+                    board.splice(y, 1);
+                    board.unshift(Array(COLS).fill(null));
+                    linesCleared++;
+                    y++;
+                }
+            }
+
+            if (linesCleared > 0) {
+                gameState.lines += linesCleared;
+                gameState.score += linesCleared * 100;
+
+                // Handle character deaths
+                charactersKilled.forEach(type => {
+                    if (gameState.characterStatus[type].alive) {
+                        gameState.characterStatus[type].alive = false;
+                        const char = CHARACTERS[type];
+                        addStoryEvent(
+                            `💀 ${char.emoji} ${char.name} has fallen in battle...`,
+                            'death'
+                        );
+
+                        // Check for moral dilemma
+                        if (gameState.characterStatus[type].interactions > 3) {
+                            gameState.moralDilemmas++;
+                            showMoralChoice(char.name);
+                        }
+                    }
+                });
+            }
+        }
+
+        function showMoralChoice(name) {
+            const choice = document.getElementById('moralChoice');
+            choice.textContent = `⚠️ You sacrificed ${name}, who had formed many bonds. Was it worth it for points?`;
+            choice.style.display = 'block';
+
+            setTimeout(() => {
+                choice.style.display = 'none';
+            }, 5000);
+        }
+
+        function addStoryEvent(text, type = '') {
+            gameState.storyEvents.unshift({ text, type });
+            if (gameState.storyEvents.length > 10) {
+                gameState.storyEvents.pop();
+            }
+            updateStoryFeed();
+        }
+
+        function updateStoryFeed() {
+            const feed = document.getElementById('storyEvents');
+            feed.innerHTML = gameState.storyEvents.map(event =>
+                `<div class="story-event ${event.type}">${event.text}</div>`
+            ).join('');
+        }
+
+        function updateCharacterList() {
+            const list = document.getElementById('characterList');
+            list.innerHTML = Object.keys(CHARACTERS).map(type => {
+                const char = CHARACTERS[type];
+                const status = gameState.characterStatus[type];
+                const statusText = status.alive ?
+                    `${status.interactions} interactions` :
+                    'Deceased';
+                return `
+                    <div class="character ${!status.alive ? 'dead' : ''}">
+                        <div class="character-icon">${char.emoji}</div>
+                        <div class="character-info">
+                            <div class="character-name">${char.name}</div>
+                            <div class="character-status">${char.role} - ${statusText}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function getEnding() {
+            const survivors = Object.values(gameState.characterStatus).filter(s => s.alive).length;
+            const totalRelationships = gameState.relationships.length;
+
+            if (survivors === 7 && totalRelationships > 5) {
+                return "✨ Perfect Harmony - All characters survived and formed deep bonds. A tale of unity and friendship!";
+            } else if (survivors === 0) {
+                return "💀 Total Tragedy - All characters perished. A dark tale of sacrifice and loss.";
+            } else if (gameState.moralDilemmas > 3) {
+                return "⚖️ The Burden of Choice - Many beloved characters were sacrificed for victory. Was it worth it?";
+            } else if (totalRelationships > 8) {
+                return "💕 Bonds Beyond Battle - Though some fell, their relationships changed the world forever.";
+            } else if (survivors >= 5) {
+                return "🌟 Hope Endures - Most heroes survived to fight another day. Their story continues...";
+            } else {
+                return "🗡️ Pyrrhic Victory - Few remain standing. The cost of survival was steep.";
+            }
+        }
+
+        function moveHorizontal(dir) {
+            if (gameState.paused || gameState.gameOver) return;
+            currentPiece.x += dir;
+            if (collide()) {
+                currentPiece.x -= dir;
+            }
+        }
+
+        function moveDown() {
+            if (gameState.paused || gameState.gameOver) return;
+            currentPiece.y++;
+            if (collide()) {
+                currentPiece.y--;
+                merge();
+                clearLines();
+                lastPiece = currentPiece;
+                currentPiece = createPiece();
+
+                if (collide()) {
+                    endGame();
+                }
+            }
+        }
+
+        function drop() {
+            if (gameState.paused || gameState.gameOver) return;
+            while (!collide()) {
+                currentPiece.y++;
+            }
+            currentPiece.y--;
+            merge();
+            clearLines();
+            lastPiece = currentPiece;
+            currentPiece = createPiece();
+
+            if (collide()) {
+                endGame();
+            }
+        }
+
+        function rotate() {
+            if (gameState.paused || gameState.gameOver) return;
+            const newShape = currentPiece.shape[0].map((_, i) =>
+                currentPiece.shape.map(row => row[i]).reverse()
+            );
+            const rotated = {...currentPiece, shape: newShape};
+            if (!collide(rotated)) {
+                currentPiece.shape = rotated.shape;
+            }
+        }
+
+        function update(time = 0) {
+            if (gameState.paused || gameState.gameOver) {
+                requestAnimationFrame(update);
+                return;
+            }
+
+            const deltaTime = time - lastTime;
+            lastTime = time;
+            dropCounter += deltaTime;
+
+            if (dropCounter > dropInterval) {
+                moveDown();
+                dropCounter = 0;
+            }
+
+            drawBoard();
+            updateUI();
+
+            requestAnimationFrame(update);
+        }
+
+        function updateUI() {
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('lines').textContent = gameState.lines;
+            document.getElementById('survivors').textContent =
+                Object.values(gameState.characterStatus).filter(s => s.alive).length;
+            document.getElementById('relationships').textContent = gameState.relationships.length;
+
+            updateCharacterList();
+        }
+
+        function endGame() {
+            gameState.gameOver = true;
+            const gameOverEl = document.getElementById('gameOver');
+            document.getElementById('ending').textContent = getEnding();
+            document.getElementById('finalScore').textContent =
+                `Score: ${gameState.score} | Survivors: ${Object.values(gameState.characterStatus).filter(s => s.alive).length}/7 | Relationships: ${gameState.relationships.length}`;
+            gameOverEl.style.display = 'block';
+        }
+
+        function init() {
+            currentPiece = createPiece();
+            addStoryEvent("📖 The story begins... Seven heroes meet in a falling world.");
+            updateCharacterList();
+            requestAnimationFrame(update);
+        }
+
+        document.addEventListener('keydown', e => {
+            if (e.key === 'p' || e.key === 'P') {
+                gameState.paused = !gameState.paused;
+                return;
+            }
+
+            if (gameState.paused || gameState.gameOver) return;
+
+            switch(e.key) {
+                case 'ArrowLeft':
+                    moveHorizontal(-1);
+                    break;
+                case 'ArrowRight':
+                    moveHorizontal(1);
+                    break;
+                case 'ArrowDown':
+                    moveDown();
+                    break;
+                case 'ArrowUp':
+                    rotate();
+                    break;
+                case ' ':
+                    e.preventDefault();
+                    drop();
+                    break;
+            }
+        });
+
+        init();
+    </script>
+</body>
+</html>

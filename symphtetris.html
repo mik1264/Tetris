@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SYMPHTETRIS - Musical Composition Tetris</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #8e2de2 0%, #4a00e0 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            color: #fff;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .game-container {
+            display: flex;
+            gap: 30px;
+            margin-bottom: 20px;
+            align-items: flex-start;
+        }
+
+        canvas {
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 10px;
+            background: rgba(0,0,0,0.3);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+
+        .music-panel {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            width: 350px;
+        }
+
+        .instruments {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+
+        .instruments h3 {
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .instrument {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            margin: 5px 0;
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+        }
+
+        .instrument-name {
+            font-size: 0.9em;
+        }
+
+        .note-indicator {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2em;
+        }
+
+        .note-indicator.playing {
+            animation: notePlay 0.5s;
+        }
+
+        @keyframes notePlay {
+            0% { transform: scale(1); background: rgba(255,255,255,0.2); }
+            50% { transform: scale(1.3); background: rgba(255,215,0,0.8); }
+            100% { transform: scale(1); background: rgba(255,255,255,0.2); }
+        }
+
+        .composition-display {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+
+        .composition-display h3 {
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .harmony-meter {
+            width: 100%;
+            height: 25px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 12px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .harmony-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff6b6b 0%, #ffd93d 50%, #43e97b 100%);
+            transition: width 0.3s;
+        }
+
+        .genre-selector {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+
+        .genre-selector h3 {
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .genre-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .genre-btn {
+            padding: 10px;
+            font-size: 0.9em;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 8px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .genre-btn.active {
+            background: rgba(255,215,0,0.3);
+            border-color: gold;
+        }
+
+        .genre-btn:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .stat {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.8;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        .controls {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            max-width: 800px;
+            text-align: center;
+        }
+
+        .controls h3 {
+            margin-bottom: 10px;
+        }
+
+        .controls p {
+            margin: 5px 0;
+            font-size: 0.95em;
+        }
+
+        .game-over {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.95);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+            display: none;
+            z-index: 1000;
+        }
+
+        .game-over h2 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            color: #8e2de2;
+        }
+
+        .game-over button {
+            padding: 15px 30px;
+            font-size: 1.2em;
+            background: linear-gradient(135deg, #8e2de2 0%, #4a00e0 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: transform 0.3s;
+        }
+
+        .game-over button:hover {
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎵 SYMPHTETRIS 🎵</h1>
+        <p>Compose Music While You Play!</p>
+    </div>
+
+    <div class="game-container">
+        <canvas id="gameCanvas" width="300" height="600"></canvas>
+
+        <div class="music-panel">
+            <div class="instruments">
+                <h3>Orchestra</h3>
+                <div class="instrument">
+                    <span class="instrument-name">I - 🎸 Bass</span>
+                    <div class="note-indicator" id="note-I">♪</div>
+                </div>
+                <div class="instrument">
+                    <span class="instrument-name">O - 🥁 Drums</span>
+                    <div class="note-indicator" id="note-O">♪</div>
+                </div>
+                <div class="instrument">
+                    <span class="instrument-name">T - 🎹 Piano</span>
+                    <div class="note-indicator" id="note-T">♪</div>
+                </div>
+                <div class="instrument">
+                    <span class="instrument-name">S - 🎻 Violin</span>
+                    <div class="note-indicator" id="note-S">♪</div>
+                </div>
+                <div class="instrument">
+                    <span class="instrument-name">Z - 🎸 Guitar</span>
+                    <div class="note-indicator" id="note-Z">♪</div>
+                </div>
+                <div class="instrument">
+                    <span class="instrument-name">J - 🎺 Brass</span>
+                    <div class="note-indicator" id="note-J">♪</div>
+                </div>
+                <div class="instrument">
+                    <span class="instrument-name">L - 🎹 Synth</span>
+                    <div class="note-indicator" id="note-L">♪</div>
+                </div>
+            </div>
+
+            <div class="composition-display">
+                <h3>Harmony Score</h3>
+                <div style="text-align: center; font-size: 1.3em; margin-bottom: 5px;">
+                    <span id="harmonyPercent">50%</span>
+                </div>
+                <div class="harmony-meter">
+                    <div class="harmony-fill" id="harmonyFill" style="width: 50%;"></div>
+                </div>
+                <p style="font-size: 0.85em; opacity: 0.8; margin-top: 10px; text-align: center;">
+                    Clear harmonious lines for bonus points!
+                </p>
+            </div>
+
+            <div class="genre-selector">
+                <h3>Genre Mode</h3>
+                <div class="genre-buttons">
+                    <button class="genre-btn active" data-genre="classical">🎼 Classical</button>
+                    <button class="genre-btn" data-genre="jazz">🎷 Jazz</button>
+                    <button class="genre-btn" data-genre="electronic">🎛️ Electronic</button>
+                    <button class="genre-btn" data-genre="rock">🎸 Rock</button>
+                </div>
+            </div>
+
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-label">Score</div>
+                    <div class="stat-value" id="score">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Lines</div>
+                    <div class="stat-value" id="lines">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Harmonies</div>
+                    <div class="stat-value" id="harmonies">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Dissonance</div>
+                    <div class="stat-value" id="dissonance">0</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <h3>Controls</h3>
+        <p><strong>←→:</strong> Move (changes timing) | <strong>↑:</strong> Rotate | <strong>↓:</strong> Soft Drop</p>
+        <p><strong>Space:</strong> Hard Drop | <strong>P:</strong> Pause | <strong>M:</strong> Mute</p>
+        <p style="margin-top: 10px; font-size: 0.9em; opacity: 0.9;">
+            💡 Height = Pitch, Horizontal Position = Timing. Create beautiful melodies!
+        </p>
+    </div>
+
+    <div class="game-over" id="gameOver">
+        <h2>Concert Ended!</h2>
+        <p id="finalScore"></p>
+        <button onclick="location.reload()">New Performance</button>
+    </div>
+
+    <script>
+        // Game constants
+        const COLS = 15;
+        const ROWS = 30;
+        const BLOCK_SIZE = 20;
+
+        const INSTRUMENTS = {
+            I: { name: 'Bass', color: '#00f0f0', waveform: 'sine', baseFreq: 110 },
+            O: { name: 'Drums', color: '#f0f000', waveform: 'square', baseFreq: 80 },
+            T: { name: 'Piano', color: '#a000f0', waveform: 'triangle', baseFreq: 261.63 },
+            S: { name: 'Violin', color: '#00f000', waveform: 'sine', baseFreq: 440 },
+            Z: { name: 'Guitar', color: '#f00000', waveform: 'sawtooth', baseFreq: 329.63 },
+            J: { name: 'Brass', color: '#0000f0', waveform: 'square', baseFreq: 220 },
+            L: { name: 'Synth', color: '#f0a000', waveform: 'sawtooth', baseFreq: 523.25 }
+        };
+
+        const SHAPES = {
+            I: [[1,1,1,1]],
+            O: [[1,1],[1,1]],
+            T: [[0,1,0],[1,1,1]],
+            S: [[0,1,1],[1,1,0]],
+            Z: [[1,1,0],[0,1,1]],
+            J: [[1,0,0],[1,1,1]],
+            L: [[0,0,1],[1,1,1]]
+        };
+
+        // Harmony relationships
+        const HARMONY_PAIRS = [
+            ['I', 'T'], ['T', 'S'], ['S', 'L'], ['O', 'J'],
+            ['J', 'Z'], ['I', 'O'], ['T', 'L']
+        ];
+
+        const DISSONANCE_PAIRS = [
+            ['I', 'S'], ['O', 'T'], ['Z', 'L'], ['S', 'J']
+        ];
+
+        // Audio context
+        let audioContext = null;
+        let isMuted = false;
+
+        // Game state
+        let gameState = {
+            score: 0,
+            lines: 0,
+            harmonies: 0,
+            dissonances: 0,
+            currentGenre: 'classical',
+            harmonyScore: 50,
+            paused: false,
+            gameOver: false
+        };
+
+        let board = Array(ROWS).fill().map(() => Array(COLS).fill(null));
+        let currentPiece = null;
+        let lastTime = 0;
+        let dropCounter = 0;
+        let dropInterval = 1000;
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function createPiece() {
+            const types = Object.keys(SHAPES);
+            const type = types[Math.floor(Math.random() * types.length)];
+            return {
+                type: type,
+                shape: SHAPES[type],
+                x: Math.floor(COLS / 2) - Math.floor(SHAPES[type][0].length / 2),
+                y: 0,
+                color: INSTRUMENTS[type].color,
+                instrument: INSTRUMENTS[type]
+            };
+        }
+
+        function playNote(type, x, y) {
+            if (isMuted || !audioContext) return;
+
+            const instrument = INSTRUMENTS[type];
+
+            // Calculate frequency based on vertical position (higher = higher pitch)
+            const pitchMultiplier = 1 + ((ROWS - y) / ROWS);
+            const frequency = instrument.baseFreq * pitchMultiplier;
+
+            // Create oscillator
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.type = instrument.waveform;
+            oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+
+            // Volume envelope
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.5);
+
+            // Visual feedback
+            const indicator = document.getElementById(`note-${type}`);
+            if (indicator) {
+                indicator.classList.add('playing');
+                setTimeout(() => indicator.classList.remove('playing'), 500);
+            }
+        }
+
+        function drawBoard() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw staff lines
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < 5; i++) {
+                const y = (ROWS / 6) * (i + 1) * BLOCK_SIZE;
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+
+            // Draw placed blocks
+            board.forEach((row, y) => {
+                row.forEach((cell, x) => {
+                    if (cell) {
+                        ctx.fillStyle = cell.color;
+                        ctx.fillRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE - 1, BLOCK_SIZE - 1);
+
+                        // Draw note symbol
+                        ctx.font = '12px Arial';
+                        ctx.fillStyle = '#fff';
+                        ctx.fillText('♪', x * BLOCK_SIZE + 5, y * BLOCK_SIZE + 15);
+                    }
+                });
+            });
+
+            // Draw current piece
+            if (currentPiece) {
+                ctx.fillStyle = currentPiece.color;
+                currentPiece.shape.forEach((row, dy) => {
+                    row.forEach((value, dx) => {
+                        if (value) {
+                            ctx.fillRect(
+                                (currentPiece.x + dx) * BLOCK_SIZE,
+                                (currentPiece.y + dy) * BLOCK_SIZE,
+                                BLOCK_SIZE - 1,
+                                BLOCK_SIZE - 1
+                            );
+                            ctx.font = '12px Arial';
+                            ctx.fillStyle = '#fff';
+                            ctx.fillText('♪', (currentPiece.x + dx) * BLOCK_SIZE + 5,
+                                              (currentPiece.y + dy) * BLOCK_SIZE + 15);
+                        }
+                    });
+                });
+            }
+        }
+
+        function collide(piece = currentPiece) {
+            return piece.shape.some((row, dy) => {
+                return row.some((value, dx) => {
+                    if (!value) return false;
+                    const newX = piece.x + dx;
+                    const newY = piece.y + dy;
+                    return newX < 0 || newX >= COLS || newY >= ROWS ||
+                           (newY >= 0 && board[newY][newX] !== null);
+                });
+            });
+        }
+
+        function merge() {
+            currentPiece.shape.forEach((row, dy) => {
+                row.forEach((value, dx) => {
+                    if (value) {
+                        const y = currentPiece.y + dy;
+                        const x = currentPiece.x + dx;
+                        if (y >= 0) {
+                            board[y][x] = {
+                                type: currentPiece.type,
+                                color: currentPiece.color
+                            };
+                            // Play note
+                            playNote(currentPiece.type, x, y);
+                        }
+                    }
+                });
+            });
+        }
+
+        function checkHarmony(line) {
+            const types = line.filter(cell => cell !== null).map(cell => cell.type);
+            const uniqueTypes = [...new Set(types)];
+
+            let harmonyCount = 0;
+            let dissonanceCount = 0;
+
+            // Check all pairs
+            for (let i = 0; i < uniqueTypes.length; i++) {
+                for (let j = i + 1; j < uniqueTypes.length; j++) {
+                    const pair = [uniqueTypes[i], uniqueTypes[j]];
+
+                    // Check harmony
+                    if (HARMONY_PAIRS.some(hp =>
+                        (hp[0] === pair[0] && hp[1] === pair[1]) ||
+                        (hp[0] === pair[1] && hp[1] === pair[0])
+                    )) {
+                        harmonyCount++;
+                    }
+
+                    // Check dissonance
+                    if (DISSONANCE_PAIRS.some(dp =>
+                        (dp[0] === pair[0] && dp[1] === pair[1]) ||
+                        (dp[0] === pair[1] && dp[1] === pair[0])
+                    )) {
+                        dissonanceCount++;
+                    }
+                }
+            }
+
+            return { harmony: harmonyCount, dissonance: dissonanceCount };
+        }
+
+        function clearLines() {
+            let linesCleared = 0;
+            let totalHarmony = 0;
+            let totalDissonance = 0;
+
+            for (let y = board.length - 1; y >= 0; y--) {
+                if (board[y].every(cell => cell !== null)) {
+                    const { harmony, dissonance } = checkHarmony(board[y]);
+                    totalHarmony += harmony;
+                    totalDissonance += dissonance;
+
+                    board.splice(y, 1);
+                    board.unshift(Array(COLS).fill(null));
+                    linesCleared++;
+                    y++;
+                }
+            }
+
+            if (linesCleared > 0) {
+                gameState.lines += linesCleared;
+                gameState.harmonies += totalHarmony;
+                gameState.dissonances += totalDissonance;
+
+                // Calculate score based on harmony
+                let multiplier = 1;
+                if (totalHarmony > totalDissonance) {
+                    multiplier = 2;
+                } else if (totalDissonance > totalHarmony) {
+                    multiplier = 0.5;
+                }
+
+                gameState.score += Math.floor(linesCleared * 100 * multiplier);
+
+                // Update harmony score
+                gameState.harmonyScore = Math.min(100, Math.max(0,
+                    50 + (gameState.harmonies * 5) - (gameState.dissonances * 5)
+                ));
+            }
+        }
+
+        function moveHorizontal(dir) {
+            if (gameState.paused || gameState.gameOver) return;
+            currentPiece.x += dir;
+            if (collide()) {
+                currentPiece.x -= dir;
+            }
+        }
+
+        function moveDown() {
+            if (gameState.paused || gameState.gameOver) return;
+            currentPiece.y++;
+            if (collide()) {
+                currentPiece.y--;
+                merge();
+                clearLines();
+                currentPiece = createPiece();
+
+                if (collide()) {
+                    endGame();
+                }
+            }
+        }
+
+        function drop() {
+            if (gameState.paused || gameState.gameOver) return;
+            while (!collide()) {
+                currentPiece.y++;
+            }
+            currentPiece.y--;
+            merge();
+            clearLines();
+            currentPiece = createPiece();
+
+            if (collide()) {
+                endGame();
+            }
+        }
+
+        function rotate() {
+            if (gameState.paused || gameState.gameOver) return;
+            const newShape = currentPiece.shape[0].map((_, i) =>
+                currentPiece.shape.map(row => row[i]).reverse()
+            );
+            const rotated = {...currentPiece, shape: newShape};
+            if (!collide(rotated)) {
+                currentPiece.shape = rotated.shape;
+            }
+        }
+
+        function update(time = 0) {
+            if (gameState.paused || gameState.gameOver) {
+                requestAnimationFrame(update);
+                return;
+            }
+
+            const deltaTime = time - lastTime;
+            lastTime = time;
+            dropCounter += deltaTime;
+
+            if (dropCounter > dropInterval) {
+                moveDown();
+                dropCounter = 0;
+            }
+
+            drawBoard();
+            updateUI();
+
+            requestAnimationFrame(update);
+        }
+
+        function updateUI() {
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('lines').textContent = gameState.lines;
+            document.getElementById('harmonies').textContent = gameState.harmonies;
+            document.getElementById('dissonance').textContent = gameState.dissonances;
+
+            document.getElementById('harmonyPercent').textContent =
+                Math.round(gameState.harmonyScore) + '%';
+            document.getElementById('harmonyFill').style.width = gameState.harmonyScore + '%';
+        }
+
+        function endGame() {
+            gameState.gameOver = true;
+            const gameOverEl = document.getElementById('gameOver');
+
+            let rank = '';
+            if (gameState.harmonyScore >= 80) {
+                rank = '🏆 VIRTUOSO!';
+            } else if (gameState.harmonyScore >= 60) {
+                rank = '🎼 MAESTRO!';
+            } else if (gameState.harmonyScore >= 40) {
+                rank = '🎵 COMPOSER!';
+            } else {
+                rank = '🎶 BEGINNER!';
+            }
+
+            document.getElementById('finalScore').textContent =
+                `${rank}\nScore: ${gameState.score} | Harmony: ${Math.round(gameState.harmonyScore)}%\nHarmonies: ${gameState.harmonies} | Dissonances: ${gameState.dissonances}`;
+            gameOverEl.style.display = 'block';
+        }
+
+        function init() {
+            initAudio();
+            currentPiece = createPiece();
+            requestAnimationFrame(update);
+
+            // Genre selector
+            document.querySelectorAll('.genre-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.genre-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    gameState.currentGenre = btn.dataset.genre;
+                });
+            });
+        }
+
+        document.addEventListener('keydown', e => {
+            if (e.key === 'p' || e.key === 'P') {
+                gameState.paused = !gameState.paused;
+                return;
+            }
+
+            if (e.key === 'm' || e.key === 'M') {
+                isMuted = !isMuted;
+                return;
+            }
+
+            if (gameState.paused || gameState.gameOver) return;
+
+            switch(e.key) {
+                case 'ArrowLeft':
+                    moveHorizontal(-1);
+                    break;
+                case 'ArrowRight':
+                    moveHorizontal(1);
+                    break;
+                case 'ArrowDown':
+                    moveDown();
+                    break;
+                case 'ArrowUp':
+                    rotate();
+                    break;
+                case ' ':
+                    e.preventDefault();
+                    drop();
+                    break;
+            }
+        });
+
+        init();
+    </script>
+</body>
+</html>
