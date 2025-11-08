@@ -2,7 +2,7 @@
 
 This repository contains interactive games exploring different concepts:
 
-## 🎮 Tetris
+## 🎮 Classic Tetris
 A classic Tetris implementation with smooth controls and scoring.
 
 **Play:** Open `index.html` in your browser
@@ -11,6 +11,51 @@ A classic Tetris implementation with smooth controls and scoring.
 - Arrow keys to move and rotate
 - Space for hard drop
 - P to pause
+
+---
+
+## 🎮🧠 Language Games Tetris
+**File:** `language-tetris.html`
+
+The perfect fusion: Tetris mechanics meet Wittgenstein's philosophy! Play Tetris while experiencing how the same pieces take on different meanings in different "language games."
+
+**The Concept:**
+- Same Tetris pieces, but their conceptual meaning changes with each level
+- Four progressive "language games" (contexts/forms of life)
+- Each game relabels the pieces to demonstrate how meaning emerges from use
+
+**Language Games Progression:**
+
+1. **🏗️ Builder's Language Game** (Level 1)
+   - Pieces as building materials: Beam, Block, Joint, Slab, Pillar
+   - "In the builder's practice, these words are commands for action"
+
+2. **📜 Poet's Language Game** (Level 2)
+   - Pieces as emotions: Longing, Wholeness, Balance, Flow, Reaching
+   - "Poetry uses words metaphorically—same shapes, different meanings"
+
+3. **🏪 Market Language Game** (Level 3)
+   - Pieces as marketplace items: Baguette, Apple, Scale, Ribbon, Hook
+   - "In commerce, the same forms take on transactional meanings"
+
+4. **🔬 Scientist's Language Game** (Level 4)
+   - Pieces as technical terms: Linear, Unit, Junction, Helix, Vector
+   - "Scientific language strives for precision, but it's still use in practice"
+
+**Gameplay Features:**
+- Progressive difficulty with faster drop speeds
+- Bonus philosophical points for understanding contexts
+- Track which "word families" you're currently playing with
+- Philosophical achievement rankings at game over
+- Same Tetris mechanics you know, but with deeper meaning!
+
+**What You Learn:**
+- The same Tetris I-block can be a "Beam" (builder), "Longing" (poet), "Baguette" (market), or "Linear" (science)
+- Context determines meaning—the piece doesn't change, but its role in different "language games" does
+- Words gain meaning through use in specific practices
+- Forms of life shape how we interpret and use language
+
+**Difficulty:** Familiar Tetris gameplay with philosophical depth
 
 ---
 
@@ -132,11 +177,19 @@ The comprehensive introduction to language games, featuring four distinct worlds
 
 ## 🎯 Recommended Play Order
 
+**For Educational Journey:**
 1. **Context Shift** - Start here to grasp the basic idea
 2. **The Builder's Apprentice** - Experience primitive language learning
 3. **Language Games Adventure** - Get the comprehensive overview
 4. **Family Resemblance** - Understand conceptual networks
 5. **Lost in Translation** - Master cross-contextual communication
+
+**For Fun with Philosophy:**
+- **Language Games Tetris** - Perfect entry point! Familiar gameplay with philosophical depth
+- Or play it after completing the educational games to see concepts applied to Tetris
+
+**For Classic Gaming:**
+- **Classic Tetris** - Pure block-stacking fun without philosophy
 
 ---
 
