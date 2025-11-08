@@ -44,18 +44,6 @@
             border-radius: 10px;
             text-align: center;
         }
-        .audio-notice {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: white;
-            background: rgba(0,0,0,0.8);
-            padding: 30px;
-            border-radius: 10px;
-            text-align: center;
-            cursor: pointer;
-        }
     </style>
 </head>
 <body>
@@ -87,9 +75,9 @@
         // Audio reactive variables
         let mic;
         let amplitude;
+        let fft;
         let audioLevel = 0;
         let audioStarted = false;
-        let frequencySpectrum = [];
 
         const SHAPES = [
             [[1,1,1,1]], // I
@@ -129,15 +117,15 @@
                             let py = (this.y + row) * BLOCK_SIZE;
 
                             // Audio reactive size
-                            let sizeBoost = audioLevel * 10;
+                            let sizeBoost = audioLevel * 15;
 
                             push();
                             translate(px + BLOCK_SIZE/2, py + BLOCK_SIZE/2);
 
                             // Glow effect based on audio
-                            for (let i = 3; i > 0; i--) {
-                                let glowSize = BLOCK_SIZE + (i * 8 * audioLevel);
-                                fill(this.col[0], this.col[1], this.col[2], 50 / i);
+                            for (let i = 4; i > 0; i--) {
+                                let glowSize = BLOCK_SIZE + (i * 10 * audioLevel);
+                                fill(this.col[0], this.col[1], this.col[2], (80 / i) * audioLevel * 5);
                                 noStroke();
                                 rect(-glowSize/2, -glowSize/2, glowSize, glowSize);
                             }
@@ -231,6 +219,8 @@
                 mic.start();
                 amplitude = new p5.Amplitude();
                 amplitude.setInput(mic);
+                fft = new p5.FFT(0.8, 64);
+                fft.setInput(mic);
                 audioStarted = true;
             }
         }
@@ -258,9 +248,6 @@
             // Get audio level
             if (audioStarted && amplitude) {
                 audioLevel = amplitude.getLevel();
-                if (mic) {
-                    frequencySpectrum = mic.fft.analyze();
-                }
             }
 
             // Background with audio reactive gradient
@@ -285,11 +272,11 @@
                         let col_data = grid[row][col];
 
                         // Audio reactive glow
-                        for (let i = 3; i > 0; i--) {
-                            let glowSize = BLOCK_SIZE + (i * 8 * audioLevel);
+                        for (let i = 4; i > 0; i--) {
+                            let glowSize = BLOCK_SIZE + (i * 10 * audioLevel);
                             push();
                             translate(px + BLOCK_SIZE/2, py + BLOCK_SIZE/2);
-                            fill(col_data[0], col_data[1], col_data[2], 50 / i);
+                            fill(col_data[0], col_data[1], col_data[2], (80 / i) * audioLevel * 5);
                             noStroke();
                             rect(-glowSize/2, -glowSize/2, glowSize, glowSize);
                             pop();
@@ -352,6 +339,9 @@
             push();
             translate(COLS * BLOCK_SIZE + 80, 0);
 
+            // Get FFT spectrum
+            let spectrum = fft ? fft.analyze() : [];
+
             stroke(255, 0, 255);
             strokeWeight(2);
             noFill();
@@ -365,22 +355,33 @@
             }
             endShape();
 
-            // Draw circular visualizer
+            // Draw circular visualizer with spectrum data
             push();
             translate(50, height/2);
             rotate(frameCount * 0.01);
 
             for (let i = 0; i < 12; i++) {
                 let angle = (i / 12) * TWO_PI;
-                let r = 30 + audioLevel * 100;
+                let specIndex = floor(map(i, 0, 12, 0, spectrum.length));
+                let amp = spectrum[specIndex] ? map(spectrum[specIndex], 0, 255, 0, 1) : 0;
+                let r = 30 + (audioLevel + amp) * 80;
                 let x = cos(angle) * r;
                 let y = sin(angle) * r;
 
                 fill(255, 0, 255, 150);
                 noStroke();
-                circle(x, y, 10 + audioLevel * 20);
+                circle(x, y, 10 + (audioLevel + amp) * 15);
             }
             pop();
+
+            // Draw frequency bars
+            for (let i = 0; i < min(32, spectrum.length); i++) {
+                let x = map(i, 0, 32, 0, 100);
+                let h = map(spectrum[i], 0, 255, 0, 100);
+                fill(255, 0, 255, 150);
+                noStroke();
+                rect(x, height - 150, 3, -h);
+            }
 
             pop();
         }

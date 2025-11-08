@@ -71,6 +71,7 @@
         let dropCounter = 0;
         let dropInterval = 1000;
         let lastTime = 0;
+        let canSpawn = true;
 
         const SHAPES = [
             [[1,1,1,1]], // I
@@ -99,7 +100,7 @@
                 this.targetY = y * BLOCK_SIZE;
                 this.col = col;
                 this.velocity = 0;
-                this.gravity = 0.5;
+                this.gravity = 0.8;
                 this.bounceCount = 0;
                 this.settled = false;
                 this.wobble = random(TWO_PI);
@@ -115,12 +116,13 @@
                 // Check if reached target
                 if (this.y >= this.targetY) {
                     this.y = this.targetY;
-                    this.velocity *= -0.6; // Bounce with damping
+                    this.velocity *= -0.5; // Bounce with damping
 
                     this.bounceCount++;
-                    if (abs(this.velocity) < 0.5 || this.bounceCount > 5) {
+                    if (abs(this.velocity) < 1 || this.bounceCount > 4) {
                         this.settled = true;
                         this.velocity = 0;
+                        this.y = this.targetY;
                     }
                 }
             }
@@ -130,21 +132,25 @@
                 translate(this.x + BLOCK_SIZE/2, this.y + BLOCK_SIZE/2);
 
                 // Squash and stretch effect
-                let squash = 1;
-                if (!this.settled) {
-                    squash = map(abs(this.velocity), 0, 10, 1, 1.2);
-                    rotate(sin(this.wobble + frameCount * 0.1) * 0.1);
+                let squashY = 1;
+                let squashX = 1;
+                if (!this.settled && abs(this.velocity) > 0.5) {
+                    squashY = map(abs(this.velocity), 0, 10, 1, 0.8);
+                    squashX = map(abs(this.velocity), 0, 10, 1, 1.2);
+                    rotate(sin(this.wobble + frameCount * 0.1) * 0.05);
                 }
 
                 fill(this.col[0], this.col[1], this.col[2]);
                 stroke(255, 200);
                 strokeWeight(2);
-                rect(-BLOCK_SIZE/2, -BLOCK_SIZE/2 * squash, BLOCK_SIZE, BLOCK_SIZE * squash);
+                rect(-BLOCK_SIZE/2 * squashX, -BLOCK_SIZE/2 * squashY,
+                     BLOCK_SIZE * squashX, BLOCK_SIZE * squashY);
 
                 // Highlight
                 noStroke();
                 fill(255, 255, 255, 100);
-                rect(-BLOCK_SIZE/2 + 5, -BLOCK_SIZE/2 * squash + 5, BLOCK_SIZE/2, BLOCK_SIZE/2);
+                rect(-BLOCK_SIZE/2 * squashX + 5, -BLOCK_SIZE/2 * squashY + 5,
+                     BLOCK_SIZE/2, BLOCK_SIZE/2);
 
                 pop();
             }
@@ -261,19 +267,22 @@
                 lastTime = now;
 
                 dropCounter += deltaTime;
-                if (dropCounter > dropInterval) {
+                if (dropCounter > dropInterval && canSpawn) {
                     if (!currentPiece.move(0, 1)) {
                         currentPiece.lock();
+                        canSpawn = false;
 
                         // Wait for blocks to settle before checking lines
                         setTimeout(() => {
                             settleBlocks();
                             clearLines();
-                            currentPiece = new Piece();
-                            if (currentPiece.collision()) {
-                                gameOver = true;
+                            if (canSpawn) {
+                                currentPiece = new Piece();
+                                if (currentPiece.collision()) {
+                                    gameOver = true;
+                                }
                             }
-                        }, 800);
+                        }, 1000);
                     }
                     dropCounter = 0;
                 }
@@ -313,7 +322,7 @@
             }
 
             // Draw current piece
-            if (!gameOver && currentPiece) {
+            if (!gameOver && currentPiece && canSpawn) {
                 currentPiece.draw();
             }
 
@@ -340,7 +349,13 @@
         }
 
         function settleBlocks() {
+            // Store the falling blocks before clearing
+            let blocksToSettle = [...fallingBlocks];
+
+            // Clear fallingBlocks array
             fallingBlocks = [];
+
+            // Clear grid
             for (let row = 0; row < ROWS; row++) {
                 for (let col = 0; col < COLS; col++) {
                     grid[row][col] = 0;
@@ -348,7 +363,7 @@
             }
 
             // Re-populate grid from settled falling blocks
-            for (let block of fallingBlocks) {
+            for (let block of blocksToSettle) {
                 if (block.settled) {
                     let gridY = Math.round(block.y / BLOCK_SIZE);
                     let gridX = Math.round(block.x / BLOCK_SIZE);
@@ -357,6 +372,8 @@
                     }
                 }
             }
+
+            canSpawn = true;
         }
 
         function clearLines() {
@@ -392,7 +409,7 @@
                 return;
             }
 
-            if (paused || gameOver) return;
+            if (paused || gameOver || !canSpawn) return;
 
             if (keyCode === LEFT_ARROW) {
                 currentPiece.move(-1, 0);
@@ -427,6 +444,7 @@
             level = 1;
             dropCounter = 0;
             dropInterval = 1000;
+            canSpawn = true;
 
             document.getElementById('score').textContent = score;
             document.getElementById('lines').textContent = lines;
