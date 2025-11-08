@@ -14,6 +14,188 @@ A classic Tetris implementation with smooth controls and scoring.
 
 ---
 
+## 🎨 Framework Tetris Collection
+
+Explore Tetris implemented with different visualization frameworks! Each framework brings unique capabilities and visual styles to the classic game.
+
+### 📊 D3.js Implementations
+
+**D3.js** (Data-Driven Documents) is a powerful JavaScript library for manipulating documents based on data, enabling dynamic and interactive visualizations.
+
+#### 1. D3.js Tetris - Classic SVG
+**File:** `d3-tetris-classic.html`
+
+Traditional Tetris built entirely with SVG elements and D3.js DOM manipulation.
+
+**Features:**
+- SVG-based block rendering
+- Smooth D3 transitions
+- Clean, minimal design
+- Perfect introduction to D3's capabilities
+
+#### 2. D3.js Tetris - Data Visualization
+**File:** `d3-tetris-dataviz.html`
+
+Experience Tetris while watching real-time data visualizations of your gameplay!
+
+**Features:**
+- Live score progression line chart
+- Piece distribution bar chart
+- Level progress gauge
+- Lines cleared tracking
+- Game time counter
+- Data-driven insights while you play
+
+**What Makes It Special:**
+See your gameplay transformed into beautiful charts in real-time. Perfect for understanding how D3.js handles dynamic data updates.
+
+#### 3. D3.js Tetris - Transition Effects
+**File:** `d3-tetris-transitions.html`
+
+Showcases D3's powerful animation and transition capabilities.
+
+**Features:**
+- Smooth piece movements with D3 transitions
+- Ghost piece preview (shows where piece will land)
+- Combo system with visual feedback
+- Particle effects on line clears
+- Animated score counter
+- Gradient backgrounds and glowing effects
+
+**What Makes It Special:**
+Every movement is a smooth animation. The combo meter pulses and grows, cleared lines explode with particles, and scores count up smoothly.
+
+---
+
+### 🎲 Three.js Implementations
+
+**Three.js** is a cross-browser JavaScript library for creating and displaying 3D computer graphics using WebGL.
+
+#### 4. Three.js Tetris - Classic 3D
+**File:** `threejs-tetris-classic.html`
+
+Tetris in full 3D with rotating camera and dynamic lighting!
+
+**Features:**
+- Full 3D block rendering
+- Perspective camera with gentle rotation
+- Point lights and ambient lighting
+- Translucent board frame
+- 3D grid visualization
+- Smooth WebGL rendering
+
+**What Makes It Special:**
+The camera slowly orbits around the game board, giving you different perspectives of your 3D Tetris blocks.
+
+#### 5. Three.js Tetris - Isometric Shadows
+**File:** `threejs-tetris-isometric.html`
+
+Professional isometric view with real-time shadow casting.
+
+**Features:**
+- Orthographic isometric camera
+- Real-time shadow mapping
+- Ground plane with shadow reception
+- Enhanced phong materials
+- Height tracking metric
+- Professional lighting setup
+
+**What Makes It Special:**
+Watch realistic shadows cast by your pieces as they fall. The isometric view provides a strategic overhead perspective perfect for planning moves.
+
+#### 6. Three.js Tetris - Particle Effects
+**File:** `threejs-tetris-particles.html`
+
+Explosive particle system with spectacular visual effects!
+
+**Features:**
+- Particle explosions on piece lock
+- Massive particle bursts when clearing lines
+- Trail particles following current piece
+- Rotation particle effects
+- Pulsing dynamic lights
+- Particle counter tracking
+- Game-over particle cascade
+
+**What Makes It Special:**
+Every action creates particles! Lock a piece - particles! Clear a line - massive explosion! The final game-over sequence creates a cascading particle waterfall.
+
+---
+
+### 📈 Chart.js Implementations
+
+**Chart.js** is a simple yet flexible JavaScript charting library, creatively repurposed here for game rendering!
+
+#### 7. Chart.js Tetris - Animated Bar Charts
+**File:** `chartjs-tetris-bars.html`
+
+Tetris visualized as stacked bar charts—each column is a vertical chart!
+
+**Features:**
+- Each board column rendered as a stacked bar chart
+- Colored segments represent different pieces
+- Real-time chart updates as you play
+- Move counter and piece type tracking
+- Flash effects on line clears
+
+**What Makes It Special:**
+A completely novel way to visualize Tetris using data visualization tools. Each column is literally a vertical bar chart showing the distribution of blocks!
+
+#### 8. Chart.js Tetris - Creative Bubbles
+**File:** `chartjs-tetris-creative.html`
+
+Tetris blocks as bubbles in a bubble chart with live analytics!
+
+**Features:**
+- Bubble chart visualization (each block = 1 bubble)
+- Real-time board density tracking
+- Live density percentage line chart
+- Block count statistics
+- Piece size information
+
+**What Makes It Special:**
+Watch your Tetris board as a field of colorful bubbles. The density chart shows how full your board is getting, creating strategic pressure.
+
+#### 9. Chart.js Tetris - Hybrid Canvas
+**File:** `chartjs-tetris-hybrid.html`
+
+The best of both worlds: traditional canvas gameplay with Chart.js analytics!
+
+**Features:**
+- Traditional canvas rendering for smooth gameplay
+- Real-time score progression chart
+- Piece distribution doughnut chart
+- Performance metrics (lines per minute)
+- Live statistics dashboard
+- Dual-panel analytics layout
+
+**What Makes It Special:**
+Play normal Tetris while comprehensive charts track your performance, piece distribution, and playing patterns. Perfect for analyzing your Tetris strategy!
+
+---
+
+## 🎯 Framework Comparison
+
+**Choose D3.js for:**
+- SVG-based rendering
+- Data binding and updates
+- Advanced transitions and animations
+- DOM manipulation
+
+**Choose Three.js for:**
+- 3D graphics and perspectives
+- WebGL rendering
+- Particle systems and effects
+- Realistic lighting and shadows
+
+**Choose Chart.js for:**
+- Creative data visualization
+- Real-time analytics
+- Hybrid gameplay/analytics
+- Novel visual approaches
+
+---
+
 ## 🎮🧠 Language Games Tetris
 **File:** `language-tetris.html`
 
@@ -190,6 +372,13 @@ The comprehensive introduction to language games, featuring four distinct worlds
 
 **For Classic Gaming:**
 - **Classic Tetris** - Pure block-stacking fun without philosophy
+
+**For Framework Exploration:**
+- **Beginners**: Start with D3.js Classic or Chart.js Hybrid
+- **Visual Effects Fans**: Three.js Particles or D3.js Transitions
+- **Data Nerds**: D3.js Data Viz or Chart.js Bubbles
+- **3D Enthusiasts**: Three.js Classic 3D or Isometric Shadows
+- **Try them all!** Each offers unique visual approaches to the same game
 
 ---
 

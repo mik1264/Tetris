@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js Tetris - Isometric Shadows</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #2b1055 0%, #7597de 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        #container {
+            position: relative;
+        }
+
+        #game-canvas {
+            border-radius: 20px;
+            box-shadow: 0 25px 70px rgba(0, 0, 0, 0.7);
+        }
+
+        .ui-panel {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        #stats-panel {
+            top: 20px;
+            left: 20px;
+        }
+
+        #stats-panel h3 {
+            color: #7597de;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+            border-bottom: 2px solid #7597de;
+            padding-bottom: 5px;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            font-size: 1.1em;
+        }
+
+        .stat-value {
+            color: #7597de;
+            font-weight: bold;
+            margin-left: 20px;
+        }
+
+        #controls-panel {
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            text-align: center;
+        }
+
+        #controls-panel h3 {
+            color: #7597de;
+            margin-bottom: 10px;
+        }
+
+        #start-btn {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #2b1055 0%, #7597de 100%);
+            color: white;
+            border: 3px solid white;
+            padding: 25px 50px;
+            font-size: 1.6em;
+            border-radius: 20px;
+            cursor: pointer;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6);
+            transition: all 0.3s ease;
+        }
+
+        #start-btn:hover {
+            transform: translate(-50%, -50%) scale(1.1);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+        }
+
+        #start-btn.hidden {
+            display: none;
+        }
+
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            color: white;
+            padding: 50px;
+            border-radius: 25px;
+            text-align: center;
+            display: none;
+            border: 3px solid #7597de;
+        }
+
+        .game-over.show {
+            display: block;
+        }
+
+        .game-over h2 {
+            font-size: 3em;
+            margin-bottom: 25px;
+            color: #7597de;
+            text-shadow: 0 0 20px rgba(117, 151, 222, 0.5);
+        }
+
+        .game-over p {
+            font-size: 1.4em;
+            margin: 15px 0;
+        }
+
+        .game-over button {
+            background: linear-gradient(135deg, #2b1055 0%, #7597de 100%);
+            color: white;
+            border: 2px solid white;
+            padding: 15px 35px;
+            font-size: 1.3em;
+            border-radius: 12px;
+            cursor: pointer;
+            margin-top: 25px;
+            transition: transform 0.2s;
+        }
+
+        .game-over button:hover {
+            transform: scale(1.1);
+        }
+
+        h1 {
+            position: absolute;
+            top: -100px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 3em;
+            text-shadow: 3px 3px 10px rgba(0, 0, 0, 0.8);
+            white-space: nowrap;
+        }
+
+        .shadow-indicator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            font-size: 1.1em;
+        }
+
+        .shadow-indicator span {
+            color: #7597de;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <h1>🎲 Three.js Tetris - Isometric</h1>
+        <canvas id="game-canvas"></canvas>
+
+        <div class="ui-panel" id="stats-panel">
+            <h3>📊 Statistics</h3>
+            <div class="stat-item">
+                <span>Score:</span>
+                <span class="stat-value" id="score">0</span>
+            </div>
+            <div class="stat-item">
+                <span>Level:</span>
+                <span class="stat-value" id="level">1</span>
+            </div>
+            <div class="stat-item">
+                <span>Lines:</span>
+                <span class="stat-value" id="lines">0</span>
+            </div>
+            <div class="stat-item">
+                <span>Height:</span>
+                <span class="stat-value" id="height">0</span>
+            </div>
+        </div>
+
+        <div class="shadow-indicator">
+            Shadows: <span>Enabled</span>
+        </div>
+
+        <div class="ui-panel" id="controls-panel">
+            <h3>🎮 Controls</h3>
+            <p>←/→ Move | ↑ Rotate | ↓ Soft Drop | Space Hard Drop | P Pause</p>
+        </div>
+
+        <button id="start-btn">Start Isometric Tetris</button>
+
+        <div class="game-over" id="game-over">
+            <h2>Game Over!</h2>
+            <p>Final Score: <span id="final-score">0</span></p>
+            <p>Max Height: <span id="final-height">0</span></p>
+            <button onclick="location.reload()">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        const BOARD_WIDTH = 10;
+        const BOARD_HEIGHT = 20;
+        const BLOCK_SIZE = 1;
+        const COLORS = {
+            I: 0x00f0f0, O: 0xf0f000, T: 0xa000f0,
+            S: 0x00f000, Z: 0xf00000, J: 0x0000f0, L: 0xf0a000
+        };
+        const SHAPES = {
+            I: [[1,1,1,1]], O: [[1,1],[1,1]], T: [[0,1,0],[1,1,1]],
+            S: [[0,1,1],[1,1,0]], Z: [[1,1,0],[0,1,1]],
+            J: [[1,0,0],[1,1,1]], L: [[0,0,1],[1,1,1]]
+        };
+
+        let gameState = {
+            board: Array(BOARD_HEIGHT).fill().map(() => Array(BOARD_WIDTH).fill(null)),
+            boardMeshes: Array(BOARD_HEIGHT).fill().map(() => Array(BOARD_WIDTH).fill(null)),
+            currentPiece: null,
+            currentMeshes: [],
+            shadowMeshes: [],
+            nextPiece: null,
+            position: { x: 0, y: 0 },
+            score: 0,
+            lines: 0,
+            level: 1,
+            maxHeight: 0,
+            gameOver: false,
+            paused: false,
+            gameLoop: null
+        };
+
+        // Three.js Setup with Isometric Camera
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.Fog(0x2b1055, 30, 60);
+
+        const aspect = 800 / 600;
+        const frustumSize = 25;
+        const camera = new THREE.OrthographicCamera(
+            frustumSize * aspect / -2, frustumSize * aspect / 2,
+            frustumSize / 2, frustumSize / -2,
+            1, 1000
+        );
+
+        const renderer = new THREE.WebGLRenderer({
+            canvas: document.getElementById('game-canvas'),
+            antialias: true
+        });
+
+        renderer.setSize(800, 600);
+        renderer.setClearColor(0x1a0741);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+        // Isometric camera angle
+        camera.position.set(20, 20, 20);
+        camera.lookAt(BOARD_WIDTH / 2, BOARD_HEIGHT / 2, 0);
+
+        // Enhanced Lighting with Shadows
+        const ambientLight = new THREE.AmbientLight(0x404060, 0.6);
+        scene.add(ambientLight);
+
+        const mainLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        mainLight.position.set(15, 30, 15);
+        mainLight.castShadow = true;
+        mainLight.shadow.mapSize.width = 2048;
+        mainLight.shadow.mapSize.height = 2048;
+        mainLight.shadow.camera.left = -20;
+        mainLight.shadow.camera.right = 20;
+        mainLight.shadow.camera.top = 20;
+        mainLight.shadow.camera.bottom = -20;
+        scene.add(mainLight);
+
+        const fillLight = new THREE.DirectionalLight(0x7597de, 0.3);
+        fillLight.position.set(-10, 15, -10);
+        scene.add(fillLight);
+
+        const backLight = new THREE.PointLight(0x7597de, 0.5);
+        backLight.position.set(5, 10, -10);
+        scene.add(backLight);
+
+        // Create ground plane for shadows
+        function createGround() {
+            const geometry = new THREE.PlaneGeometry(BOARD_WIDTH + 5, 5);
+            const material = new THREE.ShadowMaterial({ opacity: 0.3 });
+            const ground = new THREE.Mesh(geometry, material);
+            ground.rotation.x = -Math.PI / 2;
+            ground.position.set(BOARD_WIDTH / 2, -0.5, 1);
+            ground.receiveShadow = true;
+            scene.add(ground);
+        }
+
+        // Create board frame with shadow receivers
+        function createBoardFrame() {
+            const frameMaterial = new THREE.MeshPhongMaterial({
+                color: 0x2b1055,
+                transparent: true,
+                opacity: 0.5,
+                side: THREE.DoubleSide
+            });
+
+            // Back wall
+            const backGeometry = new THREE.PlaneGeometry(BOARD_WIDTH + 0.5, BOARD_HEIGHT + 0.5);
+            const backWall = new THREE.Mesh(backGeometry, frameMaterial);
+            backWall.position.set(BOARD_WIDTH / 2, BOARD_HEIGHT / 2, -0.3);
+            backWall.receiveShadow = true;
+            scene.add(backWall);
+
+            // Bottom platform
+            const platformGeometry = new THREE.BoxGeometry(BOARD_WIDTH + 0.5, 0.3, 2);
+            const platformMaterial = new THREE.MeshPhongMaterial({ color: 0x1a0741 });
+            const platform = new THREE.Mesh(platformGeometry, platformMaterial);
+            platform.position.set(BOARD_WIDTH / 2, -0.2, 0);
+            platform.receiveShadow = true;
+            platform.castShadow = true;
+            scene.add(platform);
+
+            // Grid
+            const gridHelper = new THREE.GridHelper(BOARD_WIDTH, BOARD_WIDTH, 0x7597de, 0x2b1055);
+            gridHelper.position.set(BOARD_WIDTH / 2, -0.05, 0);
+            gridHelper.rotation.x = 0;
+            scene.add(gridHelper);
+        }
+
+        // Create 3D block with enhanced materials and shadows
+        function createBlock(color, x, y, castShadow = true, opacity = 1) {
+            const geometry = new THREE.BoxGeometry(BLOCK_SIZE * 0.98, BLOCK_SIZE * 0.98, BLOCK_SIZE * 0.98);
+            const material = new THREE.MeshPhongMaterial({
+                color: color,
+                specular: 0x666666,
+                shininess: 50,
+                transparent: opacity < 1,
+                opacity: opacity
+            });
+            const cube = new THREE.Mesh(geometry, material);
+
+            // Enhanced edges
+            const edges = new THREE.EdgesGeometry(geometry);
+            const edgeMaterial = new THREE.LineBasicMaterial({
+                color: 0xffffff,
+                linewidth: 2,
+                transparent: true,
+                opacity: opacity
+            });
+            const edgeLines = new THREE.LineSegments(edges, edgeMaterial);
+            cube.add(edgeLines);
+
+            cube.position.set(x + BLOCK_SIZE / 2, y + BLOCK_SIZE / 2, 0);
+            cube.castShadow = castShadow;
+            cube.receiveShadow = true;
+
+            return cube;
+        }
+
+        function createPiece() {
+            const pieces = Object.keys(SHAPES);
+            const type = pieces[Math.floor(Math.random() * pieces.length)];
+            return { type, shape: SHAPES[type], color: COLORS[type] };
+        }
+
+        function findGhostPosition() {
+            let ghostY = gameState.position.y;
+            while (!checkCollision(gameState.currentPiece, { x: gameState.position.x, y: ghostY + 1 })) {
+                ghostY++;
+            }
+            return ghostY;
+        }
+
+        function drawShadowPiece() {
+            // Remove old shadow meshes
+            gameState.shadowMeshes.forEach(mesh => scene.remove(mesh));
+            gameState.shadowMeshes = [];
+
+            if (!gameState.currentPiece) return;
+
+            const { shape, color } = gameState.currentPiece;
+            const { x } = gameState.position;
+            const ghostY = findGhostPosition();
+
+            shape.forEach((row, dy) => {
+                row.forEach((cell, dx) => {
+                    if (cell) {
+                        const posY = BOARD_HEIGHT - (ghostY + dy) - 1;
+                        const mesh = createBlock(color, x + dx, posY, false, 0.2);
+                        scene.add(mesh);
+                        gameState.shadowMeshes.push(mesh);
+                    }
+                });
+            });
+        }
+
+        function drawCurrentPiece() {
+            gameState.currentMeshes.forEach(mesh => scene.remove(mesh));
+            gameState.currentMeshes = [];
+
+            if (!gameState.currentPiece) return;
+
+            const { shape, color } = gameState.currentPiece;
+            const { x, y } = gameState.position;
+
+            shape.forEach((row, dy) => {
+                row.forEach((cell, dx) => {
+                    if (cell) {
+                        const posY = BOARD_HEIGHT - (y + dy) - 1;
+                        const mesh = createBlock(color, x + dx, posY);
+                        scene.add(mesh);
+                        gameState.currentMeshes.push(mesh);
+                    }
+                });
+            });
+        }
+
+        function drawBoard() {
+            gameState.boardMeshes.forEach(row => {
+                row.forEach(mesh => {
+                    if (mesh) scene.remove(mesh);
+                });
+            });
+
+            let maxHeight = 0;
+
+            for (let y = 0; y < BOARD_HEIGHT; y++) {
+                for (let x = 0; x < BOARD_WIDTH; x++) {
+                    if (gameState.board[y][x]) {
+                        const posY = BOARD_HEIGHT - y - 1;
+                        const mesh = createBlock(gameState.board[y][x], x, posY);
+                        scene.add(mesh);
+                        gameState.boardMeshes[y][x] = mesh;
+                        maxHeight = Math.max(maxHeight, BOARD_HEIGHT - y);
+                    } else {
+                        gameState.boardMeshes[y][x] = null;
+                    }
+                }
+            }
+
+            gameState.maxHeight = Math.max(gameState.maxHeight, maxHeight);
+            document.getElementById('height').textContent = maxHeight;
+        }
+
+        function checkCollision(piece, pos) {
+            const { shape } = piece;
+            const { x, y } = pos;
+            for (let dy = 0; dy < shape.length; dy++) {
+                for (let dx = 0; dx < shape[dy].length; dx++) {
+                    if (shape[dy][dx]) {
+                        const newX = x + dx, newY = y + dy;
+                        if (newX < 0 || newX >= BOARD_WIDTH || newY >= BOARD_HEIGHT) return true;
+                        if (newY >= 0 && gameState.board[newY][newX]) return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        function rotatePiece(piece) {
+            const rotated = piece.shape[0].map((_, i) =>
+                piece.shape.map(row => row[i]).reverse()
+            );
+            return { ...piece, shape: rotated };
+        }
+
+        function lockPiece() {
+            const { shape, color } = gameState.currentPiece;
+            const { x, y } = gameState.position;
+            shape.forEach((row, dy) => {
+                row.forEach((cell, dx) => {
+                    if (cell && y + dy >= 0) {
+                        gameState.board[y + dy][x + dx] = color;
+                    }
+                });
+            });
+            clearLines();
+            spawnPiece();
+        }
+
+        function clearLines() {
+            let linesCleared = 0;
+            for (let y = BOARD_HEIGHT - 1; y >= 0; y--) {
+                if (gameState.board[y].every(cell => cell !== null)) {
+                    gameState.board.splice(y, 1);
+                    gameState.board.unshift(Array(BOARD_WIDTH).fill(null));
+                    linesCleared++;
+                    y++;
+                }
+            }
+            if (linesCleared > 0) {
+                gameState.lines += linesCleared;
+                gameState.score += [0, 100, 300, 500, 800][linesCleared] * gameState.level;
+                gameState.level = Math.floor(gameState.lines / 10) + 1;
+                updateStats();
+            }
+        }
+
+        function spawnPiece() {
+            gameState.currentPiece = gameState.nextPiece || createPiece();
+            gameState.nextPiece = createPiece();
+            gameState.position = {
+                x: Math.floor(BOARD_WIDTH / 2) - Math.floor(gameState.currentPiece.shape[0].length / 2),
+                y: 0
+            };
+            if (checkCollision(gameState.currentPiece, gameState.position)) endGame();
+        }
+
+        function movePiece(dx, dy) {
+            const newPos = { x: gameState.position.x + dx, y: gameState.position.y + dy };
+            if (!checkCollision(gameState.currentPiece, newPos)) {
+                gameState.position = newPos;
+                drawShadowPiece();
+                drawCurrentPiece();
+                return true;
+            }
+            return false;
+        }
+
+        function rotate() {
+            const rotated = rotatePiece(gameState.currentPiece);
+            if (!checkCollision(rotated, gameState.position)) {
+                gameState.currentPiece = rotated;
+                drawShadowPiece();
+                drawCurrentPiece();
+            }
+        }
+
+        function hardDrop() {
+            while (movePiece(0, 1)) {}
+            lockPiece();
+            gameState.score += 20;
+            updateStats();
+        }
+
+        function gameLoop() {
+            if (gameState.paused || gameState.gameOver) return;
+            if (!movePiece(0, 1)) lockPiece();
+            drawBoard();
+            drawShadowPiece();
+            drawCurrentPiece();
+        }
+
+        function updateStats() {
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('level').textContent = gameState.level;
+            document.getElementById('lines').textContent = gameState.lines;
+        }
+
+        function endGame() {
+            gameState.gameOver = true;
+            clearInterval(gameState.gameLoop);
+            document.getElementById('final-score').textContent = gameState.score;
+            document.getElementById('final-height').textContent = gameState.maxHeight;
+            document.getElementById('game-over').classList.add('show');
+        }
+
+        function startGame() {
+            gameState = {
+                board: Array(BOARD_HEIGHT).fill().map(() => Array(BOARD_WIDTH).fill(null)),
+                boardMeshes: Array(BOARD_HEIGHT).fill().map(() => Array(BOARD_WIDTH).fill(null)),
+                currentPiece: null,
+                currentMeshes: [],
+                shadowMeshes: [],
+                nextPiece: null,
+                position: { x: 0, y: 0 },
+                score: 0, lines: 0, level: 1, maxHeight: 0,
+                gameOver: false, paused: false, gameLoop: null
+            };
+
+            spawnPiece();
+            drawBoard();
+            drawShadowPiece();
+            drawCurrentPiece();
+            updateStats();
+
+            const speed = Math.max(300, 1000 - (gameState.level - 1) * 100);
+            gameState.gameLoop = setInterval(gameLoop, speed);
+            document.getElementById('start-btn').classList.add('hidden');
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (gameState.gameOver) return;
+            switch(e.key) {
+                case 'ArrowLeft': e.preventDefault(); movePiece(-1, 0); break;
+                case 'ArrowRight': e.preventDefault(); movePiece(1, 0); break;
+                case 'ArrowDown': e.preventDefault(); if (movePiece(0, 1)) { gameState.score++; updateStats(); } break;
+                case 'ArrowUp': e.preventDefault(); rotate(); break;
+                case ' ': e.preventDefault(); hardDrop(); break;
+                case 'p': case 'P': e.preventDefault(); gameState.paused = !gameState.paused; break;
+            }
+        });
+
+        document.getElementById('start-btn').addEventListener('click', startGame);
+
+        createGround();
+        createBoardFrame();
+        animate();
+    </script>
+</body>
+</html>
