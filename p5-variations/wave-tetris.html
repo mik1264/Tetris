@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wave Tetris - Distortion Effects</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #0a4d68 0%, #088395 50%, #05bfdb 100%);
+            font-family: 'Courier New', monospace;
+            color: white;
+        }
+        #info-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #00d9ff;
+            max-width: 300px;
+        }
+        h1 {
+            margin: 0 0 10px 0;
+            font-size: 24px;
+            color: #00ffff;
+            text-shadow: 0 0 10px #00ffff;
+        }
+        .stat {
+            margin: 8px 0;
+            font-size: 16px;
+        }
+        .label {
+            color: #aaffff;
+        }
+        .value {
+            color: #ffff00;
+            font-weight: bold;
+        }
+        .instructions {
+            margin-top: 15px;
+            font-size: 12px;
+            color: #cccccc;
+            border-top: 1px solid #00d9ff;
+            padding-top: 10px;
+        }
+        .wave-info {
+            margin-top: 15px;
+            font-size: 11px;
+            color: #aaddff;
+            border-top: 1px solid #00d9ff;
+            padding-top: 10px;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div id="info-panel">
+        <h1>🌊 WAVE TETRIS</h1>
+        <div class="stat"><span class="label">Score:</span> <span class="value" id="score">0</span></div>
+        <div class="stat"><span class="label">Lines:</span> <span class="value" id="lines">0</span></div>
+        <div class="stat"><span class="label">Level:</span> <span class="value" id="level">1</span></div>
+        <div class="stat"><span class="label">Wave Type:</span> <span class="value" id="wave-type">Horizontal</span></div>
+        <div class="instructions">
+            <strong>Controls:</strong><br>
+            ← → Move<br>
+            ↑ Rotate<br>
+            ↓ Soft Drop<br>
+            Space: Hard Drop<br>
+            W: Change Wave
+        </div>
+        <div class="wave-info">
+            The board warps and waves! Navigate the distortion. Higher levels = more waves!
+        </div>
+    </div>
+
+    <script>
+        const COLS = 10;
+        const ROWS = 20;
+        const BLOCK_SIZE = 30;
+        const FALL_SPEED_BASE = 800;
+
+        const SHAPES = [
+            [[1,1,1,1]], // I
+            [[1,1],[1,1]], // O
+            [[0,1,0],[1,1,1]], // T
+            [[1,1,0],[0,1,1]], // S
+            [[0,1,1],[1,1,0]], // Z
+            [[1,0,0],[1,1,1]], // J
+            [[0,0,1],[1,1,1]]  // L
+        ];
+
+        const COLORS = [
+            [0, 255, 255],   // I - cyan
+            [255, 255, 0],   // O - yellow
+            [128, 0, 255],   // T - purple
+            [0, 255, 0],     // S - green
+            [255, 0, 100],   // Z - red-pink
+            [0, 100, 255],   // J - blue
+            [255, 150, 0]    // L - orange
+        ];
+
+        const WAVE_TYPES = [
+            'Horizontal',
+            'Vertical',
+            'Circular',
+            'Spiral',
+            'Chaos'
+        ];
+
+        let board = [];
+        let currentPiece = null;
+        let currentRotation = 0;
+        let currentX = 0;
+        let currentY = 0;
+        let lastFall = 0;
+        let gameOver = false;
+        let score = 0;
+        let linesCleared = 0;
+        let level = 1;
+        let waveType = 0;
+        let waveOffset = 0;
+
+        function setup() {
+            createCanvas(COLS * BLOCK_SIZE + 250, ROWS * BLOCK_SIZE + 100);
+
+            // Initialize board
+            for (let y = 0; y < ROWS; y++) {
+                board[y] = [];
+                for (let x = 0; x < COLS; x++) {
+                    board[y][x] = null;
+                }
+            }
+
+            spawnPiece();
+        }
+
+        function draw() {
+            background(10, 40, 60);
+            waveOffset += 0.02;
+
+            push();
+            translate(50, 40);
+
+            // Draw board grid with wave effect
+            drawWavyGrid();
+
+            // Draw placed blocks with wave distortion
+            for (let y = 0; y < ROWS; y++) {
+                for (let x = 0; x < COLS; x++) {
+                    if (board[y][x] !== null) {
+                        drawWavyBlock(x, y, board[y][x], 255);
+                    }
+                }
+            }
+
+            // Draw current piece with wave effect
+            if (currentPiece !== null && !gameOver) {
+                drawWavyCurrentPiece();
+            }
+
+            pop();
+
+            // Auto-fall
+            if (millis() - lastFall > FALL_SPEED_BASE / level && !gameOver) {
+                moveDown();
+                lastFall = millis();
+            }
+
+            if (gameOver) {
+                drawGameOver();
+            }
+        }
+
+        function getWaveOffset(x, y) {
+            let waveIntensity = level * 3;
+            let offsetX = 0;
+            let offsetY = 0;
+
+            switch(waveType) {
+                case 0: // Horizontal
+                    offsetX = sin(y * 0.5 + waveOffset) * waveIntensity;
+                    break;
+                case 1: // Vertical
+                    offsetY = sin(x * 0.5 + waveOffset) * waveIntensity;
+                    break;
+                case 2: // Circular
+                    let centerX = COLS / 2;
+                    let centerY = ROWS / 2;
+                    let dist = sqrt((x - centerX) ** 2 + (y - centerY) ** 2);
+                    offsetX = sin(dist * 0.5 + waveOffset) * waveIntensity;
+                    offsetY = cos(dist * 0.5 + waveOffset) * waveIntensity;
+                    break;
+                case 3: // Spiral
+                    let angle = atan2(y - ROWS/2, x - COLS/2);
+                    let radius = sqrt((x - COLS/2) ** 2 + (y - ROWS/2) ** 2);
+                    offsetX = sin(angle + radius * 0.3 + waveOffset) * waveIntensity;
+                    offsetY = cos(angle + radius * 0.3 + waveOffset) * waveIntensity;
+                    break;
+                case 4: // Chaos
+                    offsetX = sin(x * 0.7 + y * 0.3 + waveOffset) * waveIntensity;
+                    offsetY = cos(x * 0.3 + y * 0.7 + waveOffset * 1.3) * waveIntensity;
+                    break;
+            }
+
+            return {x: offsetX, y: offsetY};
+        }
+
+        function drawWavyGrid() {
+            stroke(50, 150, 200, 80);
+            strokeWeight(1);
+            noFill();
+
+            // Vertical lines
+            for (let x = 0; x <= COLS; x++) {
+                beginShape();
+                for (let y = 0; y <= ROWS; y++) {
+                    let offset = getWaveOffset(x, y);
+                    vertex(x * BLOCK_SIZE + offset.x, y * BLOCK_SIZE + offset.y);
+                }
+                endShape();
+            }
+
+            // Horizontal lines
+            for (let y = 0; y <= ROWS; y++) {
+                beginShape();
+                for (let x = 0; x <= COLS; x++) {
+                    let offset = getWaveOffset(x, y);
+                    vertex(x * BLOCK_SIZE + offset.x, y * BLOCK_SIZE + offset.y);
+                }
+                endShape();
+            }
+        }
+
+        function drawWavyBlock(x, y, colorIndex, alpha) {
+            let col = COLORS[colorIndex];
+            let offset = getWaveOffset(x + 0.5, y + 0.5);
+
+            push();
+            translate(x * BLOCK_SIZE + offset.x, y * BLOCK_SIZE + offset.y);
+
+            fill(col[0], col[1], col[2], alpha);
+            stroke(255, 255, 255, alpha);
+            strokeWeight(2);
+            rect(2, 2, BLOCK_SIZE - 4, BLOCK_SIZE - 4, 3);
+
+            // Inner glow
+            noStroke();
+            fill(col[0], col[1], col[2], alpha * 0.3);
+            rect(2, 2, BLOCK_SIZE - 4, BLOCK_SIZE - 4, 3);
+
+            pop();
+        }
+
+        function drawWavyCurrentPiece() {
+            let shape = getRotatedShape(currentPiece, currentRotation);
+            for (let y = 0; y < shape.length; y++) {
+                for (let x = 0; x < shape[y].length; x++) {
+                    if (shape[y][x]) {
+                        drawWavyBlock(currentX + x, currentY + y, currentPiece, 255);
+                    }
+                }
+            }
+
+            // Draw drop shadow (wavy)
+            let shadowY = currentY;
+            while (canPlace(currentX, shadowY + 1, currentRotation)) {
+                shadowY++;
+            }
+            if (shadowY !== currentY) {
+                for (let y = 0; y < shape.length; y++) {
+                    for (let x = 0; x < shape[y].length; x++) {
+                        if (shape[y][x]) {
+                            let col = COLORS[currentPiece];
+                            let offset = getWaveOffset(currentX + x + 0.5, shadowY + y + 0.5);
+
+                            push();
+                            translate((currentX + x) * BLOCK_SIZE + offset.x,
+                                     (shadowY + y) * BLOCK_SIZE + offset.y);
+
+                            fill(col[0], col[1], col[2], 80);
+                            noStroke();
+                            rect(2, 2, BLOCK_SIZE - 4, BLOCK_SIZE - 4, 3);
+
+                            pop();
+                        }
+                    }
+                }
+            }
+        }
+
+        function getRotatedShape(pieceIndex, rotation) {
+            let shape = SHAPES[pieceIndex];
+            for (let r = 0; r < rotation; r++) {
+                shape = rotateMatrix(shape);
+            }
+            return shape;
+        }
+
+        function rotateMatrix(matrix) {
+            let N = matrix.length;
+            let M = matrix[0].length;
+            let result = [];
+
+            for (let i = 0; i < M; i++) {
+                result[i] = [];
+                for (let j = 0; j < N; j++) {
+                    result[i][j] = matrix[N - 1 - j][i];
+                }
+            }
+
+            return result;
+        }
+
+        function spawnPiece() {
+            currentPiece = Math.floor(Math.random() * SHAPES.length);
+            currentRotation = 0;
+            currentX = Math.floor(COLS / 2) - 1;
+            currentY = 0;
+
+            if (!canPlace(currentX, currentY, currentRotation)) {
+                gameOver = true;
+            }
+        }
+
+        function placePiece() {
+            let shape = getRotatedShape(currentPiece, currentRotation);
+
+            for (let y = 0; y < shape.length; y++) {
+                for (let x = 0; x < shape[y].length; x++) {
+                    if (shape[y][x]) {
+                        board[currentY + y][currentX + x] = currentPiece;
+                    }
+                }
+            }
+
+            clearLines();
+            spawnPiece();
+        }
+
+        function canPlace(x, y, rotation) {
+            let shape = getRotatedShape(currentPiece, rotation);
+
+            for (let sy = 0; sy < shape.length; sy++) {
+                for (let sx = 0; sx < shape[sy].length; sx++) {
+                    if (shape[sy][sx]) {
+                        let newX = x + sx;
+                        let newY = y + sy;
+
+                        if (newX < 0 || newX >= COLS || newY >= ROWS) {
+                            return false;
+                        }
+                        if (newY >= 0 && board[newY][newX] !== null) {
+                            return false;
+                        }
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        function moveDown() {
+            if (canPlace(currentX, currentY + 1, currentRotation)) {
+                currentY++;
+            } else {
+                placePiece();
+            }
+        }
+
+        function moveLeft() {
+            if (canPlace(currentX - 1, currentY, currentRotation)) {
+                currentX--;
+            }
+        }
+
+        function moveRight() {
+            if (canPlace(currentX + 1, currentY, currentRotation)) {
+                currentX++;
+            }
+        }
+
+        function rotate() {
+            if (canPlace(currentX, currentY, (currentRotation + 1) % 4)) {
+                currentRotation = (currentRotation + 1) % 4;
+            }
+        }
+
+        function hardDrop() {
+            while (canPlace(currentX, currentY + 1, currentRotation)) {
+                currentY++;
+                score += 2;
+            }
+            updateStats();
+            placePiece();
+        }
+
+        function changeWaveType() {
+            waveType = (waveType + 1) % WAVE_TYPES.length;
+            document.getElementById('wave-type').textContent = WAVE_TYPES[waveType];
+        }
+
+        function clearLines() {
+            let cleared = 0;
+
+            for (let y = ROWS - 1; y >= 0; y--) {
+                let full = true;
+                for (let x = 0; x < COLS; x++) {
+                    if (board[y][x] === null) {
+                        full = false;
+                        break;
+                    }
+                }
+
+                if (full) {
+                    board.splice(y, 1);
+                    board.unshift(new Array(COLS).fill(null));
+                    cleared++;
+                    y++;
+                }
+            }
+
+            if (cleared > 0) {
+                linesCleared += cleared;
+                score += cleared * 100 * level;
+                level = Math.floor(linesCleared / 10) + 1;
+                updateStats();
+            }
+        }
+
+        function updateStats() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('lines').textContent = linesCleared;
+            document.getElementById('level').textContent = level;
+        }
+
+        function keyPressed() {
+            if (gameOver) {
+                if (key === 'r' || key === 'R') {
+                    resetGame();
+                }
+                return;
+            }
+
+            if (keyCode === LEFT_ARROW) {
+                moveLeft();
+            } else if (keyCode === RIGHT_ARROW) {
+                moveRight();
+            } else if (keyCode === DOWN_ARROW) {
+                moveDown();
+                score += 1;
+                updateStats();
+            } else if (keyCode === UP_ARROW) {
+                rotate();
+            } else if (key === ' ') {
+                hardDrop();
+            } else if (key === 'w' || key === 'W') {
+                changeWaveType();
+            }
+        }
+
+        function drawGameOver() {
+            push();
+            translate(50, 40);
+            fill(0, 0, 0, 200);
+            rect(0, 0, COLS * BLOCK_SIZE, ROWS * BLOCK_SIZE);
+
+            fill(100, 200, 255);
+            textSize(48);
+            textAlign(CENTER, CENTER);
+            text('WAVE OUT!', COLS * BLOCK_SIZE / 2, ROWS * BLOCK_SIZE / 2 - 50);
+
+            fill(255);
+            textSize(24);
+            text('Score: ' + score, COLS * BLOCK_SIZE / 2, ROWS * BLOCK_SIZE / 2);
+
+            textSize(16);
+            text('Press R to restart', COLS * BLOCK_SIZE / 2, ROWS * BLOCK_SIZE / 2 + 80);
+            pop();
+        }
+
+        function resetGame() {
+            board = [];
+            for (let y = 0; y < ROWS; y++) {
+                board[y] = [];
+                for (let x = 0; x < COLS; x++) {
+                    board[y][x] = null;
+                }
+            }
+
+            score = 0;
+            linesCleared = 0;
+            level = 1;
+            gameOver = false;
+            waveType = 0;
+            document.getElementById('wave-type').textContent = WAVE_TYPES[waveType];
+            updateStats();
+            spawnPiece();
+        }
+    </script>
+</body>
+</html>

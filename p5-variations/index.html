@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>p5.js Tetris Variations - Creative Experiments</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 60px;
+            color: white;
+        }
+
+        h1 {
+            font-size: 48px;
+            margin-bottom: 10px;
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.3);
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from { text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.3), 0 0 20px rgba(255, 255, 255, 0.3); }
+            to { text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.3), 0 0 40px rgba(255, 255, 255, 0.6); }
+        }
+
+        .subtitle {
+            font-size: 18px;
+            opacity: 0.9;
+            margin-bottom: 20px;
+        }
+
+        .description {
+            max-width: 800px;
+            margin: 0 auto;
+            font-size: 14px;
+            line-height: 1.6;
+            opacity: 0.8;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin-top: 40px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 5px;
+            background: linear-gradient(90deg, var(--card-color-1), var(--card-color-2));
+        }
+
+        .card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+
+        .card-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .card-description {
+            font-size: 14px;
+            line-height: 1.6;
+            color: #666;
+            margin-bottom: 15px;
+        }
+
+        .card-features {
+            list-style: none;
+            margin-bottom: 20px;
+        }
+
+        .card-features li {
+            font-size: 12px;
+            color: #888;
+            padding: 5px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .card-features li::before {
+            content: '▸';
+            position: absolute;
+            left: 0;
+            color: var(--card-color-1);
+        }
+
+        .card-button {
+            display: inline-block;
+            background: linear-gradient(90deg, var(--card-color-1), var(--card-color-2));
+            color: white;
+            padding: 12px 30px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: transform 0.2s ease;
+        }
+
+        .card-button:hover {
+            transform: scale(1.05);
+        }
+
+        .back-link {
+            text-align: center;
+            margin-top: 60px;
+        }
+
+        .back-link a {
+            color: white;
+            text-decoration: none;
+            font-size: 16px;
+            padding: 15px 40px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 30px;
+            backdrop-filter: blur(10px);
+            transition: background 0.3s ease;
+        }
+
+        .back-link a:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        /* Individual card colors */
+        .card:nth-child(1) { --card-color-1: #8000ff; --card-color-2: #ff00ff; }
+        .card:nth-child(2) { --card-color-1: #0088ff; --card-color-2: #00d9ff; }
+        .card:nth-child(3) { --card-color-1: #00d9ff; --card-color-2: #05bfdb; }
+        .card:nth-child(4) { --card-color-1: #e94560; --card-color-2: #ff6b6b; }
+        .card:nth-child(5) { --card-color-1: #ff8c00; --card-color-2: #ffa500; }
+        .card:nth-child(6) { --card-color-1: #ff00ff; --card-color-2: #ff1493; }
+        .card:nth-child(7) { --card-color-1: #9acd32; --card-color-2: #6b8e23; }
+        .card:nth-child(8) { --card-color-1: #9966ff; --card-color-2: #cc99ff; }
+        .card:nth-child(9) { --card-color-1: #7209b7; --card-color-2: #b5179e; }
+        .card:nth-child(10) { --card-color-1: #ff6ec7; --card-color-2: #a61dff; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎮 p5.js Tetris Variations</h1>
+            <p class="subtitle">10 Creative Experiments with Tetris Mechanics</p>
+            <p class="description">
+                Explore innovative twists on the classic Tetris formula. Each variation introduces unique mechanics,
+                visual effects, or conceptual frameworks that transform the fundamental gameplay experience.
+                Built with p5.js for smooth animations and creative expression.
+            </p>
+        </header>
+
+        <div class="grid">
+            <div class="card" onclick="window.location.href='quantris.html'">
+                <div class="card-icon">⚛️</div>
+                <h2 class="card-title">Quantris</h2>
+                <p class="card-description">
+                    Pieces exist in quantum superposition until placed. Rotate to shift probabilities. Predict the outcome for bonus multipliers!
+                </p>
+                <ul class="card-features">
+                    <li>Superposition visualization</li>
+                    <li>Probability manipulation</li>
+                    <li>Prediction system with multipliers</li>
+                </ul>
+                <a href="quantris.html" class="card-button">Play Quantris</a>
+            </div>
+
+            <div class="card" onclick="window.location.href='oblivitris.html'">
+                <div class="card-icon">🧠</div>
+                <h2 class="card-title">Oblivitris</h2>
+                <p class="card-description">
+                    Placed pieces gradually fade from visibility. Play from spatial memory. Limited sonar pulses reveal the board temporarily.
+                </p>
+                <ul class="card-features">
+                    <li>Gradual piece fading (3-10 seconds)</li>
+                    <li>Ghost outlines of recent pieces</li>
+                    <li>Sonar pulse mechanic</li>
+                </ul>
+                <a href="oblivitris.html" class="card-button">Play Oblivitris</a>
+            </div>
+
+            <div class="card" onclick="window.location.href='wave-tetris.html'">
+                <div class="card-icon">🌊</div>
+                <h2 class="card-title">Wave Tetris</h2>
+                <p class="card-description">
+                    The board warps and waves with dynamic distortion effects. Navigate through horizontal, vertical, circular, spiral, and chaos wave patterns.
+                </p>
+                <ul class="card-features">
+                    <li>5 wave distortion modes</li>
+                    <li>Intensity increases with level</li>
+                    <li>Real-time wave animation</li>
+                </ul>
+                <a href="wave-tetris.html" class="card-button">Play Wave Tetris</a>
+            </div>
+
+            <div class="card" onclick="window.location.href='particle-tetris.html'">
+                <div class="card-icon">💥</div>
+                <h2 class="card-title">Particle Tetris</h2>
+                <p class="card-description">
+                    Explosive particle effects when clearing lines. Build combos for massive particle shows. Physics-based particle system.
+                </p>
+                <ul class="card-features">
+                    <li>Particle explosions on line clear</li>
+                    <li>Combo multiplier system</li>
+                    <li>Gravity-affected particles</li>
+                </ul>
+                <a href="particle-tetris.html" class="card-button">Play Particle Tetris</a>
+            </div>
+
+            <div class="card" onclick="window.location.href='gravity-shift.html'">
+                <div class="card-icon">⬇️</div>
+                <h2 class="card-title">Gravity Shift</h2>
+                <p class="card-description">
+                    Gravity changes direction! Pieces fall down, right, up, or left. Board rotates to match gravity. Auto-shifts every 20 seconds.
+                </p>
+                <ul class="card-features">
+                    <li>4 gravity directions</li>
+                    <li>Rotating canvas perspective</li>
+                    <li>Dynamic board compaction</li>
+                </ul>
+                <a href="gravity-shift.html" class="card-button">Play Gravity Shift</a>
+            </div>
+
+            <div class="card" onclick="window.location.href='color-blend.html'">
+                <div class="card-icon">🎨</div>
+                <h2 class="card-title">Color Blend Tetris</h2>
+                <p class="card-description">
+                    Primary colors mix to create secondary colors. Red + Blue = Purple, Red + Yellow = Orange. Match 3+ same colors to clear!
+                </p>
+                <ul class="card-features">
+                    <li>Color mixing mechanics</li>
+                    <li>Flood-fill color matching</li>
+                    <li>Dynamic board compaction</li>
+                </ul>
+                <a href="color-blend.html" class="card-button">Play Color Blend</a>
+            </div>
+
+            <div class="card" onclick="window.location.href='ecotris.html'">
+                <div class="card-icon">🌿</div>
+                <h2 class="card-title">Ecotris</h2>
+                <p class="card-description">
+                    Pieces represent organisms in a food chain. Balance plants, herbivores, predators, and decomposers to maintain ecosystem health.
+                </p>
+                <ul class="card-features">
+                    <li>4 species with relationships</li>
+                    <li>Ecosystem balance mechanics</li>
+                    <li>Population tracking</li>
+                </ul>
+                <a href="ecotris.html" class="card-button">Play Ecotris</a>
+            </div>
+
+            <div class="card" onclick="window.location.href='symphtetris.html'">
+                <div class="card-icon">🎵</div>
+                <h2 class="card-title">Symphtetris</h2>
+                <p class="card-description">
+                    Each piece is an instrument. Placement creates musical notes. Left = low pitch, right = high pitch. Harmonic clears earn bonuses!
+                </p>
+                <ul class="card-features">
+                    <li>Real-time audio synthesis</li>
+                    <li>Position-based pitch mapping</li>
+                    <li>Harmony detection</li>
+                </ul>
+                <a href="symphtetris.html" class="card-button">Play Symphtetris</a>
+            </div>
+
+            <div class="card" onclick="window.location.href='chronotris.html'">
+                <div class="card-icon">⏰</div>
+                <h2 class="card-title">Chronotris</h2>
+                <p class="card-description">
+                    Manage 3 parallel timelines simultaneously: Past, Present, and Future. Clearing in the past cascades to the present. Future shows preview.
+                </p>
+                <ul class="card-features">
+                    <li>3 simultaneous boards</li>
+                    <li>Temporal cascade mechanics</li>
+                    <li>Timeline switching (1/2/3 keys)</li>
+                </ul>
+                <a href="chronotris.html" class="card-button">Play Chronotris</a>
+            </div>
+
+            <div class="card" onclick="window.location.href='elastic-tetris.html'">
+                <div class="card-icon">🎈</div>
+                <h2 class="card-title">Elastic Tetris</h2>
+                <p class="card-description">
+                    Pieces bounce on impact! Physics-based elastic collisions with damping. Chain bounces for combos. Soft landings earn bonuses.
+                </p>
+                <ul class="card-features">
+                    <li>Bouncing physics simulation</li>
+                    <li>Squash and stretch animation</li>
+                    <li>Bounce counting and bonuses</li>
+                </ul>
+                <a href="elastic-tetris.html" class="card-button">Play Elastic Tetris</a>
+            </div>
+        </div>
+
+        <div class="back-link">
+            <a href="../index.html">← Back to Main Collection</a>
+        </div>
+    </div>
+</body>
+</html>

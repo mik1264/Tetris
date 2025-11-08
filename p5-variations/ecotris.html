@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecotris - Ecosystem Tetris</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+    <style>
+        body {
+            margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh;
+            background: linear-gradient(135deg, #1e3a20 0%, #2d5016 50%, #6b8e23 100%);
+            font-family: 'Courier New', monospace; color: white;
+        }
+        #info-panel {
+            position: absolute; top: 20px; right: 20px; background: rgba(0, 0, 0, 0.8); padding: 20px;
+            border-radius: 10px; border: 2px solid #9acd32; max-width: 320px;
+        }
+        h1 { margin: 0 0 10px 0; font-size: 24px; color: #9acd32; text-shadow: 0 0 10px #9acd32; }
+        .stat { margin: 8px 0; font-size: 14px; }
+        .label { color: #ccffcc; }
+        .value { color: #ffff00; font-weight: bold; }
+        .ecosystem { margin: 10px 0; font-size: 11px; }
+        .species { display: inline-block; margin: 2px 5px; }
+        .instructions { margin-top: 15px; font-size: 11px; color: #cccccc; border-top: 1px solid #9acd32; padding-top: 10px; }
+    </style>
+</head>
+<body>
+    <div id="info-panel">
+        <h1>🌿 ECOTRIS</h1>
+        <div class="stat"><span class="label">Score:</span> <span class="value" id="score">0</span></div>
+        <div class="stat"><span class="label">Lines:</span> <span class="value" id="lines">0</span></div>
+        <div class="stat"><span class="label">Balance:</span> <span class="value" id="balance">Perfect</span></div>
+        <div class="ecosystem">
+            <strong>Population:</strong><br>
+            <div class="species">🌱 Plants: <span id="plants">0</span></div>
+            <div class="species">🦌 Herbivores: <span id="herbivores">0</span></div>
+            <div class="species">🦁 Predators: <span id="predators">0</span></div>
+            <div class="species">🍄 Decomposers: <span id="decomposers">0</span></div>
+        </div>
+        <div class="instructions">
+            <strong>Controls:</strong> ← → ↑ ↓ Space<br><br>
+            🌱 Plants feed Herbivores<br>
+            🦌 Herbivores feed Predators<br>
+            🦁 Predators need Herbivores<br>
+            🍄 Decomposers help Plants<br><br>
+            Keep ecosystem balanced!
+        </div>
+    </div>
+
+    <script>
+        const COLS = 10, ROWS = 20, BLOCK_SIZE = 30, FALL_SPEED_BASE = 900;
+        const SHAPES = [[[1,1,1,1]], [[1,1],[1,1]], [[0,1,0],[1,1,1]], [[1,1,0],[0,1,1]], [[0,1,1],[1,1,0]], [[1,0,0],[1,1,1]], [[0,0,1],[1,1,1]]];
+        const SPECIES = ['PLANT', 'HERBIVORE', 'PREDATOR', 'DECOMPOSER'];
+        const SPECIES_COLORS = { PLANT: [0,200,0], HERBIVORE: [139,69,19], PREDATOR: [255,140,0], DECOMPOSER: [138,43,226] };
+        const SPECIES_EMOJI = { PLANT: '🌱', HERBIVORE: '🦌', PREDATOR: '🦁', DECOMPOSER: '🍄' };
+
+        let board = [], currentPiece = null, currentSpecies = 'PLANT', currentRotation = 0;
+        let currentX = 0, currentY = 0, lastFall = 0, gameOver = false;
+        let score = 0, linesCleared = 0, populations = {PLANT: 0, HERBIVORE: 0, PREDATOR: 0, DECOMPOSER: 0};
+        let lastEcologyUpdate = 0;
+
+        function setup() {
+            createCanvas(COLS * BLOCK_SIZE + 220, ROWS * BLOCK_SIZE + 100);
+            for (let y = 0; y < ROWS; y++) board[y] = Array(COLS).fill(null);
+            spawnPiece();
+        }
+
+        function draw() {
+            background(30, 58, 32);
+            stroke(60, 100, 60); strokeWeight(1);
+            for (let x = 0; x <= COLS; x++) line(x * BLOCK_SIZE, 0, x * BLOCK_SIZE, ROWS * BLOCK_SIZE);
+            for (let y = 0; y <= ROWS; y++) line(0, y * BLOCK_SIZE, COLS * BLOCK_SIZE, y * BLOCK_SIZE);
+
+            // Ecology simulation
+            if (millis() - lastEcologyUpdate > 2000) {
+                updateEcology(); lastEcologyUpdate = millis();
+            }
+
+            for (let y = 0; y < ROWS; y++) {
+                for (let x = 0; x < COLS; x++) {
+                    if (board[y][x]) drawBlock(x, y, board[y][x]);
+                }
+            }
+
+            if (currentPiece !== null && !gameOver) drawCurrentPiece();
+
+            if (millis() - lastFall > FALL_SPEED_BASE && !gameOver) {
+                moveDown(); lastFall = millis();
+            }
+
+            if (gameOver) drawGameOver();
+        }
+
+        function drawBlock(x, y, species) {
+            let col = SPECIES_COLORS[species];
+            fill(col[0], col[1], col[2]);
+            stroke(255); strokeWeight(2);
+            rect(x * BLOCK_SIZE + 2, y * BLOCK_SIZE + 2, BLOCK_SIZE - 4, BLOCK_SIZE - 4, 3);
+
+            // Draw emoji
+            textSize(16); textAlign(CENTER, CENTER);
+            text(SPECIES_EMOJI[species], x * BLOCK_SIZE + BLOCK_SIZE/2, y * BLOCK_SIZE + BLOCK_SIZE/2);
+        }
+
+        function drawCurrentPiece() {
+            let shape = getRotatedShape(currentPiece, currentRotation);
+            for (let y = 0; y < shape.length; y++) {
+                for (let x = 0; x < shape[y].length; x++) {
+                    if (shape[y][x]) drawBlock(currentX + x, currentY + y, currentSpecies);
+                }
+            }
+        }
+
+        function updateEcology() {
+            // Count populations
+            populations = {PLANT: 0, HERBIVORE: 0, PREDATOR: 0, DECOMPOSER: 0};
+            for (let y = 0; y < ROWS; y++) {
+                for (let x = 0; x < COLS; x++) {
+                    if (board[y][x]) populations[board[y][x]]++;
+                }
+            }
+
+            // Ecology rules
+            let changes = [];
+
+            // Predators need herbivores
+            if (populations.HERBIVORE === 0 && populations.PREDATOR > 0) {
+                let found = findSpecies('PREDATOR');
+                if (found) changes.push({x: found.x, y: found.y, to: null});
+            }
+
+            // Herbivores benefit from plants
+            if (populations.PLANT > 5 && populations.HERBIVORE < 10) {
+                // Herbivores can reproduce (bonus points)
+                score += 50;
+            }
+
+            // Decomposers help plants
+            if (populations.DECOMPOSER > 3 && populations.PLANT < 15) {
+                score += 30;
+            }
+
+            // Balance bonus
+            let balanced = populations.PLANT > 5 && populations.HERBIVORE > 2 &&
+                          populations.PREDATOR > 0 && populations.DECOMPOSER > 0;
+            if (balanced) {
+                score += 100;
+                document.getElementById('balance').textContent = 'Perfect ✨';
+            } else {
+                document.getElementById('balance').textContent = 'Imbalanced';
+            }
+
+            // Apply changes
+            changes.forEach(c => board[c.y][c.x] = c.to);
+
+            updateStats();
+        }
+
+        function findSpecies(species) {
+            for (let y = 0; y < ROWS; y++) {
+                for (let x = 0; x < COLS; x++) {
+                    if (board[y][x] === species) return {x, y};
+                }
+            }
+            return null;
+        }
+
+        function getRotatedShape(pieceIndex, rotation) {
+            let shape = SHAPES[pieceIndex];
+            for (let r = 0; r < rotation; r++) shape = rotateMatrix(shape);
+            return shape;
+        }
+
+        function rotateMatrix(m) {
+            let result = [];
+            for (let i = 0; i < m[0].length; i++) {
+                result[i] = [];
+                for (let j = 0; j < m.length; j++) result[i][j] = m[m.length - 1 - j][i];
+            }
+            return result;
+        }
+
+        function spawnPiece() {
+            currentPiece = Math.floor(Math.random() * SHAPES.length);
+            currentSpecies = SPECIES[Math.floor(Math.random() * SPECIES.length)];
+            currentRotation = 0; currentX = Math.floor(COLS / 2) - 1; currentY = 0;
+            if (!canPlace(currentX, currentY, currentRotation)) gameOver = true;
+        }
+
+        function placePiece() {
+            let shape = getRotatedShape(currentPiece, currentRotation);
+            for (let y = 0; y < shape.length; y++) {
+                for (let x = 0; x < shape[y].length; x++) {
+                    if (shape[y][x]) board[currentY + y][currentX + x] = currentSpecies;
+                }
+            }
+            clearLines(); spawnPiece();
+        }
+
+        function canPlace(x, y, rotation) {
+            let shape = getRotatedShape(currentPiece, rotation);
+            for (let sy = 0; sy < shape.length; sy++) {
+                for (let sx = 0; sx < shape[sy].length; sx++) {
+                    if (shape[sy][sx]) {
+                        let newX = x + sx, newY = y + sy;
+                        if (newX < 0 || newX >= COLS || newY >= ROWS) return false;
+                        if (newY >= 0 && board[newY][newX]) return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        function moveDown() {
+            if (canPlace(currentX, currentY + 1, currentRotation)) currentY++;
+            else placePiece();
+        }
+
+        function clearLines() {
+            let cleared = 0;
+            for (let y = ROWS - 1; y >= 0; y--) {
+                if (board[y].every(cell => cell !== null)) {
+                    board.splice(y, 1); board.unshift(Array(COLS).fill(null));
+                    cleared++; y++;
+                }
+            }
+            if (cleared > 0) {
+                linesCleared += cleared; score += cleared * 100;
+                updateStats();
+            }
+        }
+
+        function updateStats() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('lines').textContent = linesCleared;
+            document.getElementById('plants').textContent = populations.PLANT;
+            document.getElementById('herbivores').textContent = populations.HERBIVORE;
+            document.getElementById('predators').textContent = populations.PREDATOR;
+            document.getElementById('decomposers').textContent = populations.DECOMPOSER;
+        }
+
+        function keyPressed() {
+            if (gameOver) { if (key === 'r') resetGame(); return; }
+            if (keyCode === LEFT_ARROW) canPlace(currentX - 1, currentY, currentRotation) && currentX--;
+            else if (keyCode === RIGHT_ARROW) canPlace(currentX + 1, currentY, currentRotation) && currentX++;
+            else if (keyCode === DOWN_ARROW) { moveDown(); score++; updateStats(); }
+            else if (keyCode === UP_ARROW) canPlace(currentX, currentY, (currentRotation + 1) % 4) && currentRotation = (currentRotation + 1) % 4;
+            else if (key === ' ') {
+                while (canPlace(currentX, currentY + 1, currentRotation)) { currentY++; score += 2; }
+                updateStats(); placePiece();
+            }
+        }
+
+        function drawGameOver() {
+            fill(0, 0, 0, 200); rect(0, 0, COLS * BLOCK_SIZE, ROWS * BLOCK_SIZE);
+            fill(154, 205, 50); textSize(48); textAlign(CENTER, CENTER);
+            text('ECOSYSTEM', COLS * BLOCK_SIZE / 2, ROWS * BLOCK_SIZE / 2 - 60);
+            text('COLLAPSED', COLS * BLOCK_SIZE / 2, ROWS * BLOCK_SIZE / 2 - 10);
+            fill(255); textSize(24);
+            text('Score: ' + score, COLS * BLOCK_SIZE / 2, ROWS * BLOCK_SIZE / 2 + 40);
+            textSize(16);
+            text('Press R to restart', COLS * BLOCK_SIZE / 2, ROWS * BLOCK_SIZE / 2 + 80);
+        }
+
+        function resetGame() {
+            board = [];
+            for (let y = 0; y < ROWS; y++) board[y] = Array(COLS).fill(null);
+            score = 0; linesCleared = 0; gameOver = false;
+            populations = {PLANT: 0, HERBIVORE: 0, PREDATOR: 0, DECOMPOSER: 0};
+            updateStats(); spawnPiece();
+        }
+    </script>
+</body>
+</html>

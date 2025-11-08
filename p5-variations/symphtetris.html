@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Symphtetris - Musical Tetris</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/addons/p5.sound.min.js"></script>
+    <style>
+        body {
+            margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh;
+            background: linear-gradient(135deg, #1a0033 0%, #330066 50%, #660099 100%);
+            font-family: 'Georgia', serif; color: white;
+        }
+        #info-panel {
+            position: absolute; top: 20px; right: 20px; background: rgba(0, 0, 0, 0.8); padding: 20px;
+            border-radius: 10px; border: 2px solid #9966ff; max-width: 300px;
+        }
+        h1 { margin: 0 0 10px 0; font-size: 24px; color: #cc99ff; text-shadow: 0 0 10px #cc99ff; }
+        .stat { margin: 8px 0; font-size: 16px; }
+        .label { color: #ddaaff; }
+        .value { color: #ffff00; font-weight: bold; }
+        .note-display { text-align: center; font-size: 32px; margin: 10px 0; }
+        .instructions { margin-top: 15px; font-size: 12px; color: #cccccc; border-top: 1px solid #9966ff; padding-top: 10px; }
+    </style>
+</head>
+<body>
+    <div id="info-panel">
+        <h1>🎵 SYMPHTETRIS</h1>
+        <div class="stat"><span class="label">Score:</span> <span class="value" id="score">0</span></div>
+        <div class="stat"><span class="label">Lines:</span> <span class="value" id="lines">0</span></div>
+        <div class="stat"><span class="label">Harmony:</span> <span class="value" id="harmony">0%</span></div>
+        <div class="note-display" id="note">♪</div>
+        <div class="instructions">
+            <strong>Controls:</strong> ← → ↑ ↓ Space<br><br>
+            🎹 Each piece is an instrument<br>
+            🎵 Placement creates notes<br>
+            🎼 Harmonic clears = bonus!<br><br>
+            Left = low notes, Right = high notes
+        </div>
+    </div>
+
+    <script>
+        const COLS = 10, ROWS = 20, BLOCK_SIZE = 30, FALL_SPEED_BASE = 900;
+        const SHAPES = [[[1,1,1,1]], [[1,1],[1,1]], [[0,1,0],[1,1,1]], [[1,1,0],[0,1,1]], [[0,1,1],[1,1,0]], [[1,0,0],[1,1,1]], [[0,0,1],[1,1,1]]];
+        const COLORS = [[0,200,255], [255,255,100], [200,100,255], [100,255,150], [255,100,100], [100,150,255], [255,180,100]];
+        const NOTES = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+        const INSTRUMENTS = ['🎹 Piano', '🥁 Drums', '🎸 Guitar', '🎺 Brass', '🎻 Violin', '🎷 Sax', '🎼 Synth'];
+
+        let board = [], currentPiece = null, currentRotation = 0;
+        let currentX = 0, currentY = 0, lastFall = 0, gameOver = false;
+        let score = 0, linesCleared = 0, harmonyScore = 0;
+        let osc, playing = false;
+
+        function setup() {
+            createCanvas(COLS * BLOCK_SIZE + 200, ROWS * BLOCK_SIZE + 100);
+            for (let y = 0; y < ROWS; y++) board[y] = Array(COLS).fill(null);
+            osc = new p5.Oscillator('sine');
+            osc.amp(0);
+            osc.start();
+            spawnPiece();
+        }
+
+        function draw() {
+            background(26, 0, 51);
+            stroke(80, 40, 120); strokeWeight(1);
+            for (let x = 0; x <= COLS; x++) line(x * BLOCK_SIZE, 0, x * BLOCK_SIZE, ROWS * BLOCK_SIZE);
+            for (let y = 0; y <= ROWS; y++) line(0, y * BLOCK_SIZE, COLS * BLOCK_SIZE, y * BLOCK_SIZE);
+
+            // Draw board with musical visualization
+            for (let y = 0; y < ROWS; y++) {
+                for (let x = 0; x < COLS; x++) {
+                    if (board[y][x] !== null) {
+                        drawMusicalBlock(x, y, board[y][x]);
+                    }
+                }
+            }
+
+            if (currentPiece !== null && !gameOver) drawCurrentPiece();
+
+            if (millis() - lastFall > FALL_SPEED_BASE && !gameOver) {
+                moveDown(); lastFall = millis();
+            }
+
+            if (gameOver) drawGameOver();
+        }
+
+        function drawMusicalBlock(x, y, colorIndex) {
+            let col = COLORS[colorIndex];
+            let pulse = sin(frameCount * 0.05 + x + y) * 10;
+            fill(col[0], col[1], col[2]);
+            stroke(255, 255, 255, 200); strokeWeight(2);
+            rect(x * BLOCK_SIZE + 2, y * BLOCK_SIZE + 2 + pulse, BLOCK_SIZE - 4, BLOCK_SIZE - 4, 3);
+
+            // Musical notation
+            textSize(10); fill(255); noStroke();
+            textAlign(CENTER, CENTER);
+            text('♪', x * BLOCK_SIZE + BLOCK_SIZE/2, y * BLOCK_SIZE + BLOCK_SIZE/2);
+        }
+
+        function drawCurrentPiece() {
+            let shape = getRotatedShape(currentPiece, currentRotation);
+            let col = COLORS[currentPiece];
+            for (let y = 0; y < shape.length; y++) {
+                for (let x = 0; x < shape[y].length; x++) {
+                    if (shape[y][x]) {
+                        fill(col[0], col[1], col[2]);
+                        stroke(255); strokeWeight(2);
+                        rect((currentX + x) * BLOCK_SIZE + 2, (currentY + y) * BLOCK_SIZE + 2, BLOCK_SIZE - 4, BLOCK_SIZE - 4, 3);
+                    }
+                }
+            }
+        }
+
+        function playNote(x, y) {
+            // Map X position to pitch (left = low, right = high)
+            let freq = map(x, 0, COLS - 1, 130, 520); // C3 to C5
+            osc.freq(freq);
+            osc.amp(0.2, 0.05);
+            setTimeout(() => osc.amp(0, 0.2), 150);
+
+            // Display note
+            let noteIndex = Math.floor(map(x, 0, COLS - 1, 0, 7));
+            document.getElementById('note').textContent = NOTES[noteIndex % NOTES.length];
+        }
+
+        function getRotatedShape(pieceIndex, rotation) {
+            let shape = SHAPES[pieceIndex];
+            for (let r = 0; r < rotation; r++) shape = rotateMatrix(shape);
+            return shape;
+        }
+
+        function rotateMatrix(m) {
+            let result = [];
+            for (let i = 0; i < m[0].length; i++) {
+                result[i] = [];
+                for (let j = 0; j < m.length; j++) result[i][j] = m[m.length - 1 - j][i];
+            }
+            return result;
+        }
+
+        function spawnPiece() {
+            currentPiece = Math.floor(Math.random() * SHAPES.length);
+            currentRotation = 0; currentX = Math.floor(COLS / 2) - 1; currentY = 0;
+            if (!canPlace(currentX, currentY, currentRotation)) gameOver = true;
+        }
+
+        function placePiece() {
+            let shape = getRotatedShape(currentPiece, currentRotation);
+            for (let y = 0; y < shape.length; y++) {
+                for (let x = 0; x < shape[y].length; x++) {
+                    if (shape[y][x]) {
+                        board[currentY + y][currentX + x] = currentPiece;
+                        playNote(currentX + x, currentY + y);
+                    }
+                }
+            }
+            clearLines(); spawnPiece();
+        }
+
+        function canPlace(x, y, rotation) {
+            let shape = getRotatedShape(currentPiece, rotation);
+            for (let sy = 0; sy < shape.length; sy++) {
+                for (let sx = 0; sx < shape[sy].length; sx++) {
+                    if (shape[sy][sx]) {
+                        let newX = x + sx, newY = y + sy;
+                        if (newX < 0 || newX >= COLS || newY >= ROWS) return false;
+                        if (newY >= 0 && board[newY][newX] !== null) return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        function moveDown() {
+            if (canPlace(currentX, currentY + 1, currentRotation)) currentY++;
+            else placePiece();
+        }
+
+        function clearLines() {
+            let cleared = 0;
+            for (let y = ROWS - 1; y >= 0; y--) {
+                if (board[y].every(cell => cell !== null)) {
+                    // Check harmony (variety of instruments)
+                    let uniqueInstruments = new Set(board[y]).size;
+                    let harmonyBonus = uniqueInstruments >= 5 ? 2 : 1;
+                    harmonyScore = Math.floor((uniqueInstruments / 7) * 100);
+
+                    // Play chord
+                    for (let x = 0; x < COLS; x++) {
+                        setTimeout(() => playNote(x, y), x * 50);
+                    }
+
+                    board.splice(y, 1); board.unshift(Array(COLS).fill(null));
+                    score += 100 * harmonyBonus;
+                    cleared++; y++;
+                }
+            }
+            if (cleared > 0) {
+                linesCleared += cleared;
+                updateStats();
+            }
+        }
+
+        function updateStats() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('lines').textContent = linesCleared;
+            document.getElementById('harmony').textContent = harmonyScore + '%';
+        }
+
+        function keyPressed() {
+            if (gameOver) { if (key === 'r') resetGame(); return; }
+            if (keyCode === LEFT_ARROW) {
+                if (canPlace(currentX - 1, currentY, currentRotation)) {
+                    currentX--; playNote(currentX, currentY);
+                }
+            } else if (keyCode === RIGHT_ARROW) {
+                if (canPlace(currentX + 1, currentY, currentRotation)) {
+                    currentX++; playNote(currentX, currentY);
+                }
+            } else if (keyCode === DOWN_ARROW) { moveDown(); score++; updateStats(); }
+            else if (keyCode === UP_ARROW) {
+                if (canPlace(currentX, currentY, (currentRotation + 1) % 4)) {
+                    currentRotation = (currentRotation + 1) % 4;
+                    playNote(currentX, currentY);
+                }
+            } else if (key === ' ') {
+                while (canPlace(currentX, currentY + 1, currentRotation)) { currentY++; score += 2; }
+                updateStats(); placePiece();
+            }
+        }
+
+        function drawGameOver() {
+            fill(0, 0, 0, 200); rect(0, 0, COLS * BLOCK_SIZE, ROWS * BLOCK_SIZE);
+            fill(204, 153, 255); textSize(48); textAlign(CENTER, CENTER);
+            text('FINALE', COLS * BLOCK_SIZE / 2, ROWS * BLOCK_SIZE / 2 - 50);
+            fill(255); textSize(24);
+            text('Score: ' + score, COLS * BLOCK_SIZE / 2, ROWS * BLOCK_SIZE / 2);
+            textSize(16);
+            text('Press R to restart', COLS * BLOCK_SIZE / 2, ROWS * BLOCK_SIZE / 2 + 80);
+        }
+
+        function resetGame() {
+            board = [];
+            for (let y = 0; y < ROWS; y++) board[y] = Array(COLS).fill(null);
+            score = 0; linesCleared = 0; harmonyScore = 0; gameOver = false;
+            updateStats(); spawnPiece();
+        }
+    </script>
+</body>
+</html>

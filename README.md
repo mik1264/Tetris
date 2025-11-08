@@ -59,6 +59,35 @@ The perfect fusion: Tetris mechanics meet Wittgenstein's philosophy! Play Tetris
 
 ---
 
+## 🎨 p5.js Tetris Variations
+
+**Browse all:** `p5-variations/index.html`
+
+A collection of 10 creative experiments that reimagine Tetris mechanics using p5.js. Each variation introduces unique gameplay mechanics, visual effects, or conceptual frameworks that transform the classic puzzle experience.
+
+### The Variations:
+
+1. **⚛️ Quantris** - Quantum superposition Tetris where pieces exist in multiple states until placed
+2. **🧠 Oblivitris** - Memory-based invisible Tetris with gradually fading pieces
+3. **🌊 Wave Tetris** - Board warps with dynamic wave distortion effects
+4. **💥 Particle Tetris** - Explosive particle effects on line clears
+5. **⬇️ Gravity Shift** - Gravity changes direction (down, right, up, left)
+6. **🎨 Color Blend** - Primary colors mix to create secondary colors
+7. **🌿 Ecotris** - Ecosystem simulation with food chain mechanics
+8. **🎵 Symphtetris** - Musical composition through Tetris gameplay
+9. **⏰ Chronotris** - Manage 3 parallel timelines simultaneously
+10. **🎈 Elastic Tetris** - Physics-based bouncing pieces
+
+**Highlights:**
+- All built with p5.js for smooth animations and creative visuals
+- Self-contained HTML files (no build process required)
+- Unique mechanics ranging from physics simulations to color theory
+- Innovative takes on classic Tetris gameplay
+
+**Difficulty:** Varies by variation (familiar Tetris controls with new twists)
+
+---
+
 ## 🧠 Wittgenstein's Language Games Collection
 
 A series of educational games exploring Ludwig Wittgenstein's revolutionary philosophy of language from *Philosophical Investigations* (1953). Each game demonstrates a different aspect of how meaning emerges from use, context, and social practices.
@@ -187,6 +216,12 @@ The comprehensive introduction to language games, featuring four distinct worlds
 **For Fun with Philosophy:**
 - **Language Games Tetris** - Perfect entry point! Familiar gameplay with philosophical depth
 - Or play it after completing the educational games to see concepts applied to Tetris
+
+**For Creative Tetris Experiments:**
+- **p5.js Variations Collection** - Explore 10 innovative twists on Tetris mechanics
+- Start with **Particle Tetris** or **Wave Tetris** for impressive visual effects
+- Try **Quantris** or **Chronotris** for mind-bending gameplay
+- Play **Symphtetris** or **Ecotris** for unique conceptual frameworks
 
 **For Classic Gaming:**
 - **Classic Tetris** - Pure block-stacking fun without philosophy

@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gravity Shift Tetris</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+    <style>
+        body {
+            margin: 0; padding: 0; display: flex;
+            justify-content: center; align-items: center; min-height: 100vh;
+            background: linear-gradient(135deg, #2d1b00 0%, #8b4513 50%, #d2691e 100%);
+            font-family: 'Courier New', monospace; color: white;
+        }
+        #info-panel {
+            position: absolute; top: 20px; right: 20px;
+            background: rgba(0, 0, 0, 0.8); padding: 20px;
+            border-radius: 10px; border: 2px solid #ff8c00;
+            max-width: 300px;
+        }
+        h1 { margin: 0 0 10px 0; font-size: 24px; color: #ffa500; text-shadow: 0 0 10px #ffa500; }
+        .stat { margin: 8px 0; font-size: 16px; }
+        .label { color: #ffcc88; }
+        .value { color: #00ff00; font-weight: bold; }
+        .gravity-dir { font-size: 40px; text-align: center; margin: 10px 0; }
+        .instructions { margin-top: 15px; font-size: 12px; color: #cccccc; border-top: 1px solid #ff8c00; padding-top: 10px; }
+    </style>
+</head>
+<body>
+    <div id="info-panel">
+        <h1>⬇️ GRAVITY SHIFT</h1>
+        <div class="stat"><span class="label">Score:</span> <span class="value" id="score">0</span></div>
+        <div class="stat"><span class="label">Lines:</span> <span class="value" id="lines">0</span></div>
+        <div class="stat"><span class="label">Level:</span> <span class="value" id="level">1</span></div>
+        <div class="gravity-dir" id="gravity-dir">⬇️</div>
+        <div class="instructions">
+            <strong>Controls:</strong><br>
+            WASD: Move in current gravity<br>
+            Q/E: Rotate | G: Shift Gravity<br><br>
+            Gravity changes direction!<br>
+            Auto-shifts every 20 seconds.
+        </div>
+    </div>
+
+    <script>
+        const COLS = 10, ROWS = 20, BLOCK_SIZE = 30, FALL_SPEED_BASE = 1000;
+        const SHAPES = [[[1,1,1,1]], [[1,1],[1,1]], [[0,1,0],[1,1,1]], [[1,1,0],[0,1,1]], [[0,1,1],[1,1,0]], [[1,0,0],[1,1,1]], [[0,0,1],[1,1,1]]];
+        const COLORS = [[0,255,255], [255,255,0], [128,0,255], [0,255,0], [255,0,0], [0,100,255], [255,150,0]];
+        const GRAVITY_DIRS = ['DOWN', 'RIGHT', 'UP', 'LEFT'];
+        const GRAVITY_SYMBOLS = ['⬇️', '➡️', '⬆️', '⬅️'];
+
+        let board = [], currentPiece = null, currentRotation = 0, currentX = 0, currentY = 0;
+        let lastFall = 0, gameOver = false, score = 0, linesCleared = 0, level = 1;
+        let gravityDir = 0, lastGravityShift = 0;
+
+        function setup() {
+            createCanvas(COLS * BLOCK_SIZE + 200, ROWS * BLOCK_SIZE + 100);
+            for (let y = 0; y < ROWS; y++) board[y] = new Array(COLS).fill(null);
+            spawnPiece();
+            lastGravityShift = millis();
+        }
+
+        function draw() {
+            background(45, 27, 0);
+
+            // Auto gravity shift every 20 seconds
+            if (millis() - lastGravityShift > 20000 && !gameOver) {
+                shiftGravity();
+                lastGravityShift = millis();
+            }
+
+            // Rotate canvas based on gravity
+            push();
+            translate(width / 2, height / 2);
+            rotate(gravityDir * HALF_PI);
+            translate(-COLS * BLOCK_SIZE / 2, -ROWS * BLOCK_SIZE / 2);
+
+            // Grid
+            stroke(100, 60, 20); strokeWeight(1);
+            for (let x = 0; x <= COLS; x++) line(x * BLOCK_SIZE, 0, x * BLOCK_SIZE, ROWS * BLOCK_SIZE);
+            for (let y = 0; y <= ROWS; y++) line(0, y * BLOCK_SIZE, COLS * BLOCK_SIZE, y * BLOCK_SIZE);
+
+            // Board
+            for (let y = 0; y < ROWS; y++) {
+                for (let x = 0; x < COLS; x++) {
+                    if (board[y][x] !== null) drawBlock(x, y, board[y][x]);
+                }
+            }
+
+            // Current piece
+            if (currentPiece !== null && !gameOver) drawCurrentPiece();
+            pop();
+
+            // Auto-fall
+            if (millis() - lastFall > FALL_SPEED_BASE / level && !gameOver) {
+                applyGravity(); lastFall = millis();
+            }
+
+            if (gameOver) drawGameOver();
+        }
+
+        function drawBlock(x, y, colorIndex) {
+            let col = COLORS[colorIndex];
+            fill(col[0], col[1], col[2]);
+            stroke(255, 255, 255); strokeWeight(2);
+            rect(x * BLOCK_SIZE + 2, y * BLOCK_SIZE + 2, BLOCK_SIZE - 4, BLOCK_SIZE - 4, 3);
+        }
+
+        function drawCurrentPiece() {
+            let shape = getRotatedShape(currentPiece, currentRotation);
+            for (let y = 0; y < shape.length; y++) {
+                for (let x = 0; x < shape[y].length; x++) {
+                    if (shape[y][x]) drawBlock(currentX + x, currentY + y, currentPiece);
+                }
+            }
+        }
+
+        function getRotatedShape(pieceIndex, rotation) {
+            let shape = SHAPES[pieceIndex];
+            for (let r = 0; r < rotation; r++) shape = rotateMatrix(shape);
+            return shape;
+        }
+
+        function rotateMatrix(matrix) {
+            let N = matrix.length, M = matrix[0].length, result = [];
+            for (let i = 0; i < M; i++) {
+                result[i] = [];
+                for (let j = 0; j < N; j++) result[i][j] = matrix[N - 1 - j][i];
+            }
+            return result;
+        }
+
+        function spawnPiece() {
+            currentPiece = Math.floor(Math.random() * SHAPES.length);
+            currentRotation = 0;
+            currentX = Math.floor(COLS / 2) - 1;
+            currentY = 0;
+            if (!canPlace(currentX, currentY, currentRotation)) gameOver = true;
+        }
+
+        function placePiece() {
+            let shape = getRotatedShape(currentPiece, currentRotation);
+            for (let y = 0; y < shape.length; y++) {
+                for (let x = 0; x < shape[y].length; x++) {
+                    if (shape[y][x]) board[currentY + y][currentX + x] = currentPiece;
+                }
+            }
+            clearLines(); spawnPiece();
+        }
+
+        function canPlace(x, y, rotation) {
+            let shape = getRotatedShape(currentPiece, rotation);
+            for (let sy = 0; sy < shape.length; sy++) {
+                for (let sx = 0; sx < shape[sy].length; sx++) {
+                    if (shape[sy][sx]) {
+                        let newX = x + sx, newY = y + sy;
+                        if (newX < 0 || newX >= COLS || newY >= ROWS) return false;
+                        if (newY >= 0 && board[newY][newX] !== null) return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        function applyGravity() {
+            switch(gravityDir) {
+                case 0: // DOWN
+                    if (canPlace(currentX, currentY + 1, currentRotation)) currentY++;
+                    else placePiece();
+                    break;
+                case 1: // RIGHT
+                    if (canPlace(currentX + 1, currentY, currentRotation)) currentX++;
+                    else placePiece();
+                    break;
+                case 2: // UP
+                    if (canPlace(currentX, currentY - 1, currentRotation)) currentY--;
+                    else placePiece();
+                    break;
+                case 3: // LEFT
+                    if (canPlace(currentX - 1, currentY, currentRotation)) currentX--;
+                    else placePiece();
+                    break;
+            }
+        }
+
+        function shiftGravity() {
+            gravityDir = (gravityDir + 1) % 4;
+            document.getElementById('gravity-dir').textContent = GRAVITY_SYMBOLS[gravityDir];
+            compactBoard();
+        }
+
+        function compactBoard() {
+            // Apply gravity to all existing blocks
+            let iterations = 0;
+            while (iterations < 100) {
+                let moved = false;
+                for (let y = 0; y < ROWS; y++) {
+                    for (let x = 0; x < COLS; x++) {
+                        if (board[y][x] !== null) {
+                            let newX = x, newY = y;
+                            switch(gravityDir) {
+                                case 0: newY++; break;
+                                case 1: newX++; break;
+                                case 2: newY--; break;
+                                case 3: newX--; break;
+                            }
+                            if (newX >= 0 && newX < COLS && newY >= 0 && newY < ROWS && board[newY][newX] === null) {
+                                board[newY][newX] = board[y][x];
+                                board[y][x] = null;
+                                moved = true;
+                            }
+                        }
+                    }
+                }
+                if (!moved) break;
+                iterations++;
+            }
+        }
+
+        function clearLines() {
+            let cleared = 0;
+            for (let y = ROWS - 1; y >= 0; y--) {
+                if (board[y].every(cell => cell !== null)) {
+                    board.splice(y, 1); board.unshift(new Array(COLS).fill(null));
+                    cleared++; y++;
+                }
+            }
+            if (cleared > 0) {
+                linesCleared += cleared; score += cleared * 100 * level;
+                level = Math.floor(linesCleared / 10) + 1; updateStats();
+            }
+        }
+
+        function updateStats() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('lines').textContent = linesCleared;
+            document.getElementById('level').textContent = level;
+        }
+
+        function keyPressed() {
+            if (gameOver) { if (key === 'r') resetGame(); return; }
+            if (key === 'a') canPlace(currentX - 1, currentY, currentRotation) && currentX--;
+            else if (key === 'd') canPlace(currentX + 1, currentY, currentRotation) && currentX++;
+            else if (key === 's') { applyGravity(); score++; updateStats(); }
+            else if (key === 'w') while (canPlace(currentX, currentY + 1, currentRotation)) { currentY++; score += 2; updateStats(); } placePiece();
+            else if (key === 'q') canPlace(currentX, currentY, (currentRotation + 3) % 4) && currentRotation = (currentRotation + 3) % 4;
+            else if (key === 'e') canPlace(currentX, currentY, (currentRotation + 1) % 4) && currentRotation = (currentRotation + 1) % 4;
+            else if (key === 'g') { shiftGravity(); lastGravityShift = millis(); }
+        }
+
+        function drawGameOver() {
+            push();
+            fill(0, 0, 0, 200);
+            rect(0, 0, width, height);
+            fill(255, 100, 100); textSize(48); textAlign(CENTER, CENTER);
+            text('GAME OVER', width / 2, height / 2 - 50);
+            fill(255); textSize(24);
+            text('Score: ' + score, width / 2, height / 2);
+            textSize(16);
+            text('Press R to restart', width / 2, height / 2 + 80);
+            pop();
+        }
+
+        function resetGame() {
+            board = [];
+            for (let y = 0; y < ROWS; y++) board[y] = new Array(COLS).fill(null);
+            score = 0; linesCleared = 0; level = 1; gravityDir = 0;
+            gameOver = false; updateStats(); spawnPiece();
+            document.getElementById('gravity-dir').textContent = GRAVITY_SYMBOLS[gravityDir];
+            lastGravityShift = millis();
+        }
+    </script>
+</body>
+</html>

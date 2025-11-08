@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chronotris - Multi-Timeline Tetris</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+    <style>
+        body {
+            margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh;
+            background: linear-gradient(135deg, #0c0032 0%, #190061 50%, #240090 100%);
+            font-family: 'Courier New', monospace; color: white;
+        }
+        #info-panel {
+            position: absolute; top: 20px; right: 20px; background: rgba(0, 0, 0, 0.8); padding: 20px;
+            border-radius: 10px; border: 2px solid #7209b7; max-width: 300px;
+        }
+        h1 { margin: 0 0 10px 0; font-size: 24px; color: #b5179e; text-shadow: 0 0 10px #b5179e; }
+        .stat { margin: 8px 0; font-size: 16px; }
+        .label { color: #d0a2f7; }
+        .value { color: #00ffff; font-weight: bold; }
+        .timeline-indicator { text-align: center; font-size: 14px; margin: 10px 0; }
+        .instructions { margin-top: 15px; font-size: 11px; color: #cccccc; border-top: 1px solid #7209b7; padding-top: 10px; }
+    </style>
+</head>
+<body>
+    <div id="info-panel">
+        <h1>⏰ CHRONOTRIS</h1>
+        <div class="stat"><span class="label">Score:</span> <span class="value" id="score">0</span></div>
+        <div class="stat"><span class="label">Lines:</span> <span class="value" id="lines">0</span></div>
+        <div class="stat"><span class="label">Active Timeline:</span> <span class="value" id="timeline">PAST</span></div>
+        <div class="timeline-indicator">
+            ⏪ PAST | ⏸️ PRESENT | ⏩ FUTURE
+        </div>
+        <div class="instructions">
+            <strong>Controls:</strong><br>
+            ← → Move | ↑ Rotate<br>
+            ↓ Soft Drop | Space: Drop<br>
+            1/2/3: Switch Timeline<br><br>
+            ⏰ Clear in PAST affects PRESENT<br>
+            🔮 FUTURE shows preview<br>
+            Manage 3 timelines at once!
+        </div>
+    </div>
+
+    <script>
+        const COLS = 8, ROWS = 16, BLOCK_SIZE = 25, FALL_SPEED_BASE = 1200;
+        const TIMELINES = 3;
+        const TIMELINE_NAMES = ['PAST', 'PRESENT', 'FUTURE'];
+        const TIMELINE_COLORS = [[180,100,255], [255,150,200], [100,200,255]];
+
+        const SHAPES = [[[1,1,1,1]], [[1,1],[1,1]], [[0,1,0],[1,1,1]], [[1,1,0],[0,1,1]], [[0,1,1],[1,1,0]], [[1,0,0],[1,1,1]], [[0,0,1],[1,1,1]]];
+        const COLORS = [[0,255,255], [255,255,0], [128,0,255], [0,255,0], [255,0,0], [0,100,255], [255,150,0]];
+
+        let boards = [], currentPieces = [], currentRotations = [], currentXs = [], currentYs = [], lastFalls = [];
+        let activeTimeline = 0, gameOver = false, score = 0, linesCleared = 0;
+        let futurePreview = [];
+
+        function setup() {
+            createCanvas(COLS * BLOCK_SIZE * TIMELINES + 250, ROWS * BLOCK_SIZE + 100);
+
+            for (let t = 0; t < TIMELINES; t++) {
+                boards[t] = [];
+                for (let y = 0; y < ROWS; y++) boards[t][y] = Array(COLS).fill(null);
+                currentPieces[t] = Math.floor(Math.random() * SHAPES.length);
+                currentRotations[t] = 0;
+                currentXs[t] = Math.floor(COLS / 2) - 1;
+                currentYs[t] = 0;
+                lastFalls[t] = millis();
+            }
+
+            generateFuturePreview();
+        }
+
+        function draw() {
+            background(12, 0, 50);
+
+            // Draw all three timelines
+            for (let t = 0; t < TIMELINES; t++) {
+                push();
+                translate(t * COLS * BLOCK_SIZE, 0);
+
+                // Timeline label
+                fill(TIMELINE_COLORS[t][0], TIMELINE_COLORS[t][1], TIMELINE_COLORS[t][2]);
+                noStroke(); textSize(16); textAlign(CENTER);
+                text(TIMELINE_NAMES[t], COLS * BLOCK_SIZE / 2, -10);
+
+                // Highlight active timeline
+                if (t === activeTimeline) {
+                    stroke(255, 255, 0); strokeWeight(3); noFill();
+                    rect(-2, -2, COLS * BLOCK_SIZE + 4, ROWS * BLOCK_SIZE + 4);
+                }
+
+                // Draw grid
+                stroke(60, 40, 100, t === 2 ? 100 : 150); strokeWeight(1);
+                for (let x = 0; x <= COLS; x++) line(x * BLOCK_SIZE, 0, x * BLOCK_SIZE, ROWS * BLOCK_SIZE);
+                for (let y = 0; y <= ROWS; y++) line(0, y * BLOCK_SIZE, COLS * BLOCK_SIZE, y * BLOCK_SIZE);
+
+                // Draw board
+                for (let y = 0; y < ROWS; y++) {
+                    for (let x = 0; x < COLS; x++) {
+                        if (boards[t][y][x] !== null) {
+                            drawBlock(x, y, boards[t][y][x], t === 2 ? 120 : 255);
+                        }
+                    }
+                }
+
+                // Draw current piece
+                if (currentPieces[t] !== null && !gameOver) {
+                    drawCurrentPiece(t);
+                }
+
+                // Draw future preview
+                if (t === 2) {
+                    futurePreview.forEach(p => {
+                        fill(100, 200, 255, 50);
+                        noStroke();
+                        rect(p.x * BLOCK_SIZE + 2, p.y * BLOCK_SIZE + 2, BLOCK_SIZE - 4, BLOCK_SIZE - 4, 3);
+                    });
+                }
+
+                pop();
+
+                // Auto-fall for active timeline only
+                if (t === activeTimeline && millis() - lastFalls[t] > FALL_SPEED_BASE && !gameOver) {
+                    moveDown(t); lastFalls[t] = millis();
+                }
+            }
+
+            if (gameOver) drawGameOver();
+        }
+
+        function drawBlock(x, y, colorIndex, alpha) {
+            let col = COLORS[colorIndex];
+            fill(col[0], col[1], col[2], alpha);
+            stroke(255, 255, 255, alpha * 0.8); strokeWeight(2);
+            rect(x * BLOCK_SIZE + 2, y * BLOCK_SIZE + 2, BLOCK_SIZE - 4, BLOCK_SIZE - 4, 3);
+        }
+
+        function drawCurrentPiece(timeline) {
+            let shape = getRotatedShape(currentPieces[timeline], currentRotations[timeline]);
+            for (let y = 0; y < shape.length; y++) {
+                for (let x = 0; x < shape[y].length; x++) {
+                    if (shape[y][x]) {
+                        drawBlock(currentXs[timeline] + x, currentYs[timeline] + y, currentPieces[timeline], 255);
+                    }
+                }
+            }
+        }
+
+        function getRotatedShape(pieceIndex, rotation) {
+            let shape = SHAPES[pieceIndex];
+            for (let r = 0; r < rotation; r++) shape = rotateMatrix(shape);
+            return shape;
+        }
+
+        function rotateMatrix(m) {
+            let result = [];
+            for (let i = 0; i < m[0].length; i++) {
+                result[i] = [];
+                for (let j = 0; j < m.length; j++) result[i][j] = m[m.length - 1 - j][i];
+            }
+            return result;
+        }
+
+        function spawnPiece(timeline) {
+            currentPieces[timeline] = Math.floor(Math.random() * SHAPES.length);
+            currentRotations[timeline] = 0;
+            currentXs[timeline] = Math.floor(COLS / 2) - 1;
+            currentYs[timeline] = 0;
+            if (!canPlace(timeline, currentXs[timeline], currentYs[timeline], currentRotations[timeline])) {
+                gameOver = true;
+            }
+        }
+
+        function placePiece(timeline) {
+            let shape = getRotatedShape(currentPieces[timeline], currentRotations[timeline]);
+            for (let y = 0; y < shape.length; y++) {
+                for (let x = 0; x < shape[y].length; x++) {
+                    if (shape[y][x]) {
+                        boards[timeline][currentYs[timeline] + y][currentXs[timeline] + x] = currentPieces[timeline];
+                    }
+                }
+            }
+            clearLines(timeline); spawnPiece(timeline);
+        }
+
+        function canPlace(timeline, x, y, rotation) {
+            let shape = getRotatedShape(currentPieces[timeline], rotation);
+            for (let sy = 0; sy < shape.length; sy++) {
+                for (let sx = 0; sx < shape[sy].length; sx++) {
+                    if (shape[sy][sx]) {
+                        let newX = x + sx, newY = y + sy;
+                        if (newX < 0 || newX >= COLS || newY >= ROWS) return false;
+                        if (newY >= 0 && boards[timeline][newY][newX] !== null) return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        function moveDown(timeline) {
+            if (canPlace(timeline, currentXs[timeline], currentYs[timeline] + 1, currentRotations[timeline])) {
+                currentYs[timeline]++;
+            } else {
+                placePiece(timeline);
+            }
+        }
+
+        function clearLines(timeline) {
+            let cleared = 0;
+            for (let y = ROWS - 1; y >= 0; y--) {
+                if (boards[timeline][y].every(cell => cell !== null)) {
+                    boards[timeline].splice(y, 1);
+                    boards[timeline].unshift(Array(COLS).fill(null));
+
+                    // Temporal cascade - PAST affects PRESENT
+                    if (timeline === 0 && boards[1]) {
+                        boards[1].splice(y, 1);
+                        boards[1].unshift(Array(COLS).fill(null));
+                    }
+
+                    cleared++; y++;
+                }
+            }
+            if (cleared > 0) {
+                linesCleared += cleared; score += cleared * 100;
+                updateStats(); generateFuturePreview();
+            }
+        }
+
+        function generateFuturePreview() {
+            futurePreview = [];
+            for (let i = 0; i < 5; i++) {
+                futurePreview.push({
+                    x: Math.floor(Math.random() * COLS),
+                    y: Math.floor(Math.random() * ROWS)
+                });
+            }
+        }
+
+        function updateStats() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('lines').textContent = linesCleared;
+            document.getElementById('timeline').textContent = TIMELINE_NAMES[activeTimeline];
+        }
+
+        function keyPressed() {
+            if (gameOver) { if (key === 'r') resetGame(); return; }
+
+            let t = activeTimeline;
+            if (key === '1') { activeTimeline = 0; updateStats(); }
+            else if (key === '2') { activeTimeline = 1; updateStats(); }
+            else if (key === '3') { activeTimeline = 2; updateStats(); }
+            else if (keyCode === LEFT_ARROW) canPlace(t, currentXs[t] - 1, currentYs[t], currentRotations[t]) && currentXs[t]--;
+            else if (keyCode === RIGHT_ARROW) canPlace(t, currentXs[t] + 1, currentYs[t], currentRotations[t]) && currentXs[t]++;
+            else if (keyCode === DOWN_ARROW) { moveDown(t); score++; updateStats(); }
+            else if (keyCode === UP_ARROW) canPlace(t, currentXs[t], currentYs[t], (currentRotations[t] + 1) % 4) && currentRotations[t] = (currentRotations[t] + 1) % 4;
+            else if (key === ' ') {
+                while (canPlace(t, currentXs[t], currentYs[t] + 1, currentRotations[t])) { currentYs[t]++; score += 2; }
+                updateStats(); placePiece(t);
+            }
+        }
+
+        function drawGameOver() {
+            fill(0, 0, 0, 200);
+            rect(0, 0, width, height);
+            fill(181, 23, 158); textSize(48); textAlign(CENTER, CENTER);
+            text('TIME PARADOX', width / 2, height / 2 - 50);
+            fill(255); textSize(24);
+            text('Score: ' + score, width / 2, height / 2);
+            textSize(16);
+            text('Press R to restart', width / 2, height / 2 + 80);
+        }
+
+        function resetGame() {
+            for (let t = 0; t < TIMELINES; t++) {
+                boards[t] = [];
+                for (let y = 0; y < ROWS; y++) boards[t][y] = Array(COLS).fill(null);
+                spawnPiece(t);
+            }
+            score = 0; linesCleared = 0; activeTimeline = 0; gameOver = false;
+            updateStats(); generateFuturePreview();
+        }
+    </script>
+</body>
+</html>

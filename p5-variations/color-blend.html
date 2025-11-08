@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Color Blend Tetris</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+    <style>
+        body {
+            margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh;
+            background: linear-gradient(135deg, #ff0080 0%, #ff8c00 25%, #40e0d0 50%, #9370db 75%, #ff1493 100%);
+            font-family: 'Courier New', monospace; color: white;
+        }
+        #info-panel {
+            position: absolute; top: 20px; right: 20px; background: rgba(0, 0, 0, 0.8); padding: 20px;
+            border-radius: 10px; border: 2px solid #ff00ff; max-width: 300px;
+        }
+        h1 { margin: 0 0 10px 0; font-size: 24px; color: #ff00ff; text-shadow: 0 0 10px #ff00ff; }
+        .stat { margin: 8px 0; font-size: 16px; }
+        .label { color: #ffaaff; }
+        .value { color: #00ffff; font-weight: bold; }
+        .instructions { margin-top: 15px; font-size: 12px; color: #cccccc; border-top: 1px solid #ff00ff; padding-top: 10px; }
+    </style>
+</head>
+<body>
+    <div id="info-panel">
+        <h1>🎨 COLOR BLEND</h1>
+        <div class="stat"><span class="label">Score:</span> <span class="value" id="score">0</span></div>
+        <div class="stat"><span class="label">Lines:</span> <span class="value" id="lines">0</span></div>
+        <div class="stat"><span class="label">Level:</span> <span class="value" id="level">1</span></div>
+        <div class="stat"><span class="label">Blends:</span> <span class="value" id="blends">0</span></div>
+        <div class="instructions">
+            <strong>Controls:</strong><br>
+            ← → Move | ↑ Rotate<br>
+            ↓ Soft Drop | Space: Hard Drop<br><br>
+            🎨 Red + Blue = Purple<br>
+            🎨 Red + Yellow = Orange<br>
+            🎨 Blue + Yellow = Green<br>
+            Match 3+ same colors to clear!
+        </div>
+    </div>
+
+    <script>
+        const COLS = 10, ROWS = 20, BLOCK_SIZE = 30, FALL_SPEED_BASE = 900;
+        const SHAPES = [[[1,1,1,1]], [[1,1],[1,1]], [[0,1,0],[1,1,1]], [[1,1,0],[0,1,1]], [[0,1,1],[1,1,0]], [[1,0,0],[1,1,1]], [[0,0,1],[1,1,1]]];
+        const COLORS = { RED: [255,0,0], BLUE: [0,0,255], YELLOW: [255,255,0], PURPLE: [128,0,128], ORANGE: [255,165,0], GREEN: [0,255,0] };
+        const COLOR_NAMES = ['RED', 'BLUE', 'YELLOW'];
+
+        let board = [], currentPiece = null, currentColor = 'RED', currentRotation = 0;
+        let currentX = 0, currentY = 0, lastFall = 0, gameOver = false;
+        let score = 0, linesCleared = 0, level = 1, blendCount = 0;
+
+        function setup() {
+            createCanvas(COLS * BLOCK_SIZE + 200, ROWS * BLOCK_SIZE + 100);
+            for (let y = 0; y < ROWS; y++) board[y] = Array(COLS).fill(null);
+            spawnPiece();
+        }
+
+        function draw() {
+            background(20, 0, 40);
+            stroke(50); strokeWeight(1);
+            for (let x = 0; x <= COLS; x++) line(x * BLOCK_SIZE, 0, x * BLOCK_SIZE, ROWS * BLOCK_SIZE);
+            for (let y = 0; y <= ROWS; y++) line(0, y * BLOCK_SIZE, COLS * BLOCK_SIZE, y * BLOCK_SIZE);
+
+            for (let y = 0; y < ROWS; y++) {
+                for (let x = 0; x < COLS; x++) {
+                    if (board[y][x]) drawBlock(x, y, board[y][x]);
+                }
+            }
+
+            if (currentPiece !== null && !gameOver) drawCurrentPiece();
+
+            if (millis() - lastFall > FALL_SPEED_BASE / level && !gameOver) {
+                moveDown(); lastFall = millis();
+            }
+
+            if (gameOver) drawGameOver();
+        }
+
+        function drawBlock(x, y, color) {
+            let col = COLORS[color];
+            fill(col[0], col[1], col[2]);
+            stroke(255); strokeWeight(2);
+            rect(x * BLOCK_SIZE + 2, y * BLOCK_SIZE + 2, BLOCK_SIZE - 4, BLOCK_SIZE - 4, 3);
+        }
+
+        function drawCurrentPiece() {
+            let shape = getRotatedShape(currentPiece, currentRotation);
+            for (let y = 0; y < shape.length; y++) {
+                for (let x = 0; x < shape[y].length; x++) {
+                    if (shape[y][x]) drawBlock(currentX + x, currentY + y, currentColor);
+                }
+            }
+        }
+
+        function getRotatedShape(pieceIndex, rotation) {
+            let shape = SHAPES[pieceIndex];
+            for (let r = 0; r < rotation; r++) shape = rotateMatrix(shape);
+            return shape;
+        }
+
+        function rotateMatrix(m) {
+            let result = [];
+            for (let i = 0; i < m[0].length; i++) {
+                result[i] = [];
+                for (let j = 0; j < m.length; j++) result[i][j] = m[m.length - 1 - j][i];
+            }
+            return result;
+        }
+
+        function spawnPiece() {
+            currentPiece = Math.floor(Math.random() * SHAPES.length);
+            currentColor = COLOR_NAMES[Math.floor(Math.random() * COLOR_NAMES.length)];
+            currentRotation = 0;
+            currentX = Math.floor(COLS / 2) - 1;
+            currentY = 0;
+            if (!canPlace(currentX, currentY, currentRotation)) gameOver = true;
+        }
+
+        function placePiece() {
+            let shape = getRotatedShape(currentPiece, currentRotation);
+            for (let y = 0; y < shape.length; y++) {
+                for (let x = 0; x < shape[y].length; x++) {
+                    if (shape[y][x]) {
+                        let boardX = currentX + x, boardY = currentY + y;
+                        board[boardY][boardX] = currentColor;
+                        blendColors(boardX, boardY);
+                    }
+                }
+            }
+            clearColorGroups(); spawnPiece();
+        }
+
+        function blendColors(x, y) {
+            let neighbors = [[x-1,y], [x+1,y], [x,y-1], [x,y+1]];
+            let currentCol = board[y][x];
+
+            for (let [nx, ny] of neighbors) {
+                if (nx >= 0 && nx < COLS && ny >= 0 && ny < ROWS && board[ny][nx]) {
+                    let neighborCol = board[ny][nx];
+                    let blend = getBlendColor(currentCol, neighborCol);
+                    if (blend) {
+                        board[ny][nx] = blend;
+                        blendCount++;
+                    }
+                }
+            }
+        }
+
+        function getBlendColor(c1, c2) {
+            if (c1 === c2) return null;
+            let set = new Set([c1, c2]);
+            if (set.has('RED') && set.has('BLUE')) return 'PURPLE';
+            if (set.has('RED') && set.has('YELLOW')) return 'ORANGE';
+            if (set.has('BLUE') && set.has('YELLOW')) return 'GREEN';
+            return null;
+        }
+
+        function clearColorGroups() {
+            let toClear = new Set();
+            let visited = new Set();
+
+            function floodFill(x, y, color, group) {
+                let key = `${x},${y}`;
+                if (x < 0 || x >= COLS || y < 0 || y >= ROWS) return;
+                if (visited.has(key) || !board[y][x] || board[y][x] !== color) return;
+                visited.add(key); group.push([x, y]);
+                floodFill(x+1, y, color, group);
+                floodFill(x-1, y, color, group);
+                floodFill(x, y+1, color, group);
+                floodFill(x, y-1, color, group);
+            }
+
+            for (let y = 0; y < ROWS; y++) {
+                for (let x = 0; x < COLS; x++) {
+                    if (board[y][x] && !visited.has(`${x},${y}`)) {
+                        let group = [];
+                        floodFill(x, y, board[y][x], group);
+                        if (group.length >= 3) {
+                            group.forEach(([gx, gy]) => toClear.add(`${gx},${gy}`));
+                        }
+                    }
+                }
+            }
+
+            if (toClear.size > 0) {
+                toClear.forEach(key => {
+                    let [x, y] = key.split(',').map(Number);
+                    board[y][x] = null;
+                });
+                score += toClear.size * 50 * level;
+                compactBoard(); updateStats();
+            }
+        }
+
+        function compactBoard() {
+            for (let x = 0; x < COLS; x++) {
+                let column = [];
+                for (let y = ROWS - 1; y >= 0; y--) {
+                    if (board[y][x]) column.push(board[y][x]);
+                }
+                for (let y = ROWS - 1; y >= 0; y--) {
+                    board[y][x] = column[ROWS - 1 - y] || null;
+                }
+            }
+        }
+
+        function canPlace(x, y, rotation) {
+            let shape = getRotatedShape(currentPiece, rotation);
+            for (let sy = 0; sy < shape.length; sy++) {
+                for (let sx = 0; sx < shape[sy].length; sx++) {
+                    if (shape[sy][sx]) {
+                        let newX = x + sx, newY = y + sy;
+                        if (newX < 0 || newX >= COLS || newY >= ROWS) return false;
+                        if (newY >= 0 && board[newY][newX]) return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        function moveDown() {
+            if (canPlace(currentX, currentY + 1, currentRotation)) currentY++;
+            else placePiece();
+        }
+
+        function updateStats() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('lines').textContent = linesCleared;
+            document.getElementById('level').textContent = level;
+            document.getElementById('blends').textContent = blendCount;
+        }
+
+        function keyPressed() {
+            if (gameOver) { if (key === 'r') resetGame(); return; }
+            if (keyCode === LEFT_ARROW) canPlace(currentX - 1, currentY, currentRotation) && currentX--;
+            else if (keyCode === RIGHT_ARROW) canPlace(currentX + 1, currentY, currentRotation) && currentX++;
+            else if (keyCode === DOWN_ARROW) { moveDown(); score++; updateStats(); }
+            else if (keyCode === UP_ARROW) canPlace(currentX, currentY, (currentRotation + 1) % 4) && currentRotation = (currentRotation + 1) % 4;
+            else if (key === ' ') {
+                while (canPlace(currentX, currentY + 1, currentRotation)) { currentY++; score += 2; }
+                updateStats(); placePiece();
+            }
+        }
+
+        function drawGameOver() {
+            fill(0, 0, 0, 200); rect(0, 0, COLS * BLOCK_SIZE, ROWS * BLOCK_SIZE);
+            fill(255, 100, 100); textSize(48); textAlign(CENTER, CENTER);
+            text('GAME OVER', COLS * BLOCK_SIZE / 2, ROWS * BLOCK_SIZE / 2 - 50);
+            fill(255); textSize(24);
+            text('Score: ' + score, COLS * BLOCK_SIZE / 2, ROWS * BLOCK_SIZE / 2);
+            textSize(16);
+            text('Press R to restart', COLS * BLOCK_SIZE / 2, ROWS * BLOCK_SIZE / 2 + 80);
+        }
+
+        function resetGame() {
+            board = [];
+            for (let y = 0; y < ROWS; y++) board[y] = Array(COLS).fill(null);
+            score = 0; linesCleared = 0; level = 1; blendCount = 0;
+            gameOver = false; updateStats(); spawnPiece();
+        }
+    </script>
+</body>
+</html>
